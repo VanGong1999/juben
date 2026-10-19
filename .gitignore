@@ -1,16 +1,15 @@
-# 敏感信息 - 必须忽略
+# =====================================================================
+# 敏感信息 / Secrets — 必须忽略
+# =====================================================================
 .env
 .env.local
 .env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
-
-# 所有环境变量文件（除了 .env.example）
 .env.*
 !.env.example
 
-# API 密钥和凭证
 *credentials*
 *secret*
 *.key
@@ -18,45 +17,57 @@
 secrets/
 credentials/
 
-# 数据库
-*.sql
-*.sqlite
-*.sqlite3
-*.db
-
-# 日志
+# =====================================================================
+# 日志 / Logs
+# =====================================================================
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+/tmp/juben-*.log
+/tmp/juben-*.pid
 
-# 临时文件
+# =====================================================================
+# 临时 / 系统文件
+# =====================================================================
 *.tmp
 *.temp
 *.swp
 *.swo
 *~
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Node
+# =====================================================================
+# Node / 前端构建产物
+# =====================================================================
 node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
 dist/
 build/
 .npm/
 .yarn/
 .pnpm-store/
 
+# =====================================================================
 # Python
+# =====================================================================
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -70,25 +81,94 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
-coverage.*
-*.cover
+.mypy_cache/
+.ruff_cache/
 .hypothesis/
-.pytest_cache/
 migrations/.env.py
 
 # 虚拟环境
 venv/
+.venv/
 env/
 ENV/
 env.bak/
 venv.bak/
 
-# IDE
+# =====================================================================
+# 测试与覆盖率产物（保留 tests/ 源码，忽略结果）
+# =====================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.*
+*.cover
+test-results/
+pytest-report.*
+.cache/
+*.pytest_cache/
+
+# 本地 / 临时评测结果
+evals/*.jsonl
+evals/**/*.jsonl
+evals/**/*.json
+!evals/.gitkeep
+
+# 脚本跑批产生的结果文件
+data/test_*_result.json
+data/**/*_result.json
+*_batch_*_result.json
+*_smoke*.jsonl
+*_runtime*.jsonl
+
+# =====================================================================
+# 运行时生成数据 / 产物（不应提交）
+# =====================================================================
+volumes/
+juben_outputs/
+!juben_outputs/.gitkeep
+projects/
+outputs/
+uploads/
+files/
+temp/
+cache/
+
+# Artifact 运行产物（保留目录结构与元数据）
+artifacts/**/*.txt
+artifacts/**/*.md
+artifacts/**/*.html
+artifacts/**/*.json
+!artifacts/.metadata.json
+!artifacts/.gitkeep
+
+# 本地数据库与用户 / 会话数据
+data/users.db
+data/users/
+data/session_orchestration/
+data/agent_checkpoints/
+data/durable_runs/
+data/idempotency/
+data/memory_snapshots.json
+data/org/memory/audit.jsonl
+data/org/memory/reflections.jsonl
+data/org/memory/episodes/
+data/org/memory/versions/
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+
+# =====================================================================
+# Docker / 本地覆盖
+# =====================================================================
+docker-compose.override.yml
+
+# =====================================================================
+# IDE / 编辑器（与项目运行无关）
+# =====================================================================
 .vscode/
 .idea/
 *.iml
@@ -99,44 +179,22 @@ venv.bak/
 .settings/
 *.sublime-project
 *.sublime-workspace
+.cursor/
+*.code-workspace
 
-# 系统文件
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# 项目特定
-uploads/
-files/
-temp/
-cache/
-.cache/
-
-# 测试
-.pytest_cache/
-.coverage
-htmlcov/
-test-results/
-
-# Docker
-docker-compose.override.yml
-
-# 备份文件
+# =====================================================================
+# 备份与杂项
+# =====================================================================
 *.bak
 *.backup
 *.old
+introduce.md
 
-# 运行时生成数据 / 产物（不应提交）
-volumes/
-juben_outputs/
-projects/
-evals/
+# 本地调试 / 一次性笔记（如有）
+*.local.md
+NOTES.local.md
 
-# 本地数据库与用户/会话数据
-data/users.db
-data/users/
-data/session_orchestration/
+# 截图目录：保留占位，忽略未命名临时图（正式截图请用约定文件名提交）
+pictures/screenshots/.DS_Store
+pictures/**/.DS_Store
+pictures/pictures/
