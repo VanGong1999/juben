@@ -26,12 +26,7 @@
   <img alt="DeepSeek" src="https://img.shields.io/badge/LLM-DeepSeek%20%2B%20Zhipu-informational.svg" />
 </p>
 
----
 
-> **GitHub Description（可直接粘贴到仓库 About）**
->
-> **中文：** 生产级短剧多智能体创作平台：40+ 专业 AI Agent，覆盖策划、创作、评估全流程；支持 DeepSeek / 智谱模型与联网搜索；流式交互、双层记忆、知识图谱与完整影视工作流。  
-> **English:** Production-ready multi-agent platform for short-drama planning, writing & evaluation — 40+ specialized AI agents, DeepSeek / Zhipu models with web search, streaming UX, dual-layer memory, knowledge graph, and end-to-end creative workflows.
 
 **相关仓库**
 
@@ -83,7 +78,6 @@
 如果你是：
 
 - **编剧 / 短剧团队** —— 想要可落地的创作辅助工作台  
-- **AI 工程师** —— 想研究真实多智能体编排、记忆与流式协议  
 - **内容公司 / 工作室** —— 想把 IP 筛选、评估、批量分集做成流水线  
 
 欢迎 **⭐ Star** 与 **Fork**，一起把影视创作的 Agent 基建做厚。
@@ -110,9 +104,25 @@
 |:---:|:---:|
 | ![工具箱](./pictures/工具箱.png) | ![工具调用](./pictures/工具调用.png) |
 
-| 上下文压缩 |
-|:---:|
-| ![上下文压缩](./pictures/上下文压缩.png) |
+| 上下文压缩 | 故事大纲 |
+|:---:|:---:|
+| ![上下文压缩](./pictures/上下文压缩.png) | ![故事大纲](./pictures/故事大纲.png) |
+
+| 创作图 | 知识图谱记忆抽取 |
+|:---:|:---:|
+| ![创作图](./pictures/创作图.png) | ![知识图谱记忆抽取](./pictures/知识图谱记忆抽取.png) |
+
+| 创作产物 | AI对话 |
+|:---:|:---:|
+| ![创作产物](./pictures/创作产物.png) | ![AI对话](./pictures/AI对话.png) |
+
+| 创作台界面 | AI对话 |
+|:---:|:---:|
+| ![创作台界面](./pictures/创作台界面.png) | ![AI对话](./pictures/AI对话.png) |
+
+| 分集写作 | 知识图谱抽取 |
+|:---:|:---:|
+| ![分集写作](./pictures/分集写作.png) | ![知识图谱抽取](./pictures/知识图谱抽取.png) |
 
 ---
 
