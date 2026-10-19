@@ -1,5 +1,9 @@
 # 剧本创作 Agent 平台 · Script Creation Agent Platform
 
+> 💡 **语言切换**  
+> - **产品界面**：打开应用后，点击右上角 **中 / EN** 即可切换中英文界面。  
+> - **本 README**：点击下方 [中文](#-中文文档) / [English](#-english-documentation) 跳转对应文档；两套文档使用不同截图。
+
 <p align="center">
   <strong>生产级 · 多智能体 · 短剧全流程创作系统</strong><br/>
   <em>Plan → Write → Evaluate → Ship — powered by 40+ specialized AI Agents</em>
@@ -19,21 +23,22 @@
   <img alt="TypeScript" src="https://img.shields.io/badge/typescript-5-3178C6.svg" />
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.104-009688.svg" />
   <img alt="Agents" src="https://img.shields.io/badge/AI%20Agents-40%2B-orange.svg" />
+  <img alt="DeepSeek" src="https://img.shields.io/badge/LLM-DeepSeek%20%2B%20Zhipu-informational.svg" />
 </p>
 
 ---
 
 > **GitHub Description（可直接粘贴到仓库 About）**
 >
-> **中文：** 生产级短剧多智能体创作平台：40+ 专业 AI Agent，覆盖策划、创作、评估全流程；流式交互、双层记忆、知识图谱与完整影视工作流。  
-> **English:** Production-ready multi-agent platform for short-drama planning, writing & evaluation — 40+ specialized AI agents, streaming UX, dual-layer memory, knowledge graph, and end-to-end creative workflows.
+> **中文：** 生产级短剧多智能体创作平台：40+ 专业 AI Agent，覆盖策划、创作、评估全流程；支持 DeepSeek / 智谱模型与联网搜索；流式交互、双层记忆、知识图谱与完整影视工作流。  
+> **English:** Production-ready multi-agent platform for short-drama planning, writing & evaluation — 40+ specialized AI agents, DeepSeek / Zhipu models with web search, streaming UX, dual-layer memory, knowledge graph, and end-to-end creative workflows.
 
-**相关仓库 / Related**
+**相关仓库**
 
-- 剧本知识库：[GongLingRui/skills](https://github.com/GongLingRui/skills)
-- 影视创作 Skills：[GongLingRui/screen-creative-skills](https://github.com/GongLingRui/screen-creative-skills)
+- 剧本知识库：[VanGong1999/skills](https://github.com/VanGong1999/skills)
+- 影视创作 Skills：[VanGong1999/screen-creative-skills](https://github.com/VanGong1999/screen-creative-skills)
 
-**作者 / Author：** 宫灵瑞（Gong Lingrui）
+
 
 ---
 
@@ -45,6 +50,7 @@
 - [项目截图](#项目截图)
 - [功能全景](#功能全景)
 - [40+ Agents 一览](#40-agents-一览)
+- [模型与搜索](#模型与搜索)
 - [系统能力详解](#系统能力详解)
 - [技术架构](#技术架构)
 - [技术栈](#技术栈)
@@ -62,17 +68,17 @@
 
 ## 为什么是这个项目
 
-短剧行业正在爆发，但创作链路仍然碎片化：有人用 ChatGPT 写大纲，有人用表格管人设，有人靠经验「估」商业价值——**工具散、上下文断、质量不可复现**。
+短剧行业正在爆发，但创作链路仍然碎片化：有人用大模型写大纲，有人用表格管人设，有人靠经验「估」商业价值——**工具散、上下文断、质量不可复现**。
 
 **剧本创作 Agent 平台**把「策划 → 创作 → 评估 → 交付」做成一条可编排、可记忆、可审计的多智能体流水线：
 
 | 痛点 | 本项目怎么解 |
 |------|-------------|
-| 提示词临时拼凑 | 40+ 专职 Agent + 领域 Prompt / Skills |
-| 多轮对话丢设定 | 双层记忆 + 剧集上下文 + Checkpoint |
+| 提示词临时拼凑 | 40+ 专职 Agent + 领域提示词 / 技能包 |
+| 多轮对话丢设定 | 双层记忆 + 剧集上下文 + 检查点恢复 |
 | 质量全凭感觉 | 多维评估 Agent + 评分体系 + 一致性检查 |
-| 知识无法沉淀 | LLM Wiki + 向量检索（Milvus）+ 图数据库（Neo4j） |
-| 前后端玩具级 Demo | 生产级 FastAPI + React/TS + SSE 流式 + 鉴权 RBAC |
+| 知识无法沉淀 | LLM 知识页 + 向量检索（Milvus）+ 图数据库（Neo4j） |
+| 前后端玩具级演示 | 生产级 FastAPI + React/TS + SSE 流式 + 鉴权权限控制 |
 
 如果你是：
 
@@ -86,27 +92,27 @@
 
 ## 项目截图
 
-> 📸 **截图占位**：请把界面截图放到 [`pictures/screenshots/`](./pictures/screenshots/)，命名见该目录 README。替换下方路径后即可展示。
+界面右上角可随时切换中 / EN。以下为**中文界面**截图（英文界面见 [English Screenshots](#screenshots)）。
 
-| Studio 工作台 | 剧集工作区 |
+| 创作工作台 | 剧集工作区 |
 |:---:|:---:|
-| ![Studio](./pictures/screenshots/01-studio.svg) | ![Drama Workspace](./pictures/screenshots/02-drama-workspace.svg) |
-| *替换为 `01-studio.png`* | *替换为 `02-drama-workspace.png`* |
+| ![创作工作台](./pictures/01-studio.png) | ![剧集工作区](./pictures/02-drama-workspace.png) |
 
 | Agents 中心 | 知识图谱 |
 |:---:|:---:|
-| ![Agents Hub](./pictures/screenshots/03-agents-hub.svg) | ![Knowledge Graph](./pictures/screenshots/04-knowledge-graph.svg) |
-| *替换为 `03-agents-hub.png`* | *替换为 `04-knowledge-graph.png`* |
+| ![Agents 中心](./pictures/03-agents-hub.png) | ![知识图谱](./pictures/04-knowledge-graph.png) |
 
-| 评估打分 | 流水线管理 |
+| 记忆中心 | 工作流 |
 |:---:|:---:|
-| ![Evaluation](./pictures/screenshots/05-evaluation.svg) | ![Pipeline](./pictures/screenshots/06-pipeline.svg) |
-| *替换为 `05-evaluation.png`* | *替换为 `06-pipeline.png`* |
+| ![记忆中心](./pictures/07-memory-center.png) | ![工作流](./pictures/工作流.png) |
 
-| 记忆中心 | 移动端（可选） |
+| 工具箱 | 工具调用 |
 |:---:|:---:|
-| ![Memory](./pictures/screenshots/07-memory-center.svg) | ![Mobile](./pictures/screenshots/08-mobile-responsive.svg) |
-| *替换为 `07-memory-center.png`* | *替换为 `08-mobile-responsive.png`* |
+| ![工具箱](./pictures/工具箱.png) | ![工具调用](./pictures/工具调用.png) |
+
+| 上下文压缩 |
+|:---:|
+| ![上下文压缩](./pictures/上下文压缩.png) |
 
 ---
 
@@ -125,7 +131,7 @@
 │  小传生成     │  大纲/导图     │  8 阶段流水线  │  搜索/OCR/ASR    │
 │  关系网络     │  情节点展开    │  编排/门房     │  知识库/文件引用 │
 ├───────────────┴───────────────┴───────────────┴─────────────────┤
-│  💾 记忆 · 📁 项目 · 🗒️ Notes · 🕸️ 图谱 · 📚 Wiki · 📊 统计      │
+│  💾 记忆 · 📁 项目 · 🗒️ 笔记 · 🕸️ 图谱 · 📚 知识页 · 📊 统计      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -134,11 +140,12 @@
 1. **40+ 专业 Agents** — 策划、创作、评估、分析、人物、故事、工作流、工具全覆盖  
 2. **SSE 流式交互** — 打字机输出、思考链、工具调用、进度事件实时可见  
 3. **双层记忆系统** — 短期对话记忆 + 中期任务总结，跨会话可复用  
-4. **剧集工场（Drama Workspace）** — 项目化管理大纲、分集、人设、评估产物  
-5. **知识体系** — Skills / LLM Wiki / 向量库 / Neo4j 知识图谱  
+4. **剧集工场** — 项目化管理大纲、分集、人设、评估产物  
+5. **知识体系** — 技能包 / 知识页 / 向量库 / Neo4j 知识图谱  
 6. **批量生产能力** — 分集批量创作、视频提示词批量生成  
-7. **生产级基础设施** — 鉴权、限流、幂等、Checkpoint、分布式可靠性加固  
-8. **一键本地启动** — `scripts/start_dev.sh` 拉起依赖 + 前后端  
+7. **多模型与联网搜索** — DeepSeek（默认）+ 智谱备用，支持 DeepSeek / 百度搜索  
+8. **生产级基础设施** — 鉴权、限流、幂等、检查点、分布式可靠性加固  
+9. **一键本地启动** — `scripts/start_dev.sh` 拉起依赖 + 前后端  
 
 ---
 
@@ -146,67 +153,92 @@
 
 ### 📋 策划类
 
-| Agent | 能力 |
-|-------|------|
-| `short_drama_planner` | 情绪价值、黄金三秒钩子、期待-压抑-爆发结构、商业卡点 |
-| `juben_concierge` / `juben_conductor` / `juben_orchestrator` | 门房接待、任务编排、多 Agent 调度 |
+| 名称 | 能力 |
+|------|------|
+| 短剧策划助手 | 情绪价值、黄金三秒钩子、期待-压抑-爆发结构、商业卡点 |
+| 自动编排 / 自动编排助手 / 门房接待 | 任务编排、多 Agent 调度、接待引导 |
 
 ### ✍️ 创作类
 
-| Agent | 能力 |
-|-------|------|
-| `short_drama_creator` | 完整短剧剧本、场景与对白、设定约束与语气一致性 |
-| `episode_writer` / `episode_batch_creator` | 单集写作 / 多集批量创作 |
-| `video_prompt_writer` / `video_prompt_batch` | 视频提示词单集 / 批量生成 |
-| `document_generator` | TXT / Markdown / JSON 等文档导出 |
+| 名称 | 能力 |
+|------|------|
+| 短剧创作助手 | 完整短剧剧本、场景与对白、设定约束与语气一致性 |
+| 单集编剧 / 分集连载编排 | 单集写作 / 多集批量创作 |
+| 单集视频提示词 / 视频提示词批量编排 | 视频提示词单集 / 批量生成 |
+| 文档生成器 | TXT / Markdown / JSON 等文档导出 |
 
 ### ⭐ 评估类
 
-| Agent | 能力 |
-|-------|------|
-| `short_drama_evaluation` | 爽点、人设、桥段、市场竞争力、开发价值打分 |
-| `script_evaluation` | 结构问题定位与优化方案 |
-| `ip_evaluation` | IP 商业价值与竞品对比 |
-| `story_evaluation` / `story_outline_evaluation` | 故事与大纲质量评估 |
-| `novel_screening_evaluation` | 小说改编短剧可行性 |
-| `score_analyzer` / `result_analyzer_evaluation` | 评分统计与多结果洞察 |
-| `text_processor_evaluation` | 文本处理质量评估 |
+| 名称 | 能力 |
+|------|------|
+| 短剧评估助手 | 爽点、人设、桥段、市场竞争力、开发价值打分 |
+| 剧本评估专家 | 结构问题定位与优化方案 |
+| IP价值评估 | IP 商业价值与竞品对比 |
+| 故事质量评估 / 大纲评估 | 故事与大纲质量评估 |
+| 小说筛选评估 | 小说改编短剧可行性 |
+| 评分分析器 / 结果分析评估 | 评分统计与多结果洞察 |
+| 文本处理评估 | 文本处理质量评估 |
 
 ### 🔍 分析类
 
-| Agent | 能力 |
-|-------|------|
-| `story_five_elements` | 冲突、人物、结构、主题、情感基调 |
-| `drama_analysis` / `series_analysis` | 剧本深度分析 / 已播剧拆解 |
-| `plot_points_analyzer` / `major_plot_points` / `detailed_plot_points` | 情节点识别、展开与节奏评估 |
-| `story_type_analyzer` | 类型识别与创作规范 |
-| `logic_consistency` | 设定与剧情逻辑一致性校验 |
+| 名称 | 能力 |
+|------|------|
+| 故事五元素分析 | 冲突、人物、结构、主题、情感基调 |
+| 剧本深度分析 / 已播剧集分析 | 剧本深度分析 / 已播剧拆解 |
+| 情节点分析 / 大情节点分析 / 详细情节点 | 情节点识别、展开与节奏评估 |
+| 故事类型分析 | 类型识别与创作规范 |
+| 逻辑一致性校验 | 设定与剧情逻辑一致性校验 |
 
 ### 👤 人物类
 
-| Agent | 能力 |
-|-------|------|
-| `character_profile_generator` | 300–500 字人物小传与背景 |
-| `character_relationship_analyzer` | 9 种关系类型网络分析 |
+| 名称 | 能力 |
+|------|------|
+| 人物小传生成 | 300–500 字人物小传与背景 |
+| 人物关系分析 | 9 种关系类型网络分析 |
 
 ### 📖 故事与工作流
 
-| Agent | 能力 |
-|-------|------|
-| `story_summary_generator` / `mind_map` | 大纲精炼 / 思维导图 |
-| `plot_points_workflow` | 8 阶段流水线（验证→预处理→大纲→小传→大情节→细情节→导图→格式化） |
-| `drama_workflow` | 创意→大纲→剧本→质检 |
-| `result_integrator` / `output_formatter` | 多结果聚合与格式规范化 |
-| `meta_optimizer` / `memory_curator` | 元优化与记忆策展 |
+| 名称 | 能力 |
+|------|------|
+| 故事大纲生成 / 思维导图 | 大纲精炼 / 思维导图 |
+| 情节点工作流 | 8 阶段流水线（验证→预处理→大纲→小传→大情节→细情节→导图→格式化） |
+| 剧本创作工作流 | 创意→大纲→剧本→质检 |
+| 结果集成器 / 输出格式化 | 多结果聚合与格式规范化 |
+| 元优化器 / 记忆策展人 | 元优化与记忆策展 |
 
 ### 🛠️ 工具类
 
-| Agent | 能力 |
-|-------|------|
-| `websearch` / `knowledge` / `graph_rag_agent` | 联网搜索、知识库、图谱 RAG |
-| `file_reference` / `ocr_agent` | `@文件` 引用、OCR |
-| `series_info` / `series_name_extractor` | 剧集信息与剧名抽取 |
-| `text_splitter` / `text_truncator` | 智能切分与截断 |
+| 名称 | 能力 |
+|------|------|
+| 联网搜索 / 知识库 / 图谱检索 | 联网搜索、知识库、图谱 RAG |
+| 文件引用 / OCR | `@文件` 引用、OCR |
+| 剧集信息 / 剧名抽取 | 剧集信息与剧名抽取 |
+| 文本切分 / 文本截断 | 智能切分与截断 |
+
+---
+
+## 模型与搜索
+
+本项目**默认使用 DeepSeek**，同时支持智谱等备用提供商，并内置联网搜索能力。
+
+### 大模型
+
+| 提供商 | 说明 | 常用模型 |
+|--------|------|----------|
+| **DeepSeek（默认）** | 主力文本与推理 | `deepseek-flash`、`deepseek-v4-pro`、`deepseek-chat` |
+| **智谱 AI（备用）** | 免费 / 低成本备选 | `glm-4.7-flash` 等 Flash 系列 |
+| OpenAI / OpenRouter（可选） | 兼容 OpenAI 协议的第三方 | 按需配置 |
+
+在设置页或 `.env` 中配置 `DEEPSEEK_API_KEY`（推荐）或 `ZHIPU_API_KEY` 即可；默认提供商由 `DEFAULT_MODEL_PROVIDER=deepseek` 控制。
+
+### 联网搜索
+
+| 搜索提供商 | 说明 |
+|------------|------|
+| **DeepSeek 搜索（默认）** | `WEB_SEARCH_PROVIDER=deepseek`，与 DeepSeek 账号体系打通 |
+| **百度搜索** | 可切换为百度网页 / 百科等综合检索 |
+
+Agents（如联网搜索）可按意图自动触发搜索，结果带来源标注，便于策划调研与竞品分析。
 
 ---
 
@@ -214,31 +246,31 @@
 
 ### 1. 创作与剧集工场
 
-- **Studio / Drama Workspace**：围绕一部戏组织大纲、分集、人设、评估与导出  
+- **创作工作台 / 剧集工作区**：围绕一部戏组织大纲、分集、人设、评估与导出  
 - **分集编辑器**：单集精写、批量分集、卡点与节奏控制  
-- **视频提示词链路**：从剧本到可投喂视频模型的分镜/提示词  
-- **Artifacts 面板**：Agent 产物集中浏览、对比、归档  
+- **视频提示词链路**：从剧本到可投喂视频模型的分镜 / 提示词  
+- **产物面板**：Agent 产物集中浏览、对比、归档  
 
 ### 2. 记忆与上下文
 
 - **短期记忆**：最近对话消息（Redis），保证会话连贯  
 - **中期记忆**：任务级总结，跨会话复用  
-- **ConversationContext**：用户消息、Orchestrator 调用、Notes、共享内存  
-- **Checkpoint**：长任务可恢复，降低中断成本  
+- **对话上下文**：用户消息、编排调用、笔记、共享内存  
+- **检查点**：长任务可恢复，降低中断成本  
 
-### 3. Notes 与项目
+### 3. 笔记与项目
 
-- Agent 输出自动落为 Note（标题、类型、评论、选择态）  
+- Agent 输出自动落为笔记（标题、类型、评论、选择态）  
 - 支持 TXT / Markdown / JSON 导出  
-- 项目 CRUD、标签、模板、复制、软删除  
+- 项目增删改查、标签、模板、复制、软删除  
 - 按类型归档：策划、人设、剧本、情节点、评估、参考资料  
 
 ### 4. 知识与图谱
 
-- **LLM Wiki**：可演进的创作知识页（钩子、节奏、人设声线、反派阶梯等）  
+- **知识页**：可演进的创作知识（钩子、节奏、人设声线、反派阶梯等）  
 - **Milvus**：向量检索专业知识与优秀片段  
-- **Neo4j**：人物/事件/设定关系图谱可视化与审核中心  
-- **Skills**：可同步的影视创作技能包  
+- **Neo4j**：人物 / 事件 / 设定关系图谱可视化与审核中心  
+- **技能包**：可同步的影视创作技能  
 
 ### 5. 质量与一致性
 
@@ -249,16 +281,16 @@
 
 ### 6. 前端体验
 
-- 黑白简明高对比 UI  
-- SSE 流式：`MESSAGE` / `LLM_CHUNK` / `THOUGHT` / `TOOL_CALL` / `PROGRESS` / `DONE`…  
-- Markdown、代码高亮、思维导图（markmap）、流程图（xyflow）、力导向图谱  
+- 高对比简洁界面；右上角一键切换中英文  
+- SSE 流式：消息 / 内容片段 / 思考 / 工具调用 / 进度 / 完成…  
+- Markdown、代码高亮、思维导图、流程图、力导向图谱  
 - 虚拟滚动、分屏、工作流监控、Token 用量、统计看板  
 
 ### 7. 平台与运维能力
 
-- JWT 鉴权、RBAC、限流  
+- JWT 鉴权、角色权限、限流  
 - 幂等键、缓存（内存 → Redis → PostgreSQL 多层）  
-- 飞书集成、百度搜索、反馈闭环、发布管理  
+- 飞书集成、DeepSeek / 百度搜索、反馈闭环、发布管理  
 - Docker Compose：Neo4j；可选 Milvus  
 
 ---
@@ -266,18 +298,18 @@
 ## 技术架构
 
 ```
-Browser (React + TS + Vite)
+浏览器（React + TypeScript + Vite）
         │  HTTPS / SSE
         ▼
-FastAPI Gateway (apis/* · middleware · auth)
+FastAPI 网关（apis/* · 中间件 · 鉴权）
         │
-        ├─► Orchestrator / Conductor / Concierge
+        ├─► 编排器 / 指挥 / 门房
         │         │
         │         ▼
-        │   Specialized Agents (agents/*)
+        │   专业 Agents（agents/*）
         │         │
         │         ▼
-        │   Tools · Skills · Prompt Layer
+        │   工具 · 技能包 · 提示词层
         │
         ├─► PostgreSQL   （业务 / 持久化）
         ├─► Redis        （会话 / 缓存 / 记忆）
@@ -294,9 +326,10 @@ FastAPI Gateway (apis/* · middleware · auth)
 | 后端 | Python 3.10–3.12、FastAPI、Uvicorn、Pydantic v2 |
 | 前端 | React 18、TypeScript、Vite、Zustand、xyflow、markmap、Mermaid |
 | LLM | DeepSeek（默认）、智谱 AI、OpenAI / OpenRouter（可选） |
+| 搜索 | DeepSeek 搜索（默认）、百度搜索（可选） |
 | 数据 | PostgreSQL、Redis、Milvus、Neo4j |
 | 观测 | structlog、Prometheus、LangSmith（可选） |
-| 集成 | 飞书 lark-oapi、百度搜索、OCR / ASR（可选） |
+| 集成 | 飞书 lark-oapi、OCR / ASR（可选） |
 
 ---
 
@@ -306,24 +339,25 @@ FastAPI Gateway (apis/* · middleware · auth)
 juben/
 ├── main.py                 # FastAPI 入口
 ├── agents/                 # 40+ Agents
-├── apis/                   # 按域拆分的路由（chat / dramas / graph / memory …）
+├── apis/                   # 按域拆分的路由（对话 / 剧集 / 图谱 / 记忆 …）
 ├── prompts/                # Agent 系统提示词
-├── utils/                  # 流式、记忆、Wiki、缓存、质量等基础设施
+├── utils/                  # 流式、记忆、知识页、缓存、质量等基础设施
 ├── middleware/             # 鉴权、限流、缓存控制
 ├── config/                 # 配置与 pytest
 ├── frontend/               # React 前端
-├── skills/                 # 本地 Skills
-├── data/knowledge/         # Wiki / 图谱种子知识（可提交）
+├── skills/                 # 本地技能包
+├── data/knowledge/         # 知识页 / 图谱种子知识（可提交）
 ├── scripts/start_dev.sh    # 一键本地启动
 ├── docker-compose.yml      # Neo4j
 ├── docker-compose.milvus.yml
-├── pictures/               # 联系方式二维码 + 截图目录
-│   ├── screenshots/        # ← 项目截图放这里
+├── pictures/               # README 截图与联系方式二维码
+│   ├── 01-studio.png …     # 中文界面截图
+│   ├── en-*.png            # 英文界面截图
 │   ├── 微信好友.JPG
 │   ├── 公众号.jpg
 │   ├── 微信收款.jpg
 │   └── 支付宝收款.jpg
-├── tests/                  # 单元 / 集成测试源码
+├── tests/                  # 单元 / 集成测试
 └── requirements.txt
 ```
 
@@ -339,7 +373,7 @@ juben/
 - Node.js **18+** + **pnpm**
 - PostgreSQL、Redis（可用 Homebrew）
 - Docker（用于 Neo4j / 可选 Milvus）
-- DeepSeek 或智谱等 LLM API Key
+- **DeepSeek** 或智谱等 LLM API Key（推荐 DeepSeek）
 
 ### 1. 克隆与依赖
 
@@ -358,7 +392,8 @@ cd frontend && pnpm install && cd ..
 
 ```bash
 cp .env.example .env
-# 编辑 .env：至少配置 DEEPSEEK_API_KEY（或 ZHIPU_API_KEY）与数据库密码
+# 编辑 .env：至少配置 DEEPSEEK_API_KEY（推荐）或 ZHIPU_API_KEY，以及数据库密码
+# 可选：WEB_SEARCH_PROVIDER=deepseek 或 baidu
 ```
 
 ### 3. 一键启动（推荐）
@@ -375,6 +410,8 @@ bash scripts/start_dev.sh
 4. 前端 → [http://localhost:5173](http://localhost:5173)  
 
 日志：`/tmp/juben-backend.log`、`/tmp/juben-frontend.log`
+
+打开前端后，可在**右上角**切换中英文界面。
 
 ### 4. 手动启动（可选）
 
@@ -401,8 +438,11 @@ cd frontend && pnpm dev
 
 | 变量 | 说明 |
 |------|------|
-| `DEEPSEEK_API_KEY` | 默认模型提供商 Key |
-| `ZHIPU_API_KEY` | 智谱备用 |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key（**推荐，默认提供商**） |
+| `DEEPSEEK_MODEL` | 默认模型，如 `deepseek-flash` |
+| `DEFAULT_MODEL_PROVIDER` | 默认提供商，通常为 `deepseek` |
+| `WEB_SEARCH_PROVIDER` | 搜索提供商：`deepseek`（默认）或 `baidu` |
+| `ZHIPU_API_KEY` | 智谱备用 Key |
 | `POSTGRES_*` | PostgreSQL 连接 |
 | `REDIS_*` / 缓存相关 | 会话与多层缓存 |
 | `JWT_SECRET_KEY` | 鉴权密钥（生产必须更换） |
@@ -424,11 +464,11 @@ cd frontend && pnpm dev
 | GET | `/juben/health` | 健康检查 |
 | GET | `/juben/agents` | Agent 列表 |
 | GET | `/juben/agents/categories` | Agent 分类 |
-| CRUD | `/juben/notes` | Notes |
+| CRUD | `/juben/notes` | 笔记 |
 | CRUD | `/juben/projects` | 项目管理 |
-| — | dramas / graph / memory / knowledge / pipelines … | 见 `apis/` |
+| — | 剧集 / 图谱 / 记忆 / 知识库 / 流水线 … | 见 `apis/` |
 
-**SSE 事件类型：** `MESSAGE` · `LLM_CHUNK` · `THOUGHT` · `TOOL_CALL` · `TOOL_RETURN` · `PROGRESS` · `ERROR` · `DONE` · `SYSTEM`
+**SSE 事件类型：** 消息 · 内容片段 · 思考 · 工具调用 · 工具返回 · 进度 · 错误 · 完成 · 系统
 
 ---
 
@@ -450,7 +490,7 @@ pnpm build
 
 1. 在 `agents/` 继承 `BaseJubenAgent`  
 2. 在 `prompts/` 增加系统提示  
-3. 在路由 / Orchestrator 中注册  
+3. 在路由 / 编排器中注册  
 4. 补充单元测试  
 
 更多细节见 [`DEVELOPMENT_SETUP.md`](./DEVELOPMENT_SETUP.md)。
@@ -459,11 +499,11 @@ pnpm build
 
 ## 路线图
 
-- [ ] 更丰富的分集协作与版本对比 UI  
+- [ ] 更丰富的分集协作与版本对比界面  
 - [ ] 更多视频模型提示词模板与导出格式  
 - [ ] 评测集与回归看板产品化  
 - [ ] 多租户与企业部署文档  
-- [ ] 插件化 Skills 市场  
+- [ ] 插件化技能包市场  
 
 欢迎在 Issues 投票你最想要的能力。
 
@@ -482,12 +522,17 @@ Star 🌟 是对我们最大的鼓励；Issue / PR 同样欢迎。
 
 # 🇬🇧 English Documentation
 
+> 💡 **Language switch**  
+> - **In the app:** use the **中 / EN** control in the **top-right** corner.  
+> - **In this README:** jump via [中文](#-中文文档) / [English](#-english-documentation). Screenshots below are from the **English UI**.
+
 ## Table of Contents
 
 - [Why this project](#why-this-project)
 - [Screenshots](#screenshots)
 - [Feature overview](#feature-overview)
 - [40+ Agents at a glance](#40-agents-at-a-glance-1)
+- [Models & search](#models--search)
 - [Capabilities in depth](#capabilities-in-depth)
 - [Architecture](#architecture)
 - [Tech stack](#tech-stack-1)
@@ -505,7 +550,7 @@ Star 🌟 是对我们最大的鼓励；Issue / PR 同样欢迎。
 
 ## Why this project
 
-Short-drama production is booming, yet the creative stack is still fragmented: ChatGPT for outlines, spreadsheets for characters, gut feeling for “market value.” **Context breaks. Quality doesn’t reproduce.**
+Short-drama production is booming, yet the creative stack is still fragmented: LLMs for outlines, spreadsheets for characters, gut feeling for “market value.” **Context breaks. Quality doesn’t reproduce.**
 
 **Script Creation Agent Platform** turns **Plan → Write → Evaluate → Deliver** into an orchestrated, memory-aware, auditable multi-agent pipeline:
 
@@ -525,23 +570,15 @@ If this helps you — please **⭐ Star** and **Fork**.
 
 ## Screenshots
 
-> 📸 **Placeholders** — drop images into [`pictures/screenshots/`](./pictures/screenshots/) using the filenames below.
+English UI screenshots (`pictures/en-*.png`). For Chinese UI shots, see [项目截图](#项目截图).
 
-| Studio | Drama workspace |
+| Studio | Agents conversation |
 |:---:|:---:|
-| ![Studio](./pictures/screenshots/01-studio.svg) | ![Drama Workspace](./pictures/screenshots/02-drama-workspace.svg) |
+| ![Studio](./pictures/en-studio.png) | ![Agents talk](./pictures/en-agents-talk.png) |
 
-| Agents hub | Knowledge graph |
+| Memory center | Settings |
 |:---:|:---:|
-| ![Agents Hub](./pictures/screenshots/03-agents-hub.svg) | ![Knowledge Graph](./pictures/screenshots/04-knowledge-graph.svg) |
-
-| Evaluation | Pipelines |
-|:---:|:---:|
-| ![Evaluation](./pictures/screenshots/05-evaluation.svg) | ![Pipeline](./pictures/screenshots/06-pipeline.svg) |
-
-| Memory center | Mobile (optional) |
-|:---:|:---:|
-| ![Memory](./pictures/screenshots/07-memory-center.svg) | ![Mobile](./pictures/screenshots/08-mobile-responsive.svg) |
+| ![Memory](./pictures/en-memory.png) | ![Settings](./pictures/en-setting.png) |
 
 ---
 
@@ -553,6 +590,7 @@ If this helps you — please **⭐ Star** and **Fork**.
 - **Drama workspace** for outlines, episodes, profiles, and artifacts  
 - **Knowledge stack**: Skills, LLM Wiki, Milvus, Neo4j graph  
 - **Batch production**: multi-episode writing & video-prompt batches  
+- **Models & search**: DeepSeek (default) + Zhipu fallback; DeepSeek / Baidu web search  
 - **Production substrate**: auth, rate limits, idempotency, checkpoints  
 - **One-command local boot**: `scripts/start_dev.sh`  
 
@@ -560,19 +598,44 @@ If this helps you — please **⭐ Star** and **Fork**.
 
 ## 40+ Agents at a glance
 
-**Planning** — `short_drama_planner`, concierge / conductor / orchestrator  
+**Planning** — Short Drama Planner; Auto Orchestration / Conductor / Concierge  
 
-**Writing** — `short_drama_creator`, `episode_writer`, `episode_batch_creator`, `video_prompt_*`, `document_generator`  
+**Writing** — Short Drama Creator; Episode Writer; Episode Batch Creator; Video Prompt (single / batch); Document Generator  
 
-**Evaluation** — short-drama / script / IP / story / outline / novel-screening scorers + analyzers  
+**Evaluation** — Short-drama / Script / IP / Story / Outline / Novel-screening scorers + analyzers  
 
-**Analysis** — five elements, drama/series analysis, plot-point suite, genre typing, logic consistency  
+**Analysis** — Story Five Elements; Drama / Series analysis; Plot-point suite; Genre typing; Logic consistency  
 
-**Characters** — profile generator, 9-type relationship analyzer  
+**Characters** — Character Profile Generator; 9-type Relationship Analyzer  
 
-**Story & workflows** — outline, mind map, 8-stage plot workflow, drama workflow, result integrator, meta optimizer, memory curator  
+**Story & workflows** — Story Outline; Mind Map; 8-stage Plot Workflow; Drama Workflow; Result Integrator; Meta Optimizer; Memory Curator  
 
-**Tools** — web search, knowledge, graph RAG, file references, OCR, series extractors, text split/truncate  
+**Tools** — Web Search; Knowledge; Graph RAG; File references; OCR; Series extractors; Text split / truncate  
+
+---
+
+## Models & search
+
+DeepSeek is the **default** provider. Zhipu and OpenAI-compatible endpoints are optional. Web search is built in.
+
+### LLMs
+
+| Provider | Role | Common models |
+|----------|------|----------------|
+| **DeepSeek (default)** | Primary text & reasoning | `deepseek-flash`, `deepseek-v4-pro`, `deepseek-chat` |
+| **Zhipu AI (fallback)** | Low-cost / free options | `glm-4.7-flash` and other Flash models |
+| OpenAI / OpenRouter (optional) | OpenAI-compatible APIs | Configure as needed |
+
+Set `DEEPSEEK_API_KEY` (recommended) or `ZHIPU_API_KEY` in `.env`. Default provider: `DEFAULT_MODEL_PROVIDER=deepseek`.
+
+### Web search
+
+| Provider | Notes |
+|----------|--------|
+| **DeepSeek search (default)** | `WEB_SEARCH_PROVIDER=deepseek` |
+| **Baidu search** | Switch for Baidu web / Baike-style retrieval |
+
+Search-capable agents can trigger lookups automatically and cite sources for research and competitive analysis.
 
 ---
 
@@ -583,8 +646,8 @@ If this helps you — please **⭐ Star** and **Fork**.
 3. **Notes & projects** — auto-saved agent notes, export, templates, tagging, soft delete  
 4. **Knowledge & graph** — evolvable wiki, vector retrieval, Neo4j visualization & review center, syncable Skills  
 5. **Quality** — multi-axis scoring, consistency agent, eval scaffolding  
-6. **Frontend** — high-contrast UI, markdown/code highlight, markmap, xyflow, force-graph, virtual scroll, stats & token usage  
-7. **Platform** — JWT/RBAC, multi-level cache, Feishu integration, Dockerized Neo4j (+ optional Milvus)  
+6. **Frontend** — high-contrast UI, top-right **中 / EN** switch, markdown/code highlight, markmap, xyflow, force-graph, virtual scroll, stats & token usage  
+7. **Platform** — JWT/RBAC, multi-level cache, Feishu integration, DeepSeek / Baidu search, Dockerized Neo4j (+ optional Milvus)  
 
 ---
 
@@ -607,7 +670,15 @@ FastAPI Gateway
 
 ## Tech stack
 
-Python 3.10–3.12 · FastAPI · React 18 · TypeScript · Vite · Zustand · DeepSeek / Zhipu / OpenAI · PostgreSQL · Redis · Milvus · Neo4j · structlog · Prometheus · optional LangSmith / Feishu / OCR / ASR  
+| Layer | Stack |
+|-------|--------|
+| Backend | Python 3.10–3.12, FastAPI, Uvicorn, Pydantic v2 |
+| Frontend | React 18, TypeScript, Vite, Zustand, xyflow, markmap, Mermaid |
+| LLM | DeepSeek (default), Zhipu AI, OpenAI / OpenRouter (optional) |
+| Search | DeepSeek search (default), Baidu (optional) |
+| Data | PostgreSQL, Redis, Milvus, Neo4j |
+| Observability | structlog, Prometheus, LangSmith (optional) |
+| Integrations | Feishu lark-oapi, OCR / ASR (optional) |
 
 ---
 
@@ -615,13 +686,13 @@ Python 3.10–3.12 · FastAPI · React 18 · TypeScript · Vite · Zustand · De
 
 See the Chinese [项目结构](#项目结构) section — same tree. Runtime folders (`projects/`, `logs/`, `juben_outputs/`, `volumes/`, …) are gitignored.
 
-Screenshots & contact QR codes live under [`pictures/`](./pictures/).
+Screenshots & contact QR codes live under [`pictures/`](./pictures/): Chinese UI images use numeric / Chinese filenames; English UI images use the `en-` prefix.
 
 ---
 
 ## Quick start
 
-**Requirements:** Python 3.10+, Node 18+ / pnpm, PostgreSQL, Redis, Docker (Neo4j / optional Milvus), an LLM API key.
+**Requirements:** Python 3.10+, Node 18+ / pnpm, PostgreSQL, Redis, Docker (Neo4j / optional Milvus), a **DeepSeek** (recommended) or Zhipu LLM API key.
 
 ```bash
 git clone https://github.com/GongLingRui/juben.git
@@ -631,11 +702,15 @@ python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 cd frontend && pnpm install && cd ..
 
-cp .env.example .env   # set DEEPSEEK_API_KEY (or ZHIPU_API_KEY) and DB secrets
+cp .env.example .env
+# set DEEPSEEK_API_KEY (recommended) or ZHIPU_API_KEY, plus DB secrets
+# optional: WEB_SEARCH_PROVIDER=deepseek|baidu
 
 bash scripts/start_dev.sh
 # Backend http://localhost:8000  ·  Frontend http://localhost:5173
 ```
+
+After the UI loads, switch language with **中 / EN** in the top-right corner.
 
 Manual alternative: start Postgres/Redis/Neo4j/Milvus yourself, then `python main.py` and `pnpm dev` in `frontend/`.
 
@@ -645,7 +720,18 @@ Manual alternative: start Postgres/Redis/Neo4j/Milvus yourself, then `python mai
 
 See [`.env.example`](./.env.example). Never commit `.env`.
 
-Critical: `DEEPSEEK_API_KEY` or `ZHIPU_API_KEY`, `POSTGRES_*`, JWT secret, Redis/cache, Neo4j/Milvus as needed.
+| Variable | Purpose |
+|----------|---------|
+| `DEEPSEEK_API_KEY` | DeepSeek API key (**recommended default**) |
+| `DEEPSEEK_MODEL` | e.g. `deepseek-flash` |
+| `DEFAULT_MODEL_PROVIDER` | Usually `deepseek` |
+| `WEB_SEARCH_PROVIDER` | `deepseek` (default) or `baidu` |
+| `ZHIPU_API_KEY` | Zhipu fallback |
+| `POSTGRES_*` | PostgreSQL |
+| `REDIS_*` / cache | Session & multi-layer cache |
+| `JWT_SECRET_KEY` | Auth secret (change in production) |
+| `AUTH_ENABLED` | Toggle auth |
+| `NEO4J_*` / `MILVUS_*` | Graph & vector stores |
 
 ---
 
@@ -699,7 +785,7 @@ Stars 🌟 and PRs are deeply appreciated.
 
 **作者 / Author：** 宫灵瑞（Gong Lingrui）
 
-| 渠道 | 链接 / 内容 |
+| 渠道 / Channel | 链接 / Link |
 |------|-------------|
 | GitHub | [github.com/GongLingRui/juben](https://github.com/GongLingRui/juben) |
 | Issues | [提交问题 / Bug reports](https://github.com/GongLingRui/juben/issues) |
