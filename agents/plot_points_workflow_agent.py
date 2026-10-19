@@ -44,7 +44,7 @@ class PlotPointsWorkflowAgent(BaseJubenAgent):
     输入处理 → 文本分析 → 并行智能体调用 → 结果整合 → 输出
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化情节点工作流智能体"""
         super().__init__("plot_points_workflow", model_provider)
         

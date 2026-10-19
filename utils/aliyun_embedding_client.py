@@ -20,14 +20,34 @@ class AliyunEmbeddingClient:
         Args:
             api_key: 阿里云API密钥
         """
-        self.api_key = api_key or os.getenv("ALIYUN_API_KEY", "your-aliyun-api-key-here")
+        self.api_key = api_key or os.getenv("ALIYUN_API_KEY", "")
         self.base_url = "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
         self.model = "text-embedding-v1"
         self.dimension = 1536
-        
+
         self.logger = logging.getLogger(__name__)
-        self.logger.info("阿里云Embedding客户端初始化完成")
-    
+        # 未配置有效 key 时降级为本地哈希向量，避免向空 API 反复请求产生 401 洪泛
+        self.available = bool(self.api_key) and "your-" not in self.api_key and "here" not in self.api_key
+        if self.available:
+            self.logger.info("阿里云Embedding客户端初始化完成")
+        else:
+            self.logger.warning("阿里云 Embedding API Key 未配置，改用本地哈希向量（语义检索精度降低）")
+
+    def _local_embed(self, text: str) -> List[float]:
+        """本地哈希向量兜底（维度对齐 1536），避免依赖外部 API"""
+        import hashlib
+        vec = [0.0] * self.dimension
+        if not text:
+            return vec
+        s = str(text).lower()
+        for i, ch in enumerate(s):
+            h = int(hashlib.md5(f"{i}:{ch}".encode()).hexdigest(), 16)
+            vec[h % self.dimension] += 1.0
+        norm = sum(v * v for v in vec) ** 0.5
+        if norm > 0:
+            vec = [v / norm for v in vec]
+        return vec
+
     def embed_text(self, text: str) -> List[float]:
         """
         将文本转换为向量
@@ -38,6 +58,8 @@ class AliyunEmbeddingClient:
         Returns:
             List[float]: 向量表示
         """
+        if not self.available:
+            return self._local_embed(text)
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
@@ -85,6 +107,8 @@ class AliyunEmbeddingClient:
         Returns:
             List[List[float]]: 向量列表
         """
+        if not self.available:
+            return [self._local_embed(t) for t in texts]
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",

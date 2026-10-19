@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Upload, Download, Copy, Check, X, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useI18n } from '@/i18n';
 import { API_BASE_URL, getAuthHeaderValue } from '@/services/api';
 import { getProjects } from '@/services/projectService';
 import type { Project } from '@/types';
@@ -18,7 +19,7 @@ interface OCRUploaderProps {
   className?: string;
 }
 
-interface OCRResult {
+export interface OCRResult {
   text: string;
   metadata: {
     processing_time: number;
@@ -29,7 +30,7 @@ interface OCRResult {
   saved_paths?: Record<string, string>;
 }
 
-type OutputFormat = 'text' | 'markdown' | 'json' | 'structured';
+export type OutputFormat = 'text' | 'markdown' | 'json' | 'structured';
 
 export const OCRUploader: React.FC<OCRUploaderProps> = ({
   onUploadStart,
@@ -56,6 +57,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const { t } = useI18n();
 
   useEffect(() => {
     const loadProjectOptions = async () => {
@@ -78,13 +80,13 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
     // 验证文件类型
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/tiff', 'application/pdf'];
     if (!validTypes.includes(selectedFile.type) && !selectedFile.name.match(/\.(jpg|jpeg|png|bmp|tiff|pdf)$/i)) {
-      onError?.('不支持的文件格式。请上传图片或 PDF 文件。');
+      onError?.(t('dataViews.ocr.unsupportedFormat'));
       return;
     }
 
     // 验证文件大小（限制 20MB）
     if (selectedFile.size > 20 * 1024 * 1024) {
-      onError?.('文件大小超过限制（最大 20MB）');
+      onError?.(t('dataViews.ocr.fileTooLarge'));
       return;
     }
 
@@ -102,7 +104,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
     } else {
       setPreview('');
     }
-  }, [onError]);
+  }, [onError, t]);
 
   // 处理拖放
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -131,7 +133,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
 
     setIsUploading(true);
     setIsProcessing(true);
-    setEvents(['正在上传文件...']);
+    setEvents([t('dataViews.ocr.uploading')]);
     onUploadStart?.();
 
     abortControllerRef.current = new AbortController();
@@ -143,7 +145,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
       formData.append('use_structure', useStructure.toString());
       formData.append('save_result', 'true');
 
-      setEvents(prev => [...prev, '正在进行 OCR 识别...']);
+      setEvents(prev => [...prev, t('dataViews.ocr.recognizing')]);
 
       const response = await fetch(`${API_BASE_URL}/juben/ocr/upload`, {
         method: 'POST',
@@ -155,7 +157,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error(`上传失败: ${response.statusText}`);
+        throw new Error(`${t('dataViews.ocr.uploadFailed')}: ${response.statusText}`);
       }
 
       // 处理 SSE 响应
@@ -163,7 +165,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
       const decoder = new TextDecoder();
 
       if (!reader) {
-        throw new Error('无法读取响应流');
+        throw new Error(t('dataViews.ocr.noStream'));
       }
 
       let currentText = '';
@@ -194,7 +196,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                 } else if (eventType === 'complete') {
                   setIsProcessing(false);
                 } else if (eventType === 'error') {
-                  onError?.(eventData.error || eventData.content || '未知错误');
+                  onError?.(eventData.error || eventData.content || t('dataViews.ocr.unknownError'));
                   setIsProcessing(false);
                 }
                 return newEvents;
@@ -231,19 +233,19 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
 
       setIsProcessing(false);
       setIsUploading(false);
-      setEvents(prev => [...prev, '✅ 处理完成！']);
+      setEvents(prev => [...prev, `✅ ${t('dataViews.ocr.done')}`]);
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        setEvents(prev => [...prev, '❌ 已取消']);
+        setEvents(prev => [...prev, `❌ ${t('dataViews.ocr.canceled')}`]);
       } else {
-        onError?.(error instanceof Error ? error.message : '上传失败');
-        setEvents(prev => [...prev, `❌ 错误: ${error}`]);
+        onError?.(error instanceof Error ? error.message : t('dataViews.ocr.uploadFailed'));
+        setEvents(prev => [...prev, `❌ ${t('dataViews.ocr.error')}: ${error}`]);
       }
       setIsProcessing(false);
       setIsUploading(false);
     }
-  }, [file, outputFormat, useStructure, onUploadStart, onUploadProgress, onUploadComplete, onError]);
+  }, [file, outputFormat, useStructure, onUploadStart, onUploadProgress, onUploadComplete, onError, t]);
 
   // 取消上传
   const handleCancel = useCallback(() => {
@@ -311,9 +313,9 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
           session_id: sessionId,
           action: 'ocr',
           name: `ocr_${Date.now()}`,
-          title: file?.name || 'OCR 识别结果',
+          title: file?.name || t('dataViews.ocr.resultTitle'),
           context: result.text,
-          cover_title: 'OCR 结果',
+          cover_title: t('dataViews.ocr.coverTitle'),
           metadata: {
             output_format: outputFormat,
             use_structure: useStructure,
@@ -323,15 +325,15 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
         }),
       });
       if (!response.ok) {
-        throw new Error('保存失败');
+        throw new Error(t('dataViews.ocr.saveFailed'));
       }
-      setSaveNoteMessage('已保存到 Notes');
+      setSaveNoteMessage(t('dataViews.ocr.savedToNotes'));
     } catch (error) {
-      setSaveNoteMessage('保存 Notes 失败');
+      setSaveNoteMessage(t('dataViews.ocr.saveNotesFailed'));
     } finally {
       setSavingNote(false);
     }
-  }, [result, outputFormat, useStructure, file]);
+  }, [result, outputFormat, useStructure, file, t]);
 
   const handleSaveToFiles = useCallback(async () => {
     if (!result?.text) return;
@@ -359,7 +361,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
           user_id: userId,
           session_id: sessionId,
           project_id: projectId,
-          description: 'OCR 识别结果',
+          description: t('dataViews.ocr.resultTitle'),
           tags: ['ocr', outputFormat, useStructure ? 'structured' : 'plain'],
           metadata: {
             output_format: outputFormat,
@@ -370,18 +372,18 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
         }),
       });
       if (!response.ok) {
-        throw new Error('保存失败');
+        throw new Error(t('dataViews.ocr.saveFailed'));
       }
       if (selectedProjectId) {
         localStorage.setItem('projectId', selectedProjectId);
       }
-      setSaveFileMessage('已保存到文件系统');
+      setSaveFileMessage(t('dataViews.ocr.savedToFiles'));
     } catch (error) {
-      setSaveFileMessage('保存文件系统失败');
+      setSaveFileMessage(t('dataViews.ocr.saveFilesFailed'));
     } finally {
       setSavingFile(false);
     }
-  }, [result, selectedProjectId, outputFormat, useStructure, file]);
+  }, [result, selectedProjectId, outputFormat, useStructure, file, t]);
 
   return (
     <div className={clsx('bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden', className)}>
@@ -420,10 +422,10 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                   </div>
                   <div>
                     <p className="text-lg font-medium text-gray-900 dark:text-white">
-                      点击或拖拽上传文件
+                      {t('dataViews.ocr.dragTitle')}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      支持 JPG、PNG、BMP、TIFF、PDF 格式（最大 20MB）
+                      {t('dataViews.ocr.dragHint')}
                     </p>
                   </div>
                 </>
@@ -437,7 +439,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
               {/* 输出格式选择 */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  输出格式
+                  {t('dataViews.ocr.outputFormat')}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(['text', 'markdown', 'json', 'structured'] as OutputFormat[]).map((format) => (
@@ -466,7 +468,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                   className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">
-                  启用结构化识别（表格、公式、版面分析）
+                  {t('dataViews.ocr.useStructure')}
                 </span>
               </label>
 
@@ -485,12 +487,12 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                   {isProcessing ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      处理中...
+                      {t('dataViews.ocr.processing')}
                     </>
                   ) : (
                     <>
                       <Upload className="w-5 h-5" />
-                      开始识别
+                      {t('dataViews.ocr.start')}
                     </>
                   )}
                 </button>
@@ -499,7 +501,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                     onClick={handleCancel}
                     className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
                   >
-                    取消
+                    {t('common.cancel')}
                   </button>
                 )}
               </div>
@@ -511,7 +513,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
             <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  处理日志
+                  {t('dataViews.ocr.log')}
                 </span>
               </div>
               <div className="space-y-1">
@@ -530,13 +532,13 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
           {/* 结果头部 */}
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              识别结果
+              {t('dataViews.ocr.result')}
             </h3>
             <div className="flex gap-2">
               <button
                 onClick={handleCopy}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="复制"
+                title={t('dataViews.ocr.copy')}
               >
                 {copied ? (
                   <Check className="w-5 h-5 text-green-500" />
@@ -547,14 +549,14 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
               <button
                 onClick={handleDownload}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="下载"
+                title={t('dataViews.ocr.download')}
               >
                 <Download className="w-5 h-5 text-gray-500" />
               </button>
               <button
                 onClick={handleReset}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                title="重新上传"
+                title={t('dataViews.ocr.reupload')}
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
@@ -574,7 +576,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                     : 'bg-black text-white hover:bg-gray-800'
                 )}
               >
-                {savingNote ? '保存中...' : '保存到 Notes'}
+                {savingNote ? t('dataViews.ocr.saving') : t('dataViews.ocr.saveToNotes')}
               </button>
 
               <div className="flex items-center gap-2">
@@ -583,7 +585,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                   onChange={(e) => setSelectedProjectId(e.target.value)}
                   className="px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm"
                 >
-                  <option value="">选择项目（保存到文件）</option>
+                  <option value="">{t('dataViews.ocr.selectProject')}</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
                       {project.name}
@@ -600,7 +602,7 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                       : 'bg-blue-600 text-white hover:bg-blue-700'
                   )}
                 >
-                  {savingFile ? '保存中...' : '保存到文件系统'}
+                  {savingFile ? t('dataViews.ocr.saving') : t('dataViews.ocr.saveToFiles')}
                 </button>
               </div>
             </div>
@@ -619,25 +621,25 @@ export const OCRUploader: React.FC<OCRUploaderProps> = ({
                 <div className="text-2xl font-bold text-blue-600">
                   {result.metadata.processing_time?.toFixed(2) || '0'}s
                 </div>
-                <div className="text-xs text-gray-500">处理时间</div>
+                <div className="text-xs text-gray-500">{t('dataViews.ocr.processingTime')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
                   {result.metadata.text_box_count || 0}
                 </div>
-                <div className="text-xs text-gray-500">文本框</div>
+                <div className="text-xs text-gray-500">{t('dataViews.ocr.textBoxes')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">
                   {result.metadata.table_count || 0}
                 </div>
-                <div className="text-xs text-gray-500">表格</div>
+                <div className="text-xs text-gray-500">{t('dataViews.ocr.tables')}</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
                   {result.metadata.formula_count || 0}
                 </div>
-                <div className="text-xs text-gray-500">公式</div>
+                <div className="text-xs text-gray-500">{t('dataViews.ocr.formulas')}</div>
               </div>
             </div>
           )}

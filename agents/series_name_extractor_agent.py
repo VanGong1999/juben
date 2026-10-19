@@ -11,7 +11,7 @@ from .base_juben_agent import BaseJubenAgent
 class SeriesNameExtractorAgent(BaseJubenAgent):
     """剧集名称提取智能体"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("series_name_extractor", model_provider)
         self._load_series_name_extractor_prompt()
     

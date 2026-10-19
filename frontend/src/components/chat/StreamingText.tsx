@@ -1,248 +1,116 @@
 /**
- * 流式文本组件 - 优化版
- * 参考: https://codedeepai.com/blog/streaming-vs-non-streaming-ai-responses-building-lightning-fast-chat-interfaces-that-users-love
- *
- * 特性:
- * - 智能缓冲处理，避免渲染不完整的 Markdown
- * - 代码块检测和优化
- * - 平滑的打字机效果
+ * 流式文本 — 直接渲染，避免过度缓冲导致「只显示一个字符」
+ * 流式中用不完整 Markdown 友好策略；结束后完整 GFM 渲染
+ * 进度短句（开始…/正在…）竖排展示，前缀「、」
  */
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import 'highlight.js/styles/github-dark.css';
-import { createStreamBuffer } from '@/utils/streamBuffer';
+import 'highlight.js/styles/github.css';
+import clsx from 'clsx';
+import { useI18n } from '@/i18n';
+import { splitProgressPrefix } from '@/utils/splitProgressContent';
 
 interface StreamingTextProps {
   content: string;
   isStreaming?: boolean;
-  onComplete?: () => void;
-  enableBuffer?: boolean;
+  className?: string;
+  /** 更紧凑的工作室对话样式 */
+  compact?: boolean;
+}
+
+function ProgressList({ lines, compact }: { lines: string[]; compact?: boolean }) {
+  if (lines.length === 0) return null;
+  return (
+    <ul
+      className={clsx(
+        'mb-2 space-y-0.5 text-ink-muted list-none pl-0',
+        compact ? 'text-[12px] leading-snug' : 'text-[13px] leading-relaxed'
+      )}
+    >
+      {lines.map((line, i) => (
+        <li key={`${i}-${line.slice(0, 12)}`} className="flex gap-0.5">
+          <span className="shrink-0 select-none text-ink-faint">、</span>
+          <span className="min-w-0 break-words">{line}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export default function StreamingText({
   content,
   isStreaming = false,
-  onComplete,
-  enableBuffer = true
+  className,
+  compact = false,
 }: StreamingTextProps) {
-  const [displayContent, setDisplayContent] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
-  const bufferRef = useRef<ReturnType<typeof createStreamBuffer> | null>(null);
-  const lastContentRef = useRef('');
-  const rafIdRef = useRef<number>();
+  const { t } = useI18n();
+  const text = content || '';
+  const { progressLines, body } = useMemo(() => splitProgressPrefix(text), [text]);
+  const displayBody = body || (progressLines.length === 0 ? text : '');
+  const looksLikeMd = useMemo(
+    () => /(^#{1,6}\s)|(\*\*|__)|(`{1,3})|(\n[-*+]\s)|(\[[^\]]+\]\()/.test(displayBody),
+    [displayBody]
+  );
 
-  // 初始化缓冲区
-  useEffect(() => {
-    if (enableBuffer && !bufferRef.current) {
-      bufferRef.current = createStreamBuffer({
-        minBufferSize: 30,
-        maxBufferSize: 300,
-        enableMarkdownOptimization: true,
-      });
-    }
-  }, [enableBuffer]);
-
-  // 处理内容更新
-  useEffect(() => {
-    console.log('[StreamingText] Content updated:', content.substring(0, 50), 'isStreaming:', isStreaming);
-
-    if (!enableBuffer) {
-      // 不使用缓冲区，直接显示
-      setDisplayContent(content);
-      return;
-    }
-
-    const buffer = bufferRef.current;
-    if (!buffer) return;
-
-    // 检测新增的 chunk
-    const newContent = content.slice(lastContentRef.current.length);
-    if (newContent.length === 0) {
-      console.log('[StreamingText] No new content');
-      return;
-    }
-
-    // 添加到缓冲区
-    const renderedChunk = buffer.add(newContent);
-    lastContentRef.current = content;
-
-    // 更新显示内容
-    if (renderedChunk) {
-      setDisplayContent(prev => prev + renderedChunk);
-    }
-
-    // 使用 requestAnimationFrame 优化渲染
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-    }
-
-    rafIdRef.current = requestAnimationFrame(() => {
-      const updatedContent = buffer.getAll();
-      if (updatedContent !== displayContent) {
-        setDisplayContent(updatedContent);
-      }
-    });
-
-    // 流式完成时刷新所有内容
-    if (!isStreaming && content.length > 0) {
-      const remaining = buffer.flush();
-      if (remaining) {
-        setDisplayContent(prev => prev + remaining);
-      }
-      onComplete?.();
-    }
-
-    return () => {
-      if (rafIdRef.current) {
-        cancelAnimationFrame(rafIdRef.current);
-      }
-    };
-  }, [content, isStreaming, enableBuffer, onComplete]);
-
-  // 光标闪烁效果
-  useEffect(() => {
-    if (!isStreaming) {
-      setShowCursor(false);
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setShowCursor(prev => !prev);
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [isStreaming]);
-
-  // 检查内容特性
-  const hasCodeBlock = useMemo(() => {
-    return /```[\s\S]*```/.test(displayContent) || /^```[\s\S]*$/.test(displayContent);
-  }, [displayContent]);
-
-  const hasMarkdown = useMemo(() => {
-    return /(^|[^\\])[#*_`\-\[\]()]/.test(displayContent);
-  }, [displayContent]);
-
-  // 检测当前是否在不完整代码块中
-  const isIncompleteCodeBlock = useMemo(() => {
-    const codeBlockCount = (displayContent.match(/```/g) || []).length;
-    return codeBlockCount % 2 === 1;
-  }, [displayContent]);
-
-  // 检测不完整代码块的语言 - MUST be called before early return
-  const incompleteBlockLanguage = useMemo(() => {
-    if (!isIncompleteCodeBlock) return null;
-    const match = displayContent.match(/```(\w*)$/);
-    return match ? match[1] : null;
-  }, [displayContent, isIncompleteCodeBlock]);
-
-  // 流式时，如果当前内容几乎为空（例如仅有一个 "(" 之类的占位符），交给上层的「生成中」状态展示即可
-  if (isStreaming && displayContent.trim().length <= 1) {
-    return null;
-  }
-
-  // 如果没有 Markdown 且没有代码块，直接渲染
-  if (!hasMarkdown && !hasCodeBlock) {
+  // 流式且尚未形成可读内容
+  if (isStreaming && text.trim().length === 0) {
     return (
-      <p className="whitespace-pre-wrap break-words text-gray-800">
-        {displayContent}
-        {isStreaming && showCursor && (
-          <span className="typing-cursor">|</span>
-        )}
-      </p>
+      <div className={clsx('flex items-center gap-1 text-[11px] text-ink-faint', className)}>
+        <span className="w-1 h-1 rounded-full bg-atelier-teal animate-pulse" />
+        <span className="w-1 h-1 rounded-full bg-atelier-teal animate-pulse [animation-delay:120ms]" />
+        <span className="w-1 h-1 rounded-full bg-atelier-teal animate-pulse [animation-delay:240ms]" />
+        <span className="ml-1">{t('chatGraph.streaming.generating')}</span>
+      </div>
     );
   }
 
-  // 使用 Markdown 渲染
+  // 流式过程中：优先纯文本，避免半截 Markdown 炸版
+  if (isStreaming && !looksLikeMd) {
+    return (
+      <div className={clsx(className)}>
+        <ProgressList lines={progressLines} compact={compact} />
+        {displayBody ? (
+          <p
+            className={clsx(
+              'whitespace-pre-wrap break-words text-ink leading-relaxed',
+              compact ? 'text-[12.5px]' : 'text-sm'
+            )}
+          >
+            {displayBody}
+            <span className="inline-block w-[2px] h-[0.9em] ml-0.5 align-[-1px] bg-atelier-teal animate-pulse" />
+          </p>
+        ) : (
+          progressLines.length > 0 && (
+            <span className="inline-block w-[2px] h-[0.9em] ml-0.5 align-[-1px] bg-atelier-teal animate-pulse" />
+          )
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="markdown prose prose-sm max-w-none">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
-        components={{
-          // 自定义代码块渲染
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            const language = match ? match[1] : '';
-
-            return !inline ? (
-              <div className="relative group">
-                <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => navigator.clipboard.writeText(String(children))}
-                    className="px-2 py-1 text-xs bg-gray-700 text-white rounded hover:bg-gray-600"
-                  >
-                    复制
-                  </button>
-                </div>
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              </div>
-            ) : (
-              <code className="px-1.5 py-0.5 bg-gray-100 text-gray-900 rounded text-sm font-mono" {...props}>
-                {children}
-              </code>
-            );
-          },
-          // 自定义链接渲染
-          a({ children, href }) {
-            return (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-black underline hover:text-gray-700"
-              >
-                {children}
-              </a>
-            );
-          },
-          // 自定义表格渲染
-          table({ children }) {
-            return (
-              <div className="overflow-x-auto my-4">
-                <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-                  {children}
-                </table>
-              </div>
-            );
-          },
-          // 自定义表头渲染
-          thead({ children }) {
-            return <thead className="bg-gray-50">{children}</thead>;
-          },
-          // 自定义表格单元格渲染
-          td({ children }) {
-            return <td className="px-4 py-2 text-sm border-b border-gray-200">{children}</td>;
-          },
-          th({ children }) {
-            return <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b-2 border-gray-200">
-              {children}
-            </th>;
-          },
-        }}
-      >
-        {displayContent}
-      </ReactMarkdown>
-
-      {/* 显示不完整代码块的预览 */}
-      {isIncompleteCodeBlock && incompleteBlockLanguage && (
-        <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center gap-2 text-xs text-yellow-700 mb-2">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-            <span>正在生成{incompleteBlockLanguage}代码块...</span>
-          </div>
+    <div className={clsx(className)}>
+      <ProgressList lines={progressLines} compact={compact} />
+      {displayBody ? (
+        <div
+          className={clsx(
+            'markdown max-w-none text-ink',
+            compact
+              ? 'prose prose-sm prose-neutral [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-[13px] [&_pre]:text-[11px] text-[12.5px] leading-relaxed'
+              : 'prose prose-sm max-w-none'
+          )}
+        >
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+            {displayBody}
+          </ReactMarkdown>
+          {isStreaming && (
+            <span className="inline-block w-[2px] h-[0.9em] ml-0.5 align-[-1px] bg-atelier-teal animate-pulse" />
+          )}
         </div>
-      )}
-
-      {/* 光标 */}
-      {isStreaming && showCursor && (
-        <span className="typing-cursor" style={{ marginLeft: '2px' }}>|</span>
-      )}
+      ) : null}
     </div>
   );
 }
-

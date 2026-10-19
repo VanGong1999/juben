@@ -225,7 +225,7 @@ class EnhancedContextManager:
     5. Token预算管理 (Token Budgeting)
     """
 
-    def __init__(self, model_provider: str = "zhipu", model: str = "glm-4-flash"):
+    def __init__(self, model_provider: str = "deepseek", model: str = "deepseek-flash"):
         self.config = JubenSettings()
         self.logger = JubenLogger("EnhancedContextManager", level=self.config.log_level)
 

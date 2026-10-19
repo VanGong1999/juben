@@ -180,7 +180,7 @@ class RateLimiter:
 
             results = await pipe.execute()
 
-            current_count = results[1]  # zcard的结果
+            current_count = results[1] + 1  # zcard的结果 + 当前请求
 
             # 计算重置时间（时间窗口结束时间）
             oldest_timestamp = await redis.zrange(key, 0, 0, withscores=True)
@@ -189,7 +189,7 @@ class RateLimiter:
             else:
                 reset_time = current_time + actual_window
 
-            is_allowed_result = current_count < actual_limit
+            is_allowed_result = current_count <= actual_limit
 
             return is_allowed_result, {
                 "current_count": current_count,

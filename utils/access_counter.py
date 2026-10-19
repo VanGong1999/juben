@@ -49,10 +49,11 @@ class JubenAccessCounter:
         """确保Redis可用（快速检查，避免阻塞主要业务）"""
         try:
             redis_client = await self._get_redis_client()
-            if redis_client and redis_client.redis:
+            raw_client = getattr(redis_client, 'redis', None) or getattr(redis_client, '_redis', None)
+            if raw_client:
                 # 添加1秒超时，快速失败机制
                 import asyncio
-                await asyncio.wait_for(redis_client.redis.ping(), timeout=1.0)
+                await asyncio.wait_for(raw_client.ping(), timeout=1.0)
                 self.redis_available = True
                 return True
             else:

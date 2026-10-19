@@ -1,0 +1,11 @@
+{
+  "drama_id": "9573ac51-ffc1-458a-906b-6dc60ab705d7",
+  "studio_url": "/studio/9573ac51-ffc1-458a-906b-6dc60ab705d7",
+  "subagent_starts": 5,
+  "subagent_ends": 5,
+  "video_prompts_done": 5,
+  "visual_continuity": true,
+  "sample_has_shot_structure": true,
+  "sample_has_seedance_symbols": true,
+  "ok": true
+}

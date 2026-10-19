@@ -30,6 +30,7 @@ import {
 import StreamingText from './StreamingText';
 import { parseMindMap, type MindMapData } from '@/utils/mindMap';
 import MindMapViewer from '@/components/mindmap/MindMapViewer';
+import { useI18n } from '@/i18n';
 // 内容类型枚举（与后端保持一致）- juben剧本创作专用
 export type StreamContentTypeEnum =
   // 基础类型
@@ -98,7 +99,7 @@ interface ContentBlockProps {
 // 内容类型配置 - juben剧本创作专用
 const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   icon: React.ComponentType<{ className?: string }>;
-  displayName: string;
+  labelKey: string;
   color: string;
   bgColor: string;
   textColor: string;
@@ -106,21 +107,21 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 基础类型
   text: {
     icon: Settings2,
-    displayName: '文本',
+    labelKey: 'chatGraph.contentType.text',
     color: 'text-gray-600',
     bgColor: 'bg-gray-50',
     textColor: 'text-gray-900',
   },
   markdown: {
     icon: BookOpen,
-    displayName: 'Markdown',
+    labelKey: 'chatGraph.contentType.markdown',
     color: 'text-gray-600',
     bgColor: 'bg-gray-50',
     textColor: 'text-gray-900',
   },
   json: {
     icon: Settings2,
-    displayName: 'JSON数据',
+    labelKey: 'chatGraph.contentType.json',
     color: 'text-slate-600',
     bgColor: 'bg-slate-50',
     textColor: 'text-slate-900',
@@ -129,21 +130,21 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 思考和分析类
   thought: {
     icon: Brain,
-    displayName: '思考过程',
+    labelKey: 'chatGraph.contentType.thought',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-900',
   },
   plan_step: {
     icon: ClipboardList,
-    displayName: '执行步骤',
+    labelKey: 'chatGraph.contentType.planStep',
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
     textColor: 'text-purple-900',
   },
   insight: {
     icon: Lightbulb,
-    displayName: '洞察分析',
+    labelKey: 'chatGraph.contentType.insight',
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-50',
     textColor: 'text-yellow-900',
@@ -152,14 +153,14 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 人物相关
   character_profile: {
     icon: User,
-    displayName: '人物画像',
+    labelKey: 'chatGraph.contentType.characterProfile',
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
     textColor: 'text-indigo-900',
   },
   character_relationship: {
     icon: Link2,
-    displayName: '人物关系',
+    labelKey: 'chatGraph.contentType.characterRelationship',
     color: 'text-pink-600',
     bgColor: 'bg-pink-50',
     textColor: 'text-pink-900',
@@ -168,42 +169,42 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 故事结构相关
   story_summary: {
     icon: BookOpen,
-    displayName: '故事梗概',
+    labelKey: 'chatGraph.contentType.storySummary',
     color: 'text-amber-600',
     bgColor: 'bg-amber-50',
     textColor: 'text-amber-900',
   },
   story_outline: {
     icon: BookOpen,
-    displayName: '故事大纲',
+    labelKey: 'chatGraph.contentType.storyOutline',
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
     textColor: 'text-orange-900',
   },
   story_type: {
     icon: Settings2,
-    displayName: '故事类型',
+    labelKey: 'chatGraph.contentType.storyType',
     color: 'text-stone-600',
     bgColor: 'bg-stone-50',
     textColor: 'text-stone-900',
   },
   five_elements: {
     icon: Settings2,
-    displayName: '故事五元素',
+    labelKey: 'chatGraph.contentType.fiveElements',
     color: 'text-violet-600',
     bgColor: 'bg-violet-50',
     textColor: 'text-violet-900',
   },
   series_info: {
     icon: Settings2,
-    displayName: '系列信息',
+    labelKey: 'chatGraph.contentType.seriesInfo',
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50',
     textColor: 'text-cyan-900',
   },
   series_analysis: {
     icon: BarChart3,
-    displayName: '系列分析',
+    labelKey: 'chatGraph.contentType.seriesAnalysis',
     color: 'text-teal-600',
     bgColor: 'bg-teal-50',
     textColor: 'text-teal-900',
@@ -212,28 +213,28 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 情节相关
   major_plot: {
     icon: Film,
-    displayName: '大情节点',
+    labelKey: 'chatGraph.contentType.majorPlot',
     color: 'text-red-600',
     bgColor: 'bg-red-50',
     textColor: 'text-red-900',
   },
   detailed_plot: {
     icon: Film,
-    displayName: '详细情节点',
+    labelKey: 'chatGraph.contentType.detailedPlot',
     color: 'text-rose-600',
     bgColor: 'bg-rose-50',
     textColor: 'text-rose-900',
   },
   drama_analysis: {
     icon: ScrollText,
-    displayName: '戏剧功能分析',
+    labelKey: 'chatGraph.contentType.dramaAnalysis',
     color: 'text-red-700',
     bgColor: 'bg-red-50',
     textColor: 'text-red-900',
   },
   plot_analysis: {
     icon: Film,
-    displayName: '情节分析',
+    labelKey: 'chatGraph.contentType.plotAnalysis',
     color: 'text-red-800',
     bgColor: 'bg-red-50',
     textColor: 'text-red-900',
@@ -242,21 +243,21 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 创作相关
   script: {
     icon: ScrollText,
-    displayName: '剧本',
+    labelKey: 'chatGraph.contentType.script',
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-900',
   },
   drama_plan: {
     icon: PenTool,
-    displayName: '剧本策划',
+    labelKey: 'chatGraph.contentType.dramaPlan',
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     textColor: 'text-green-900',
   },
   proposal: {
     icon: PenTool,
-    displayName: '内容提案',
+    labelKey: 'chatGraph.contentType.proposal',
     color: 'text-lime-600',
     bgColor: 'bg-lime-50',
     textColor: 'text-lime-900',
@@ -265,7 +266,7 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 可视化
   mind_map: {
     icon: Brain,
-    displayName: '思维导图',
+    labelKey: 'chatGraph.contentType.mindMap',
     color: 'text-sky-600',
     bgColor: 'bg-sky-50',
     textColor: 'text-sky-900',
@@ -274,49 +275,49 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 评估相关
   evaluation: {
     icon: Star,
-    displayName: '综合评估',
+    labelKey: 'chatGraph.contentType.evaluation',
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
     textColor: 'text-orange-900',
   },
   script_evaluation: {
     icon: Star,
-    displayName: '剧本评估',
+    labelKey: 'chatGraph.contentType.scriptEvaluation',
     color: 'text-amber-600',
     bgColor: 'bg-amber-50',
     textColor: 'text-amber-900',
   },
   story_evaluation: {
     icon: Star,
-    displayName: '故事评估',
+    labelKey: 'chatGraph.contentType.storyEvaluation',
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-50',
     textColor: 'text-yellow-900',
   },
   outline_evaluation: {
     icon: Star,
-    displayName: '大纲评估',
+    labelKey: 'chatGraph.contentType.outlineEvaluation',
     color: 'text-yellow-700',
     bgColor: 'bg-yellow-50',
     textColor: 'text-yellow-900',
   },
   ip_evaluation: {
     icon: Star,
-    displayName: 'IP评估',
+    labelKey: 'chatGraph.contentType.ipEvaluation',
     color: 'text-fuchsia-600',
     bgColor: 'bg-fuchsia-50',
     textColor: 'text-fuchsia-900',
   },
   novel_screening: {
     icon: Star,
-    displayName: '小说筛选',
+    labelKey: 'chatGraph.contentType.novelScreening',
     color: 'text-violet-600',
     bgColor: 'bg-violet-50',
     textColor: 'text-violet-900',
   },
   score_analysis: {
     icon: BarChart3,
-    displayName: '评分分析',
+    labelKey: 'chatGraph.contentType.scoreAnalysis',
     color: 'text-indigo-600',
     bgColor: 'bg-indigo-50',
     textColor: 'text-indigo-900',
@@ -325,35 +326,35 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 工具相关
   search_result: {
     icon: Wrench,
-    displayName: '搜索结果',
+    labelKey: 'chatGraph.contentType.searchResult',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-900',
   },
   knowledge_result: {
     icon: BookOpen,
-    displayName: '知识库结果',
+    labelKey: 'chatGraph.contentType.knowledgeResult',
     color: 'text-cyan-600',
     bgColor: 'bg-cyan-50',
     textColor: 'text-cyan-900',
   },
   reference_result: {
     icon: BookOpen,
-    displayName: '参考文献',
+    labelKey: 'chatGraph.contentType.referenceResult',
     color: 'text-teal-600',
     bgColor: 'bg-teal-50',
     textColor: 'text-teal-900',
   },
   document: {
     icon: Settings2,
-    displayName: '文档生成',
+    labelKey: 'chatGraph.contentType.document',
     color: 'text-stone-600',
     bgColor: 'bg-stone-50',
     textColor: 'text-stone-900',
   },
   formatted_content: {
     icon: Settings2,
-    displayName: '格式化输出',
+    labelKey: 'chatGraph.contentType.formattedContent',
     color: 'text-zinc-600',
     bgColor: 'bg-zinc-50',
     textColor: 'text-zinc-900',
@@ -362,42 +363,42 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 系统相关
   system_progress: {
     icon: Settings2,
-    displayName: '系统进度',
+    labelKey: 'chatGraph.contentType.systemProgress',
     color: 'text-gray-600',
     bgColor: 'bg-gray-50',
     textColor: 'text-gray-900',
   },
   tool_result: {
     icon: Wrench,
-    displayName: '工具结果',
+    labelKey: 'chatGraph.contentType.toolResult',
     color: 'text-slate-600',
     bgColor: 'bg-slate-50',
     textColor: 'text-slate-900',
   },
   workflow_progress: {
     icon: Settings2,
-    displayName: '工作流进度',
+    labelKey: 'chatGraph.contentType.workflowProgress',
     color: 'text-coolGray-600',
     bgColor: 'bg-gray-50',
     textColor: 'text-gray-900',
   },
   result_integration: {
     icon: Settings2,
-    displayName: '结果整合',
+    labelKey: 'chatGraph.contentType.resultIntegration',
     color: 'text-neutral-600',
     bgColor: 'bg-neutral-50',
     textColor: 'text-neutral-900',
   },
   text_operation: {
     icon: Settings2,
-    displayName: '文本操作',
+    labelKey: 'chatGraph.contentType.textOperation',
     color: 'text-zinc-600',
     bgColor: 'bg-zinc-50',
     textColor: 'text-zinc-900',
   },
   batch_progress: {
     icon: Settings2,
-    displayName: '批处理进度',
+    labelKey: 'chatGraph.contentType.batchProgress',
     color: 'text-warmGray-600',
     bgColor: 'bg-gray-50',
     textColor: 'text-gray-900',
@@ -406,14 +407,14 @@ const CONTENT_TYPE_CONFIG: Record<StreamContentTypeEnum, {
   // 其他
   final_answer: {
     icon: CheckCircle2,
-    displayName: '最终答案',
+    labelKey: 'chatGraph.contentType.finalAnswer',
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-900',
   },
   error_content: {
     icon: Wrench,
-    displayName: '错误',
+    labelKey: 'chatGraph.contentType.error',
     color: 'text-red-600',
     bgColor: 'bg-red-50',
     textColor: 'text-red-900',
@@ -428,6 +429,7 @@ export default function ContentTypeRenderer({
   timestamp,
   metadata = {},
 }: ContentBlockProps) {
+  const { t, language } = useI18n();
   const [expanded, setExpanded] = useState(true);
   const config = CONTENT_TYPE_CONFIG[contentType] || CONTENT_TYPE_CONFIG.text;
   const Icon = config.icon;
@@ -490,7 +492,7 @@ export default function ContentTypeRenderer({
 
           {/* 类型名称 */}
           <span className={`text-sm font-semibold ${config.textColor}`}>
-            {config.displayName}
+            {t(config.labelKey)}
           </span>
 
           {/* Agent来源 */}
@@ -504,7 +506,7 @@ export default function ContentTypeRenderer({
           {isStreaming && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500">
               <div className="w-1.5 h-1.5 bg-current rounded-full animate-pulse" />
-              <span>生成中</span>
+              <span>{t('chatGraph.contentType.generating')}</span>
             </div>
           )}
         </div>
@@ -534,7 +536,7 @@ export default function ContentTypeRenderer({
               <StreamingText
                 content={content}
                 isStreaming={isStreaming}
-                enableBuffer={true}
+                compact
               />
             </div>
           )}
@@ -544,7 +546,7 @@ export default function ContentTypeRenderer({
             <div className="mt-3 pt-3 border-t border-gray-200 border-opacity-30">
               <details className="text-xs">
                 <summary className="cursor-pointer text-gray-600 hover:text-gray-900">
-                  查看元数据
+                  {t('chatGraph.contentType.viewMetadata')}
                 </summary>
                 <pre className="mt-2 p-2 bg-white bg-opacity-50 rounded overflow-x-auto">
                   {JSON.stringify(metadata, null, 2)}
@@ -556,7 +558,7 @@ export default function ContentTypeRenderer({
           {/* 时间戳 */}
           {timestamp && (
             <div className="mt-2 text-xs text-gray-500 text-right">
-              {new Date(timestamp).toLocaleString('zh-CN')}
+              {new Date(timestamp).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}
             </div>
           )}
         </div>

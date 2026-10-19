@@ -27,6 +27,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 
 interface MarkdownEditorProps {
   value: string;
@@ -41,7 +42,7 @@ interface MarkdownEditorProps {
 export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   value,
   onChange,
-  placeholder = '请输入 Markdown 内容...',
+  placeholder,
   height = '500px',
   readOnly = false,
   showPreview = true,
@@ -51,6 +52,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { success, error } = useNotificationStore();
+  const { t } = useI18n();
 
   // 插入 Markdown 语法
   const insertMarkdown = useCallback(
@@ -83,7 +85,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const toolbarButtons = [
     {
       icon: <Undo className="w-4 h-4" />,
-      title: '撤销',
+      title: t('studio.undo'),
       action: () => {
         // 撤销功能（简化实现）
         textareaRef.current?.focus();
@@ -92,7 +94,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     },
     {
       icon: <Redo className="w-4 h-4" />,
-      title: '重做',
+      title: t('studio.redo'),
       action: () => {
         // 重做功能（简化实现）
         textareaRef.current?.focus();
@@ -102,58 +104,58 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     { divider: true },
     {
       icon: <Bold className="w-4 h-4" />,
-      title: '粗体',
+      title: t('ui.bold'),
       action: () => insertMarkdown('**', '**', '粗体文本'),
     },
     {
       icon: <Italic className="w-4 h-4" />,
-      title: '斜体',
+      title: t('ui.italic'),
       action: () => insertMarkdown('*', '*', '斜体文本'),
     },
     {
       icon: <Heading1 className="w-4 h-4" />,
-      title: '一级标题',
+      title: t('ui.heading1'),
       action: () => insertMarkdown('# ', '', '标题 1'),
     },
     {
       icon: <Heading2 className="w-4 h-4" />,
-      title: '二级标题',
+      title: t('ui.heading2'),
       action: () => insertMarkdown('## ', '', '标题 2'),
     },
     {
       icon: <Heading3 className="w-4 h-4" />,
-      title: '三级标题',
+      title: t('ui.heading3'),
       action: () => insertMarkdown('### ', '', '标题 3'),
     },
     { divider: true },
     {
       icon: <List className="w-4 h-4" />,
-      title: '无序列表',
+      title: t('ui.unorderedList'),
       action: () => insertMarkdown('- ', '', '列表项'),
     },
     {
       icon: <ListOrdered className="w-4 h-4" />,
-      title: '有序列表',
+      title: t('ui.orderedList'),
       action: () => insertMarkdown('1. ', '', '列表项'),
     },
     {
       icon: <Quote className="w-4 h-4" />,
-      title: '引用',
+      title: t('ui.quote'),
       action: () => insertMarkdown('> ', '', '引用内容'),
     },
     {
       icon: <Code className="w-4 h-4" />,
-      title: '代码块',
+      title: t('ui.codeBlock'),
       action: () => insertMarkdown('```\n', '\n```', '代码'),
     },
     {
       icon: <LinkIcon className="w-4 h-4" />,
-      title: '链接',
+      title: t('ui.link'),
       action: () => insertMarkdown('[', '](url)', '链接文本'),
     },
     {
       icon: <Image className="w-4 h-4" />,
-      title: '图片',
+      title: t('ui.image'),
       action: () => insertMarkdown('![', '](url)', '图片描述'),
     },
   ];
@@ -162,9 +164,9 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      success('复制成功', '内容已复制到剪贴板');
+      success(t('ui.copySuccess'), t('ui.copySuccessDesc'));
     } catch {
-      error('复制失败', '无法复制内容');
+      error(t('ui.copyFailed'), t('ui.copyFailedDesc'));
     }
   };
 
@@ -177,7 +179,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     a.download = `document-${Date.now()}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    success('下载成功', 'Markdown文件已下载');
+    success(t('ui.downloadSuccess'), t('ui.downloadSuccessDesc'));
   };
 
   // 处理文件上传
@@ -189,10 +191,10 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     reader.onload = (event) => {
       const content = event.target?.result as string;
       onChange(content);
-      success('导入成功', 'Markdown文件已导入');
+      success(t('ui.importSuccess'), t('ui.importSuccessDesc'));
     };
     reader.onerror = () => {
-      error('导入失败', '无法读取文件');
+      error(t('ui.importFailed'), t('ui.importFailedDesc'));
     };
     reader.readAsText(file);
   };
@@ -260,7 +262,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               <button
                 onClick={() => setIsPreviewMode(!isPreviewMode)}
                 className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                title={isPreviewMode ? '显示编辑器' : '显示预览'}
+                title={isPreviewMode ? t('ui.showEditor') : t('ui.showPreview')}
               >
                 {isPreviewMode ? (
                   <EyeOff className="w-4 h-4" />
@@ -274,7 +276,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             <button
               onClick={handleCopy}
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title="复制内容"
+              title={t('ui.copyContent')}
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -283,7 +285,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             <button
               onClick={handleDownload}
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title="下载为 Markdown 文件"
+              title={t('ui.downloadMarkdown')}
             >
               <Download className="w-4 h-4" />
             </button>
@@ -303,7 +305,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title={isFullscreen ? '退出全屏' : '全屏'}
+              title={isFullscreen ? t('studio.exitFullscreen') : t('studio.fullscreen')}
             >
               {isFullscreen ? (
                 <Minimize2 className="w-4 h-4" />
@@ -324,7 +326,7 @@ export const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               ref={textareaRef}
               value={value}
               onChange={(e) => onChange(e.target.value)}
-              placeholder={placeholder}
+              placeholder={placeholder || t('ui.markdownPlaceholder')}
               readOnly={readOnly}
               className="w-full h-full p-4 resize-none focus:outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm"
               style={{ minHeight: height }}

@@ -25,13 +25,13 @@ from datetime import datetime
 import uuid
 
 from .base_juben_agent import BaseJubenAgent
-from ..utils.logger import JubenLogger
-from ..utils.error_handler import JubenErrorHandler
-from ..utils.workflow_manager import WorkflowManager
-from ..utils.agent_registry import AgentRegistry
-from ..utils.context_builder import get_juben_context_builder
-from ..utils.reference_resolver import get_juben_reference_resolver
-from ..utils.multimodal_processor import get_multimodal_processor
+from utils.logger import JubenLogger
+from utils.error_handler import JubenErrorHandler
+from utils.workflow_manager import WorkflowManager
+from utils.agent_registry import AgentRegistry
+from utils.context_builder import get_juben_context_builder
+from utils.reference_resolver import get_juben_reference_resolver
+from utils.multimodal_processor import get_multimodal_processor
 
 
 class JubenOrchestrator(BaseJubenAgent):
@@ -46,7 +46,7 @@ class JubenOrchestrator(BaseJubenAgent):
     5. 🚀 性能优化：并发控制和资源管理
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化编排器"""
         super().__init__("juben_orchestrator", model_provider)
         

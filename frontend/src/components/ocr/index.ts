@@ -3,4 +3,4 @@
  */
 
 export { OCRUploader } from './OCRUploader';
-export type { OutputFormat } from './OCRUploader';
+export type { OutputFormat, OCRResult } from './OCRUploader';

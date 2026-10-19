@@ -1,38 +1,38 @@
 /**
- * 聊天面板组件
- * 右侧 40% 区域 - 用户与 Agent 对话界面
+ * 聊天面板 — 紧凑密度 + Cursor 风格工作过程
  */
 
 import { useChatStore } from '@/store/chatStore';
 import { useAgentStore } from '@/store/agentStore';
 import { useWorkspaceStore } from '@/store/workspaceStore';
-import { useSettingsStore } from '@/store/settingsStore';
-import { useUIStore } from '@/store/uiStore';
 import ChatMessage from '@/components/chat/ChatMessage';
 import ChatInputArea from '@/components/workspace/ChatInputArea';
-import { Loader2 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { Loader2, MessageCircle, History, Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import {
+  listChatSessions,
+  getChatSessionHistory,
+  type ChatSessionMeta,
+} from '@/services/chatService';
+import type { Message } from '@/types';
+import { useI18n } from '@/i18n';
 
 export default function ChatPanel() {
-  const {
-    messages,
-    streamingMessage,
-    isStreaming,
-    sendMessage,
-  } = useChatStore();
-
+  const { messages, isStreaming, sendMessage, newSession, setMessages, setCurrentSession } =
+    useChatStore();
   const { agents, activeAgent } = useAgentStore();
   const { notes, setViewMode } = useWorkspaceStore();
-  const { showThoughtChain } = useSettingsStore();
-  const { thoughtChainExpanded } = useUIStore();
+  const { t, language } = useI18n();
   const location = useLocation();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [sessions, setSessions] = useState<ChatSessionMeta[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
-  // 自动滚动到底部
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingMessage]);
+  }, [messages, isStreaming]);
 
   useEffect(() => {
     if (!location.hash) return;
@@ -41,31 +41,27 @@ export default function ChatPanel() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-  }, [location.hash, messages, streamingMessage]);
+  }, [location.hash, messages]);
 
-  // 获取当前 Agent 信息
   const currentAgent = agents.find((a) => a.id === activeAgent);
   const selectedNotesCount = notes.filter((n) => n.select_status === 1).length;
   const totalNotesCount = notes.length;
 
   const getAgentSuggestions = () => {
     const category = currentAgent?.category;
-    const base = [
-      currentAgent?.inputExample || '帮我生成一个短剧创意',
-    ];
-
+    const base = [currentAgent?.inputExample || t('workspace.suggestion.default')];
     const categorySuggestions: Record<string, string[]> = {
-      planning: ['生成三幕结构大纲', '输出人物小传'],
-      creation: ['写第一场戏', '生成关键对话'],
-      evaluation: ['给出评分与问题清单', '输出优化建议'],
-      analysis: ['提炼主题与核心冲突', '梳理人物关系'],
-      workflow: ['按流程输出步骤', '拆解成可执行任务'],
-      character: ['生成主要人物关系图', '补全人物背景'],
-      story: ['输出故事梗概', '生成情节转折点'],
+      planning: [t('workspace.suggestion.outline'), t('workspace.suggestion.bios')],
+      creation: [t('workspace.suggestion.scene1'), t('workspace.suggestion.dialogue')],
+      evaluation: [t('workspace.suggestion.score'), t('workspace.suggestion.optimize')],
+      analysis: [t('workspace.suggestion.theme'), t('workspace.suggestion.relations')],
+      workflow: [t('workspace.suggestion.steps'), t('workspace.suggestion.tasks')],
+      character: [t('workspace.suggestion.relationMap'), t('workspace.suggestion.background')],
+      story: [t('workspace.suggestion.synopsis'), t('workspace.suggestion.plotTurns')],
+      orchestration: [t('workspace.suggestion.orchestrate')],
     };
-
     const extras = category ? categorySuggestions[category] || [] : [];
-    const notesHint = selectedNotesCount > 0 ? ['基于已选 Notes 继续'] : [];
+    const notesHint = selectedNotesCount > 0 ? [t('workspace.suggestion.notesHint')] : [];
     return [...base, ...extras, ...notesHint].filter(Boolean);
   };
 
@@ -75,116 +71,191 @@ export default function ChatPanel() {
     await sendMessage(content, activeAgent);
   };
 
-  return (
-    <div className="flex flex-col h-full bg-gray-50">
-      {/* Agent 信息栏 */}
-      <div className="flex-shrink-0 px-4 py-3 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          {/* Agent 图标 */}
-          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100">
-            <span className="text-2xl">
-              {currentAgent?.icon || '🤖'}
-            </span>
-          </div>
+  const loadSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const userId = localStorage.getItem('userId') || 'default_user';
+      const res = await listChatSessions(userId);
+      setSessions(res.sessions || []);
+    } catch {
+      setSessions([]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
 
-          {/* Agent 名称和描述 */}
+  const toggleHistory = () => {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (next) void loadSessions();
+  };
+
+  const switchSession = async (sessionId: string) => {
+    try {
+      const res = await getChatSessionHistory(sessionId);
+      const history = res.history || [];
+      const mapped: Message[] = history.map((h, i) => ({
+        id: h.id || `hist-${i}-${h.created_at || Date.now()}`,
+        role: (h.message_type === 'user' ? 'user' : 'assistant') as Message['role'],
+        content: h.content || '',
+        timestamp: h.created_at || new Date().toISOString(),
+        agentName: h.agent_name,
+        status: 'complete' as const,
+      }));
+      setCurrentSession(sessionId);
+      setMessages(mapped);
+      setHistoryOpen(false);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handleNewSession = () => {
+    newSession();
+    setHistoryOpen(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-transparent min-h-0">
+      {/* 紧凑标题 */}
+      <div className="flex-shrink-0 px-3 py-2 border-b border-pearl-line/80 relative">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-atelier-teal-soft text-sm border border-pearl-line shrink-0">
+            {currentAgent?.icon || '✦'}
+          </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-sm">
-              {currentAgent?.displayName || '未知 Agent'}
-            </h3>
-            <p className="text-xs text-gray-500 truncate">
-              {currentAgent?.description || '暂无描述'}
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-display font-semibold text-ink text-[13px] truncate leading-tight">
+                {currentAgent?.displayName || t('workspace.chooseExpert')}
+              </h3>
+              {currentAgent?.category && (
+                <span className="text-[9px] px-1 py-0.5 rounded bg-pearl-soft text-ink-faint shrink-0">
+                  {{
+                    planning: t('workspace.category.planning'),
+                    story: t('workspace.category.story'),
+                    analysis: t('workspace.category.analysis'),
+                    character: t('workspace.category.character'),
+                    creation: t('workspace.category.creation'),
+                    evaluation: t('workspace.category.evaluation'),
+                    workflow: t('workspace.category.workflow'),
+                    utility: t('workspace.category.utility'),
+                    orchestration: t('workspace.category.orchestration'),
+                  }[currentAgent.category] || currentAgent.category}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-ink-muted truncate leading-tight mt-0.5">
+              {currentAgent?.description || t('workspace.fallbackDesc')}
             </p>
           </div>
-
-          {/* 状态指示器 */}
           {isStreaming && (
-            <div className="flex items-center gap-2 text-xs text-blue-600">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>思考中...</span>
+            <div className="flex items-center gap-1 text-[10px] text-atelier-teal font-medium shrink-0">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {t('workspace.working')}
             </div>
           )}
+          <button
+            type="button"
+            onClick={toggleHistory}
+            className="p-1.5 rounded-lg text-ink-muted hover:bg-pearl-soft hover:text-atelier-teal shrink-0"
+            title={t('workspace.history')}
+          >
+            <History className="w-4 h-4" />
+          </button>
         </div>
-
-        {/* Notes 状态 */}
         {totalNotesCount > 0 && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-            <span>Notes: {selectedNotesCount}/{totalNotesCount} 已选</span>
-            <button
-              onClick={() => setViewMode('notes')}
-              className="px-2 py-1 rounded-full border border-gray-200 hover:bg-gray-50"
-            >
-              查看 Notes
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setViewMode('notes')}
+            className="mt-1 text-[10px] text-ink-faint hover:text-atelier-teal"
+          >
+            {t('workspace.notesView', { selected: selectedNotesCount, total: totalNotesCount })}
+          </button>
         )}
       </div>
 
-      {/* 消息列表区 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {historyOpen && (
+        <div className="absolute right-3 top-full mt-1 w-72 max-h-96 overflow-y-auto rounded-xl border border-pearl-line bg-white shadow-atelier-lg z-50">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-pearl-line">
+            <span className="text-xs font-semibold text-ink">{t('workspace.history')}</span>
+            <button
+              type="button"
+              onClick={handleNewSession}
+              className="flex items-center gap-1 text-[11px] text-atelier-teal hover:underline"
+            >
+              <Plus className="w-3 h-3" /> {t('workspace.newChat')}
+            </button>
+          </div>
+          {loadingSessions ? (
+            <div className="px-3 py-6 text-center text-xs text-ink-faint">{t('workspace.loading')}</div>
+          ) : sessions.length === 0 ? (
+            <div className="px-3 py-6 text-center text-xs text-ink-faint">{t('workspace.noHistory')}</div>
+          ) : (
+            <ul>
+              {sessions.map((s) => (
+                <li key={s.session_id}>
+                  <button
+                    type="button"
+                    onClick={() => switchSession(s.session_id)}
+                    className="w-full text-left px-3 py-2 hover:bg-pearl-soft/60 transition-colors border-b border-pearl-line/40"
+                  >
+                    <div className="text-xs font-medium text-ink truncate">
+                      {(s.title || t('workspace.unnamed')).slice(0, 40)}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-ink-faint">
+                      <span>{t('workspace.messageCount', { count: s.message_count || 0 })}</span>
+                      <span>·</span>
+                      <span>
+                        {s.last_active
+                          ? new Date(s.last_active).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                              month: 'numeric',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : ''}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-2.5 min-h-0">
         {messages.length === 0 ? (
-          // 空状态
-          <div className="h-full flex flex-col items-center justify-center text-gray-400">
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
-              <svg
-                className="w-8 h-8"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                />
-              </svg>
+          <div className="h-full flex flex-col items-center justify-center px-4 text-center">
+            <div className="w-11 h-11 rounded-2xl bg-atelier-teal-soft text-atelier-teal flex items-center justify-center mb-3 border border-pearl-line">
+              <MessageCircle className="w-5 h-5" />
             </div>
-            <p className="text-sm font-medium">开始对话</p>
-            <p className="text-xs mt-1">输入指令，让 AI 为你创作</p>
+            <p className="font-display text-sm font-semibold text-ink">{t('workspace.chatWithExpert')}</p>
+            <p className="text-[11px] mt-1.5 leading-relaxed max-w-[220px] text-ink-muted">
+              {t('workspace.processHint')}
+            </p>
           </div>
         ) : (
-          // 消息列表
           <>
             {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message}
-                showThoughtChain={showThoughtChain && thoughtChainExpanded}
-              />
+              <ChatMessage key={message.id} message={message} showThoughtChain compact />
             ))}
-
-            {/* 流式消息 */}
-            {streamingMessage && (
-              <ChatMessage
-                message={{
-                  id: 'streaming',
-                  role: 'assistant',
-                  content: streamingMessage,
-                  timestamp: new Date().toISOString(),
-                  status: 'streaming',
-                }}
-                showThoughtChain={showThoughtChain && thoughtChainExpanded}
-              />
-            )}
-
-            {/* 滚动锚点 */}
             <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      {/* 输入区 */}
-      <div className="flex-shrink-0 p-4 bg-white border-t border-gray-200">
+      <div className="flex-shrink-0 p-2.5 border-t border-white/40 bg-white/40 backdrop-blur-md">
         <ChatInputArea
           onSend={handleSendMessage}
           disabled={isStreaming}
           placeholder={
             currentAgent
-              ? `与 ${currentAgent.displayName} 对话...`
-              : '发送消息...'
+              ? t('workspace.chatPlaceholder', { name: currentAgent.displayName })
+              : t('workspace.selectExpertFirst')
           }
           suggestions={suggestions}
+          compact
         />
       </div>
     </div>

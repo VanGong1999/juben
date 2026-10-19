@@ -4,6 +4,7 @@
  */
 
 import { ExternalLink, Users, Film, Info } from 'lucide-react';
+import { useI18n } from '@/i18n';
 import { LemmaContent } from '@/services/baiduService';
 
 interface BaiduBaikeContentProps {
@@ -12,6 +13,7 @@ interface BaiduBaikeContentProps {
 }
 
 export default function BaiduBaikeContent({ content, loading }: BaiduBaikeContentProps) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="animate-pulse">
@@ -36,7 +38,7 @@ export default function BaiduBaikeContent({ content, loading }: BaiduBaikeConten
     return (
       <div className="text-center py-8 text-gray-500">
         <Info className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-        <p>未找到百科内容</p>
+        <p>{t('dataViews.baidu.baike.none')}</p>
       </div>
     );
   }
@@ -84,7 +86,7 @@ export default function BaiduBaikeContent({ content, loading }: BaiduBaikeConten
             rel="noopener noreferrer"
             className="flex-shrink-0 self-start px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
           >
-            查看详情
+            {t('dataViews.baidu.baike.viewDetail')}
             <ExternalLink className="w-4 h-4" />
           </a>
         )}
@@ -93,7 +95,7 @@ export default function BaiduBaikeContent({ content, loading }: BaiduBaikeConten
       {/* 摘要 */}
       {content.summary && (
         <div className="p-4 bg-blue-50 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">摘要</h3>
+          <h3 className="text-sm font-medium text-blue-900 mb-2">{t('dataViews.baidu.baike.summary')}</h3>
           <p className="text-sm text-blue-800">{content.summary}</p>
         </div>
       )}
@@ -101,7 +103,7 @@ export default function BaiduBaikeContent({ content, loading }: BaiduBaikeConten
       {/* 概述 */}
       {content.abstract_plain && (
         <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-2">概述</h3>
+          <h3 className="text-sm font-medium text-gray-900 mb-2">{t('dataViews.baidu.baike.overview')}</h3>
           <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
             {content.abstract_plain}
           </p>
@@ -113,7 +115,7 @@ export default function BaiduBaikeContent({ content, loading }: BaiduBaikeConten
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
             <Users className="w-4 h-4" />
-            相关人物
+            {t('dataViews.baidu.baike.relatedPeople')}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {content.relations.slice(0, 8).map((relation) => (
@@ -145,7 +147,7 @@ export default function BaiduBaikeContent({ content, loading }: BaiduBaikeConten
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
             <Film className="w-4 h-4" />
-            相关视频
+            {t('dataViews.baidu.baike.relatedVideos')}
           </h3>
           <div className="space-y-2">
             {content.videos.map((video) => (

@@ -43,7 +43,7 @@ class StoryTypeAnalyzerAgent(BaseJubenAgent):
     作为故事五元素工作流中的专业子智能体，专门负责题材类型分析任务
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("story_type_analyzer", model_provider)
         
         # 工作流配置

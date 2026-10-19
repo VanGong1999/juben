@@ -31,8 +31,23 @@ mock_modules = [
     'utils.multimodal_processor',
     'utils.stop_manager',
     'utils.redis_client',
-    'utils.llm_client'
+    'utils.llm_client',
+    'utils.project_manager',
+    'utils.project_types',
+    'utils.enhanced_context_manager',
+    'utils.context_mixin',
+    'utils.structured_output_guard',
+    'utils.agent_naming',
+    'utils.memory_manager',
+    'utils.memory_settings',
+    'utils.output_schema_registry',
+    'services.output_archive_service',
+    'apis.core.schemas'
 ]
+
+# Save modules this file will overwrite so they can be restored afterwards,
+# preventing pollution of global sys.modules (which breaks other test modules).
+_saved_modules = {name: sys.modules.get(name) for name in mock_modules + ['config.settings', 'utils.logger', 'config', 'utils', 'agents']}
 
 for module_name in mock_modules:
     if module_name not in sys.modules:
@@ -67,11 +82,30 @@ sys.modules['utils.storage_manager'].ChatMessage = MockChatMessage
 sys.modules['utils.storage_manager'].ContextState = MockContextState
 sys.modules['utils.storage_manager'].Note = MockNote
 
-# Load the module directly
-spec = importlib.util.spec_from_file_location("base_juben_agent", base_agent_path)
-base_agent_module = importlib.util.module_from_spec(spec)
-sys.modules['base_juben_agent'] = base_agent_module
-spec.loader.exec_module(base_agent_module)
+# ContextManagementMixin is used as a base class, so it must be a real class
+# with a cooperative __init__ (mirroring the real mixin's *args/**kwargs signature).
+class ContextManagementMixin:
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+
+sys.modules['utils.context_mixin'].ContextManagementMixin = ContextManagementMixin
+
+# apis.core.schemas.FileType is imported as a value/type.
+sys.modules['apis.core.schemas'].FileType = MagicMock()
+
+try:
+    # Load the module directly
+    spec = importlib.util.spec_from_file_location("base_juben_agent", base_agent_path)
+    base_agent_module = importlib.util.module_from_spec(spec)
+    sys.modules['base_juben_agent'] = base_agent_module
+    spec.loader.exec_module(base_agent_module)
+finally:
+    # Restore overwritten modules to avoid polluting other test modules.
+    for _name, _orig in _saved_modules.items():
+        if _orig is not None:
+            sys.modules[_name] = _orig
+        else:
+            sys.modules.pop(_name, None)
 
 BaseJubenAgent = base_agent_module.BaseJubenAgent
 
@@ -99,7 +133,7 @@ class TestBaseJubenAgentInit:
     @pytest.fixture
     def mock_settings(self):
         """Mock JubenSettings"""
-        with patch('agents.base_juben_agent.JubenSettings') as mock:
+        with patch('base_juben_agent.JubenSettings') as mock:
             settings = MagicMock()
             settings.log_level = "INFO"
             settings.default_provider = "zhipu"
@@ -109,7 +143,7 @@ class TestBaseJubenAgentInit:
     @pytest.fixture
     def mock_logger(self):
         """Mock JubenLogger"""
-        with patch('agents.base_juben_agent.JubenLogger') as mock:
+        with patch('base_juben_agent.JubenLogger') as mock:
             logger = MagicMock()
             mock.return_value = logger
             yield mock
@@ -117,7 +151,7 @@ class TestBaseJubenAgentInit:
     @pytest.fixture
     def mock_llm_client(self):
         """Mock LLM client"""
-        with patch('agents.base_juben_agent.get_llm_client') as mock:
+        with patch('utils.llm_client.get_llm_client') as mock:
             client = AsyncMock()
             client.chat = AsyncMock(return_value="Test response")
             client.stream_chat = AsyncMock(return_value=iter(["Test", " response"]))
@@ -127,7 +161,7 @@ class TestBaseJubenAgentInit:
     @pytest.fixture
     def mock_langsmith_client(self):
         """Mock LangSmith client wrapper"""
-        with patch('agents.base_juben_agent.create_langsmith_llm_client') as mock:
+        with patch('base_juben_agent.create_langsmith_llm_client') as mock:
             wrapped_client = AsyncMock()
             wrapped_client.chat = AsyncMock(return_value="Wrapped response")
             wrapped_client.stream_chat = AsyncMock(return_value=iter(["Wrapped", " response"]))
@@ -202,10 +236,10 @@ class TestBaseJubenAgentInfo:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             return ConcreteTestAgent("test_info_agent", "zhipu")
 
     def test_get_agent_info(self, agent):
@@ -236,10 +270,10 @@ class TestBaseJubenAgentTokenAccumulator:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             return ConcreteTestAgent("test_token_agent", "zhipu")
 
     @pytest.mark.asyncio
@@ -287,10 +321,10 @@ class TestBaseJubenAgentOutputTags:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             return ConcreteTestAgent("test_tag_agent", "zhipu")
 
     @pytest.mark.parametrize("agent_name,expected_tag", [
@@ -323,10 +357,10 @@ class TestBaseJubenAgentUtilityMethods:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             return ConcreteTestAgent("test_utility_agent", "zhipu")
 
     def test_extract_note_references(self, agent):
@@ -380,10 +414,10 @@ class TestBaseJubenAgentScoreExtraction:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             return ConcreteTestAgent("test_score_agent", "zhipu")
 
     def test_extract_scores_from_text(self, agent):
@@ -461,10 +495,10 @@ class TestBaseJubenAgentPerformanceModes:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             agent = ConcreteTestAgent("test_mode_agent", "zhipu")
             # Start with thought streaming enabled
             agent.enable_thought_streaming = True
@@ -524,10 +558,10 @@ class TestBaseJubenAgentLLMParameters:
     @pytest.fixture
     def agent(self):
         """Create a test agent with mocked dependencies"""
-        with patch('agents.base_juben_agent.JubenSettings'), \
-             patch('agents.base_juben_agent.JubenLogger'), \
-             patch('agents.base_juben_agent.get_llm_client'), \
-             patch('agents.base_juben_agent.create_langsmith_llm_client'):
+        with patch('base_juben_agent.JubenSettings'), \
+             patch('base_juben_agent.JubenLogger'), \
+             patch('utils.llm_client.get_llm_client'), \
+             patch('base_juben_agent.create_langsmith_llm_client'):
             agent = ConcreteTestAgent("test_llm_param_agent", "zhipu")
             # Mock the LLM client with provider attribute
             agent.llm_client.provider = "zhipu"

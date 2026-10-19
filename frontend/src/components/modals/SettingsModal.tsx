@@ -4,28 +4,27 @@
  */
 
 import { useUIStore } from '@/store/uiStore';
-import { useSettingsStore } from '@/store/settingsStore';
+import { useSettingsStore, PROVIDER_DEFAULTS, type ModelProvider } from '@/store/settingsStore';
 import { useAgents } from '@/hooks/useAgents';
-import { X, Monitor, Type, Zap, Eye, RotateCcw, Globe, Database, RefreshCw, Hash } from 'lucide-react';
+import { X, Monitor, Type, Zap, Eye, RotateCcw, Globe, Database, RefreshCw, Hash, KeyRound, Link2, Languages } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getMemorySettings, updateMemorySettings } from '@/services/memoryService';
+import { useI18n, LANGUAGES } from '@/i18n';
 
 const MODELS = [
-  { value: 'glm-4.7-flash', label: 'GLM-4.7 Flash', desc: '最新快速响应 (推荐)' },
-  { value: 'glm-4-flash', label: 'GLM-4 Flash', desc: '快速响应' },
-  { value: 'glm-4.1v-thinking-flash', label: 'GLM-4.1V Thinking', desc: '深度推理' },
-  { value: 'glm-4-plus', label: 'GLM-4 Plus', desc: '强大性能' },
-  { value: 'glm-4-air', label: 'GLM-4 Air', desc: '轻量级' },
+  { value: 'deepseek-flash', label: 'DeepSeek Flash', desc: '最便宜主力 (推荐)' },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', desc: '更强推理·贵一些' },
+  { value: 'deepseek-chat', label: 'DeepSeek Chat', desc: '兼容旧名' },
+  { value: 'glm-4.7-flash', label: 'GLM-4.7 Flash', desc: '智谱备用' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', desc: 'OpenAI 经济款' },
+  { value: 'qwen-turbo', label: 'Qwen Turbo', desc: '通义快速' },
   { value: 'qwen2.5:7b', label: 'Qwen2.5 7B', desc: '本地常用默认' },
 ];
 
-const MODEL_PROVIDERS = [
-  { value: 'zhipu', label: '智谱AI' },
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'local', label: '本地模型' },
-  { value: 'ollama', label: 'Ollama' },
-];
+const MODEL_PROVIDERS = (Object.keys(PROVIDER_DEFAULTS) as ModelProvider[]).map((value) => ({
+  value,
+  label: PROVIDER_DEFAULTS[value].label,
+}));
 
 export default function SettingsModal() {
   const { settingsModalOpen, setSettingsModalOpen } = useUIStore();
@@ -33,6 +32,8 @@ export default function SettingsModal() {
     theme,
     model,
     modelProvider,
+    apiKey,
+    baseUrl,
     streamEnabled,
     showThoughtChain,
     fontSize,
@@ -46,7 +47,9 @@ export default function SettingsModal() {
     memoryProjectEnabled,
     setTheme,
     setModel,
-    setModelProvider,
+    setApiKey,
+    setBaseUrl,
+    applyProviderDefaults,
     setStreamEnabled,
     setShowThoughtChain,
     setFontSize,
@@ -58,11 +61,16 @@ export default function SettingsModal() {
     setMaxRetries,
     setMemoryUserEnabled,
     setMemoryProjectEnabled,
+    language,
+    setLanguage,
     resetSettings,
   } = useSettingsStore();
 
+  const { t } = useI18n();
+
   const { activeAgentData } = useAgents();
   const [localModelInput, setLocalModelInput] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [memoryEffectiveEnabled, setMemoryEffectiveEnabled] = useState(true);
   const userId = localStorage.getItem('userId') || 'default-user';
   const projectId = localStorage.getItem('projectId') || undefined;
@@ -136,7 +144,7 @@ export default function SettingsModal() {
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg animate-scale-in max-h-[90vh] overflow-y-auto">
           {/* 头部 */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
-            <h2 className="text-lg font-semibold">设置</h2>
+            <h2 className="text-lg font-semibold">{t('settings.title')}</h2>
             <button
               onClick={() => setSettingsModalOpen(false)}
               className="p-2 rounded-lg hover:bg-gray-100 hover-scale icon-rotate transition-all"
@@ -157,7 +165,7 @@ export default function SettingsModal() {
                     <span className="text-xs px-2 py-0.5 bg-white text-gray-600 rounded">
                       {activeAgentData.category}
                     </span>
-                    <span className="text-xs text-gray-400">模型: {activeAgentData.model}</span>
+                    <span className="text-xs text-gray-400">{t('settings.model')}: {activeAgentData.model}</span>
                   </div>
                 </div>
               </div>
@@ -166,52 +174,42 @@ export default function SettingsModal() {
 
           {/* 内容 */}
           <div className="p-6 space-y-6">
-            {/* 模型选择 */}
+            {/* 语言 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-gray-600" />
-                <label className="font-medium text-gray-900">AI模型</label>
+                <Languages className="w-5 h-5 text-gray-600" />
+                <label className="font-medium text-gray-900">{t('settings.language')}</label>
               </div>
-              <select
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black input-focus-effect transition-all"
-              >
-                {MODELS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label} - {m.desc}
-                  </option>
+              <div className="flex gap-2">
+                {LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.value}
+                    type="button"
+                    onClick={() => setLanguage(lang.value)}
+                    className={`flex-1 px-4 py-2 rounded-lg border-2 transition-all hover-scale ${
+                      language === lang.value
+                        ? 'border-gray-900 bg-gray-50 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
                 ))}
-              </select>
-              {(modelProvider === 'local' || modelProvider === 'ollama') && (
-                <div className="mt-2">
-                  <input
-                    value={localModelInput}
-                    onChange={(e) => {
-                      setLocalModelInput(e.target.value);
-                      setModel(e.target.value);
-                    }}
-                    placeholder="输入本地模型名称，如 qwen2.5:7b"
-                    className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    本地模型名称来自你的本地服务（Ollama/LM Studio/vLLM）
-                  </p>
-                </div>
-              )}
+              </div>
             </div>
 
             {/* 模型提供商 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Hash className="w-5 h-5 text-gray-600" />
-                <label className="font-medium text-gray-900">模型提供商</label>
+                <label className="font-medium text-gray-900">{t('settings.modelProvider')}</label>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {MODEL_PROVIDERS.map((provider) => (
                   <button
                     key={provider.value}
-                    onClick={() => setModelProvider(provider.value as any)}
+                    type="button"
+                    onClick={() => applyProviderDefaults(provider.value)}
                     className={`px-3 py-2 text-sm rounded-lg border-2 transition-all hover-scale ${
                       modelProvider === provider.value
                         ? 'border-gray-900 bg-gray-50'
@@ -222,13 +220,86 @@ export default function SettingsModal() {
                   </button>
                 ))}
               </div>
+              <p className="text-xs text-gray-500">
+                {t('settings.modelProviderHint')}
+              </p>
+            </div>
+
+            {/* API Key + Base URL */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-gray-600" />
+                <label className="font-medium text-gray-900">{t('settings.apiKey')}</label>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={t('settings.apiKeyPlaceholder')}
+                  className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black font-mono"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey((v) => !v)}
+                  className="px-3 py-2 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  {showApiKey ? t('settings.hide') : t('settings.show')}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 mt-2">
+                <Link2 className="w-5 h-5 text-gray-600" />
+                <label className="font-medium text-gray-900">{t('settings.baseUrl')}</label>
+              </div>
+              <input
+                type="url"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="https://api.openai.com/v1"
+                className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black font-mono"
+              />
+              <p className="text-xs text-gray-500">
+                {t('settings.keyHint')}
+              </p>
+            </div>
+
+            {/* 模型选择 */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-gray-600" />
+                <label className="font-medium text-gray-900">{t('settings.model')}</label>
+              </div>
+              <select
+                value={MODELS.some((m) => m.value === model) ? model : '__custom__'}
+                onChange={(e) => {
+                  if (e.target.value !== '__custom__') setModel(e.target.value);
+                }}
+                className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black input-focus-effect transition-all"
+              >
+                {MODELS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label} - {m.desc}
+                  </option>
+                ))}
+                <option value="__custom__">{t('settings.customModel')}</option>
+              </select>
+              <input
+                value={localModelInput || model}
+                onChange={(e) => {
+                  setLocalModelInput(e.target.value);
+                  setModel(e.target.value);
+                }}
+                placeholder="模型 ID，如 glm-4.7-flash / gpt-4o-mini / qwen2.5:7b"
+                className="w-full px-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black font-mono"
+              />
             </div>
 
             {/* 主题 */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Monitor className="w-5 h-5 text-gray-600" />
-                <label className="font-medium text-gray-900">主题</label>
+                <label className="font-medium text-gray-900">{t('settings.theme')}</label>
               </div>
               <div className="flex gap-2">
                 <button
@@ -239,7 +310,7 @@ export default function SettingsModal() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  浅色
+                  {t('settings.light')}
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
@@ -249,7 +320,7 @@ export default function SettingsModal() {
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  深色
+                  {t('settings.dark')}
                 </button>
               </div>
             </div>
@@ -258,7 +329,7 @@ export default function SettingsModal() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Type className="w-5 h-5 text-gray-600" />
-                <label className="font-medium text-gray-900">字体大小</label>
+                <label className="font-medium text-gray-900">{t('settings.fontSize')}</label>
               </div>
               <div className="flex gap-2">
                 {(['sm', 'md', 'lg'] as const).map((size) => (
@@ -271,7 +342,7 @@ export default function SettingsModal() {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    {size === 'sm' ? '小' : size === 'md' ? '中' : '大'}
+                    {size === 'sm' ? t('settings.fontSmall') : size === 'md' ? t('settings.fontMedium') : t('settings.fontLarge')}
                   </button>
                 ))}
               </div>
@@ -284,8 +355,8 @@ export default function SettingsModal() {
                 <div className="flex items-center gap-3">
                   <Zap className="w-5 h-5 text-gray-600" />
                   <div>
-                    <div className="font-medium text-gray-900">流式响应</div>
-                    <div className="text-sm text-gray-500">实时显示生成内容</div>
+                    <div className="font-medium text-gray-900">{t('settings.streaming')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.streamingDesc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -315,8 +386,8 @@ export default function SettingsModal() {
                 <div className="flex items-center gap-3">
                   <Globe className="w-5 h-5 text-gray-600" />
                   <div>
-                    <div className="font-medium text-gray-900">网络搜索</div>
-                    <div className="text-sm text-gray-500">启用实时网络信息检索</div>
+                    <div className="font-medium text-gray-900">{t('settings.webSearch')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.webSearchDesc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -346,8 +417,8 @@ export default function SettingsModal() {
                 <div className="flex items-center gap-3">
                   <Database className="w-5 h-5 text-gray-600" />
                   <div>
-                    <div className="font-medium text-gray-900">知识库查询</div>
-                    <div className="text-sm text-gray-500">检索专业剧本资料</div>
+                    <div className="font-medium text-gray-900">{t('settings.knowledgeBase')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.knowledgeBaseDesc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -377,8 +448,8 @@ export default function SettingsModal() {
                 <div className="flex items-center gap-3">
                   <RefreshCw className="w-5 h-5 text-gray-600" />
                   <div>
-                    <div className="font-medium text-gray-900">自动重试</div>
-                    <div className="text-sm text-gray-500">错误时自动重试 (最多{maxRetries}次)</div>
+                    <div className="font-medium text-gray-900">{t('settings.autoRetry')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.autoRetryDesc', { count: maxRetries })}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -408,8 +479,8 @@ export default function SettingsModal() {
                 <div className="flex items-center gap-3">
                   <Eye className="w-5 h-5 text-gray-600" />
                   <div>
-                    <div className="font-medium text-gray-900">思考过程</div>
-                    <div className="text-sm text-gray-500">显示AI推理思考链</div>
+                    <div className="font-medium text-gray-900">{t('settings.thoughtChain')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.thoughtChainDesc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -441,8 +512,8 @@ export default function SettingsModal() {
                     <span className="text-xs">↓</span>
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">自动滚动</div>
-                    <div className="text-sm text-gray-500">新消息时自动滚动到底部</div>
+                    <div className="font-medium text-gray-900">{t('settings.autoScroll')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.autoScrollDesc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -474,8 +545,8 @@ export default function SettingsModal() {
                     <span className="text-xs">⏱</span>
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">时间戳</div>
-                    <div className="text-sm text-gray-500">显示消息时间</div>
+                    <div className="font-medium text-gray-900">{t('settings.timestamp')}</div>
+                    <div className="text-sm text-gray-500">{t('settings.timestampDesc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -505,33 +576,33 @@ export default function SettingsModal() {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Database className="w-5 h-5 text-gray-600" />
-                <label className="font-medium text-gray-900">记忆开关</label>
-                <span className="text-xs text-gray-400">生效: {memoryEffectiveEnabled ? '开启' : '关闭'}</span>
+                <label className="font-medium text-gray-900">{t('settings.memory')}</label>
+                <span className="text-xs text-gray-400">{t('settings.effective')}: {memoryEffectiveEnabled ? t('settings.on') : t('settings.off')}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span>用户维度记忆</span>
+                <span>{t('settings.userMemory')}</span>
                 <button
                   onClick={handleToggleUserMemory}
                   className={`px-3 py-1 rounded-full text-xs border ${
                     memoryUserEnabled ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200'
                   }`}
                 >
-                  {memoryUserEnabled ? '已开启' : '已关闭'}
+                  {memoryUserEnabled ? t('settings.enabled') : t('settings.disabled')}
                 </button>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span>项目维度记忆</span>
+                <span>{t('settings.projectMemory')}</span>
                 <button
                   onClick={handleToggleProjectMemory}
                   className={`px-3 py-1 rounded-full text-xs border ${
                     memoryProjectEnabled ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200'
                   }`}
                 >
-                  {memoryProjectEnabled ? '已开启' : '已关闭'}
+                  {memoryProjectEnabled ? t('settings.enabled') : t('settings.disabled')}
                 </button>
               </div>
               {!projectId && (
-                <div className="text-xs text-gray-400">未选择项目时，项目维度记忆不生效。</div>
+                <div className="text-xs text-gray-400">{t('settings.noProjectMemory')}</div>
               )}
             </div>
 
@@ -540,7 +611,7 @@ export default function SettingsModal() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <RefreshCw className="w-5 h-5 text-gray-600" />
-                  <label className="font-medium text-gray-900">最大重试次数</label>
+                  <label className="font-medium text-gray-900">{t('settings.maxRetries')}</label>
                 </div>
                 <div className="flex gap-2">
                   {[1, 2, 3, 5].map((count) => (
@@ -568,13 +639,13 @@ export default function SettingsModal() {
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-all hover-scale icon-rotate"
             >
               <RotateCcw className="w-4 h-4" />
-              重置设置
+              {t('settings.resetSettings')}
             </button>
             <button
               onClick={() => setSettingsModalOpen(false)}
               className="px-6 py-2 text-sm text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-all hover-scale shadow-md hover:shadow-lg"
             >
-              完成
+              {t('common.done')}
             </button>
           </div>
         </div>

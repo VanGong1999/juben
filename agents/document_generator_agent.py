@@ -41,7 +41,7 @@ class DocumentGeneratorAgent(BaseJubenAgent):
     4. 文档链接管理
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化文档生成工具智能体"""
         super().__init__("document_generator", model_provider)
         

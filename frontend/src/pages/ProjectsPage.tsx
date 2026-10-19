@@ -27,23 +27,25 @@ import {
   Tag
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
+import { enUS, zhCN } from 'date-fns/locale';
 import type { Project, ProjectStatus } from '@/types';
+import { useI18n } from '@/i18n';
 
-const PHASE_META: Record<string, { label: string; className: string }> = {
-  planning: { label: '策划', className: 'bg-blue-100 text-blue-700' },
-  creation: { label: '创作', className: 'bg-emerald-100 text-emerald-700' },
-  evaluation: { label: '评估', className: 'bg-orange-100 text-orange-700' },
-  analysis: { label: '分析', className: 'bg-purple-100 text-purple-700' },
-  workflow: { label: '工作流', className: 'bg-slate-100 text-slate-700' },
-  character: { label: '人物', className: 'bg-pink-100 text-pink-700' },
-  story: { label: '情节', className: 'bg-indigo-100 text-indigo-700' },
-  utility: { label: '工具', className: 'bg-gray-100 text-gray-700' },
+const PHASE_META: Record<string, { className: string }> = {
+  planning: { className: 'bg-blue-100 text-blue-700' },
+  creation: { className: 'bg-emerald-100 text-emerald-700' },
+  evaluation: { className: 'bg-orange-100 text-orange-700' },
+  analysis: { className: 'bg-purple-100 text-purple-700' },
+  workflow: { className: 'bg-slate-100 text-slate-700' },
+  character: { className: 'bg-pink-100 text-pink-700' },
+  story: { className: 'bg-indigo-100 text-indigo-700' },
+  utility: { className: 'bg-gray-100 text-gray-700' },
 };
 
 export default function ProjectsPage() {
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const navigate = useNavigate();
+  const { t, language } = useI18n();
 
   const {
     projects,
@@ -152,12 +154,26 @@ export default function ProjectsPage() {
 
   const getStatusText = (status: ProjectStatus) => {
     switch (status) {
-      case 'active': return '进行中';
-      case 'completed': return '已完成';
-      case 'archived': return '已归档';
-      case 'deleted': return '已删除';
+      case 'active': return t('project.status.active');
+      case 'completed': return t('project.status.completed');
+      case 'archived': return t('project.status.archived');
+      case 'deleted': return t('project.status.deleted');
       default: return status;
     }
+  };
+
+  const phaseLabel = (phase: string) => {
+    const labels: Record<string, string> = {
+      planning: t('project.phase.planning'),
+      creation: t('project.phase.creation'),
+      evaluation: t('project.phase.evaluation'),
+      analysis: t('project.phase.analysis'),
+      workflow: t('project.phase.workflow'),
+      character: t('project.phase.character'),
+      story: t('project.phase.story'),
+      utility: t('project.phase.utility'),
+    };
+    return labels[phase] || phase;
   };
 
   const phaseOptions = Array.from(
@@ -188,13 +204,13 @@ export default function ProjectsPage() {
     return (
       <div className="flex flex-wrap gap-1 mt-2">
         {phases.map((phase) => {
-          const meta = PHASE_META[phase] || { label: phase, className: 'bg-gray-100 text-gray-700' };
+          const meta = PHASE_META[phase] || { className: 'bg-gray-100 text-gray-700' };
           return (
             <span
               key={phase}
               className={`inline-flex px-2 py-0.5 text-[11px] rounded ${meta.className}`}
             >
-              {meta.label}
+              {phaseLabel(phase)}
             </span>
           );
         })}
@@ -225,9 +241,9 @@ export default function ProjectsPage() {
                     <FolderOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">项目管理</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('studio.header.nav.projects')}</h1>
                     <p className="text-sm text-gray-500 mt-1">
-                      管理您的剧本创作项目，共 {total} 个项目
+                      {t('project.pageSubtitle', { total })}
                     </p>
                   </div>
                 </div>
@@ -237,7 +253,7 @@ export default function ProjectsPage() {
                   className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all hover-scale"
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="font-medium">新建项目</span>
+                  <span className="font-medium">{t('project.newProject')}</span>
                 </button>
               </div>
 
@@ -248,7 +264,7 @@ export default function ProjectsPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="搜索项目..."
+                    placeholder={t('project.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm"
@@ -261,11 +277,11 @@ export default function ProjectsPage() {
                   onChange={(e) => setStatusFilter(e.target.value as ProjectStatus | 'all')}
                   className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black"
                 >
-                  <option value="all">全部状态</option>
-                  <option value="active">进行中</option>
-                  <option value="completed">已完成</option>
-                  <option value="archived">已归档</option>
-                  <option value="deleted">已删除</option>
+                  <option value="all">{t('project.allStatuses')}</option>
+                  <option value="active">{t('project.status.active')}</option>
+                  <option value="completed">{t('project.status.completed')}</option>
+                  <option value="archived">{t('project.status.archived')}</option>
+                  <option value="deleted">{t('project.status.deleted')}</option>
                 </select>
 
                 {/* 阶段过滤 */}
@@ -274,7 +290,7 @@ export default function ProjectsPage() {
                   onChange={(e) => setPhaseFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black"
                 >
-                  <option value="">全部阶段</option>
+                  <option value="">{t('project.allPhases')}</option>
                   {phaseOptions.map((phase) => (
                     <option key={phase} value={phase}>
                       {phase}
@@ -288,7 +304,7 @@ export default function ProjectsPage() {
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black"
                 >
-                  <option value="">全部分类</option>
+                  <option value="">{t('project.allCategories')}</option>
                   {categoryOptions.map((category) => (
                     <option key={category} value={category}>
                       {category}
@@ -326,7 +342,7 @@ export default function ProjectsPage() {
                 <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                   {error}
                   <button onClick={clearError} className="ml-2 underline hover:text-red-900">
-                    关闭
+                    {t('project.close')}
                   </button>
                 </div>
               )}
@@ -335,7 +351,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">加载中...</p>
+                    <p className="text-gray-500">{t('studio.loading')}</p>
                   </div>
                 </div>
               ) : filteredProjects.length === 0 ? (
@@ -344,12 +360,12 @@ export default function ProjectsPage() {
                     <FolderPlus className="w-10 h-10 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {searchQuery || statusFilter !== 'all' ? '没有找到匹配的项目' : '还没有项目'}
+                    {searchQuery || statusFilter !== 'all' ? t('project.noMatch') : t('empty.noProjects')}
                   </h3>
                   <p className="text-gray-500 mb-6">
                     {searchQuery || statusFilter !== 'all'
-                      ? '尝试调整搜索条件或过滤选项'
-                      : '创建您的第一个剧本创作项目'}
+                      ? t('project.noMatchHint')
+                      : t('project.createFirstProject')}
                   </p>
                   {!searchQuery && statusFilter === 'all' && (
                     <button
@@ -357,7 +373,7 @@ export default function ProjectsPage() {
                       className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all"
                     >
                       <Plus className="w-4 h-4" />
-                      创建项目
+                      {t('empty.createProject')}
                     </button>
                   )}
                 </div>
@@ -388,12 +404,12 @@ export default function ProjectsPage() {
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">项目名称</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">描述</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">文件数</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">更新时间</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('project.table.name')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('project.table.description')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('project.table.status')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('project.table.fileCount')}</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('project.table.updatedAt')}</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('project.table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -436,7 +452,7 @@ export default function ProjectsPage() {
                           <td className="px-6 py-4 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-4 h-4" />
-                              {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: zhCN })}
+                              {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: language === 'zh' ? zhCN : enUS })}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -462,7 +478,11 @@ export default function ProjectsPage() {
               {total > 20 && (
                 <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
                   <p className="text-sm text-gray-500">
-                    显示 {Math.min((currentPage - 1) * 20 + 1, filteredProjects.length)} - {Math.min(currentPage * 20, filteredProjects.length)} / 共 {total} 个项目
+                    {t('project.showRange', {
+                      from: Math.min((currentPage - 1) * 20 + 1, filteredProjects.length),
+                      to: Math.min(currentPage * 20, filteredProjects.length),
+                      total,
+                    })}
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -470,14 +490,14 @@ export default function ProjectsPage() {
                       disabled={currentPage === 1}
                       className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
-                      上一页
+                      {t('project.prevPage')}
                     </button>
                     <button
                       onClick={() => setCurrentPage(Math.min(Math.ceil(total / 20), currentPage + 1))}
                       disabled={currentPage >= Math.ceil(total / 20)}
                       className="px-3 py-1 border border-gray-200 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
-                      下一页
+                      {t('project.nextPage')}
                     </button>
                   </div>
                 </div>
@@ -493,39 +513,39 @@ export default function ProjectsPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">创建新项目</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('project.createNewProject')}</h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">项目名称 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.projectNameRequired')}</label>
                 <input
                   type="text"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="输入项目名称"
+                  placeholder={t('project.inputProjectName')}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">项目描述</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.projectDesc')}</label>
                 <textarea
                   value={newProjectDesc}
                   onChange={(e) => setNewProjectDesc(e.target.value)}
-                  placeholder="描述这个项目..."
+                  placeholder={t('project.descPlaceholder')}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">标签</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.tags')}</label>
                 <input
                   type="text"
                   value={newProjectTags.join(', ')}
                   onChange={(e) => setNewProjectTags(e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
-                  placeholder="输入标签，用逗号分隔"
+                  placeholder={t('project.inputTags')}
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black"
                 />
               </div>
@@ -540,14 +560,14 @@ export default function ProjectsPage() {
                   }}
                   className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  取消
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleCreateProject}
                   disabled={!newProjectName.trim() || isLoading}
                   className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isLoading ? '创建中...' : '创建'}
+                  {isLoading ? t('project.creating') : t('project.create')}
                 </button>
               </div>
             </div>
@@ -559,9 +579,9 @@ export default function ProjectsPage() {
       {showDeleteModal && projectToDelete && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">删除项目</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{t('project.deleteProject')}</h2>
             <p className="text-gray-600 mb-6">
-              确定要删除项目 "{projectToDelete.name}" 吗？此操作无法撤销。
+              {t('project.deleteProjectConfirm', { name: projectToDelete.name })}
             </p>
 
             <div className="flex gap-3">
@@ -572,13 +592,13 @@ export default function ProjectsPage() {
                 }}
                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleDeleteProject}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                删除
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -609,6 +629,7 @@ function ProjectCard({
   getStatusText: (status: ProjectStatus) => string;
   renderPhaseBadges: (tags: string[]) => React.ReactNode;
 }) {
+  const { t, language } = useI18n();
   return (
     <div
       onClick={onClick}
@@ -625,7 +646,7 @@ function ProjectCard({
               {project.name}
             </h3>
             <p className="text-xs text-gray-500 mt-1">
-              {formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: zhCN })}
+              {formatDistanceToNow(new Date(project.created_at), { addSuffix: true, locale: language === 'zh' ? zhCN : enUS })}
             </p>
           </div>
         </div>
@@ -645,7 +666,7 @@ function ProjectCard({
 
       {/* 描述 */}
       <p className="text-sm text-gray-600 mb-4 line-clamp-2 min-h-[40px]">
-        {project.description || '暂无描述'}
+        {project.description || t('project.noDescription')}
       </p>
 
       {/* 标签 */}
@@ -673,7 +694,7 @@ function ProjectCard({
         <div className="flex items-center gap-3 text-sm text-gray-500">
           <div className="flex items-center gap-1">
             <FileText className="w-4 h-4" />
-            <span>{project.file_count} 文件</span>
+            <span>{t('project.files', { count: project.file_count })}</span>
           </div>
           <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
             {getStatusText(project.status)}
@@ -684,14 +705,14 @@ function ProjectCard({
           <button
             onClick={onEdit}
             className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-            title="编辑"
+            title={t('project.edit')}
           >
             <Edit className="w-4 h-4 text-gray-500" />
           </button>
           <button
             onClick={onDelete}
             className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
-            title="删除"
+            title={t('common.delete')}
           >
             <Trash2 className="w-4 h-4 text-red-500" />
           </button>

@@ -56,6 +56,11 @@ from apis.pipelines.api_routes_pipelines import router as pipelines_router
 from apis.release.api_routes_release import router as release_router
 from apis.quality.api_routes_quality import router as quality_router
 from apis.asr.api_routes_asr import router as asr_router
+from apis.dramas.api_routes_dramas import router as dramas_router
+from apis.dramas.api_routes_atelier import router as atelier_router
+from apis.dramas.api_routes_scripts import router as drama_scripts_router
+from apis.agent_infra.api_routes_agent_infra import router as agent_infra_router
+from apis.feishu.api_routes_feishu import router as feishu_router
 from middleware.cors_middleware import CORSMiddlewareConfig
 from middleware.auth_middleware import AuthMiddleware, RateLimitMiddleware
 from middleware.request_tracking import RequestTrackingMiddleware
@@ -215,15 +220,11 @@ app.include_router(pipelines_router)
 app.include_router(release_router)
 app.include_router(quality_router)
 app.include_router(asr_router)
-
-# 静态文件服务 (如果前端构建文件存在)
-frontend_dist = Path(__file__).parent / "frontend" / "dist"
-if frontend_dist.exists():
-    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
-    logger.info(f"前端静态文件服务已启用: {frontend_dist}")
-else:
-    logger.warning(f"前端构建文件不存在: {frontend_dist}")
-
+app.include_router(dramas_router)
+app.include_router(atelier_router)
+app.include_router(drama_scripts_router)
+app.include_router(agent_infra_router)
+app.include_router(feishu_router)
 
 @app.get("/health")
 async def health_check():
@@ -303,13 +304,18 @@ async def health_check():
     # 检查 LLM API 可用性
     llm_check = {"status": "unknown", "message": "LLM API 未配置检查"}
     try:
-        zhipu_key = os.getenv("ZHIPU_API_KEY")
-        if zhipu_key and zhipu_key != "your_zhipu_api_key_here":
+        deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+        if deepseek_key and deepseek_key != "your_deepseek_api_key_here":
             llm_check["status"] = "healthy"
-            llm_check["message"] = "智谱 API Key 已配置"
+            llm_check["message"] = "DeepSeek API Key 已配置"
         else:
-            llm_check["status"] = "warning"
-            llm_check["message"] = "智谱 API Key 未配置或使用默认值"
+            zhipu_key = os.getenv("ZHIPU_API_KEY")
+            if zhipu_key and zhipu_key != "your_zhipu_api_key_here":
+                llm_check["status"] = "healthy"
+                llm_check["message"] = "智谱 API Key 已配置（备用）"
+            else:
+                llm_check["status"] = "warning"
+                llm_check["message"] = "DeepSeek API Key 未配置或使用默认值"
     except Exception as e:
         llm_check = {
             "status": "error",
@@ -349,6 +355,17 @@ async def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
+# 静态文件服务 (如果前端构建文件存在)
+# 注意：必须注册在所有 API 路由（尤其是 /health、/metrics）之后，
+# 否则 mount("/") 会拦截这些路由导致 404。
+frontend_dist = Path(__file__).parent / "frontend" / "dist"
+if frontend_dist.exists():
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+    logger.info(f"前端静态文件服务已启用: {frontend_dist}")
+else:
+    logger.warning(f"前端构建文件不存在: {frontend_dist}")
+
+
 @app.on_event("startup")
 async def startup_event():
     """应用启动事件"""
@@ -370,14 +387,18 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"⚠️ 异步错误处理设置失败: {e}")
 
-    # 🆕 【新增】预热连接池
+    # 🆕 【新增】预热连接池（带超时，避免 Redis 不可用时卡死启动）
     try:
+        import asyncio
         from utils.connection_pool_manager import get_connection_pool_manager
         pool_manager = await get_connection_pool_manager()
-        await pool_manager.warmup_pools(['high_priority', 'normal', 'background'])
+        await asyncio.wait_for(
+            pool_manager.warmup_pools(['high_priority', 'normal', 'background']),
+            timeout=float(os.getenv("REDIS_WARMUP_TIMEOUT", "3")),
+        )
         logger.info("✅ 连接池预热完成")
     except Exception as e:
-        logger.warning(f"⚠️ 连接池预热失败，将在首次使用时创建: {e}")
+        logger.warning(f"⚠️ 连接池预热失败/超时，将在首次使用时创建: {e}")
 
     # 🆕 【新增】启动端口监控服务
     try:
@@ -395,6 +416,47 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"⚠️ 端口监控服务启动失败: {e}")
 
+    # Agent Infra：回收崩溃后仍标记为 running 的 Atelier 步骤
+    try:
+        from utils.agent_infra.durable import reclaim_stale_runs
+
+        reclaimed = await reclaim_stale_runs(stale_after_seconds=int(os.getenv("ATELIER_STALE_SECONDS", "1800")))
+        if reclaimed:
+            logger.info(f"✅ Agent Infra 已回收 {len(reclaimed)} 个卡住的步骤")
+        else:
+            logger.info("✅ Agent Infra durable reclaim 完成（无卡住任务）")
+    except Exception as e:
+        logger.warning(f"⚠️ Agent Infra reclaim 失败: {e}")
+
+    # Agent Infra：内存 Worker + 可选 Redis Worker + OTel
+    try:
+        from utils.agent_infra.queue import get_worker_pool
+        from utils.agent_infra.otel import configure_otel_from_env
+
+        configure_otel_from_env()
+        await get_worker_pool(concurrency=int(os.getenv("AGENT_WORKER_CONCURRENCY", "4")))
+        logger.info("✅ Agent Infra 内存 WorkerPool 已启动")
+    except Exception as e:
+        logger.warning(f"⚠️ Agent Infra WorkerPool 启动失败: {e}")
+
+    if os.getenv("AGENT_REDIS_WORKER", "").lower() in ("1", "true", "yes"):
+        try:
+            from utils.agent_infra.redis_queue import get_redis_worker_pool
+
+            await get_redis_worker_pool(concurrency=int(os.getenv("AGENT_REDIS_WORKER_CONCURRENCY", "2")))
+            logger.info("✅ Agent Infra Redis WorkerPool 已启动")
+        except Exception as e:
+            logger.warning(f"⚠️ Agent Infra Redis Worker 启动失败: {e}")
+
+    # 飞书集成：WebSocket 长连接（仅当 FEISHU_ENABLED=true 时启动，默认不影响现有功能）
+    try:
+        from utils.feishu_bot import get_feishu_bot
+
+        feishu_bot = get_feishu_bot()
+        feishu_bot.start()
+    except Exception as e:
+        logger.warning(f"⚠️ 飞书机器人启动失败: {e}")
+
     logger.info("✅ 应用启动成功!")
     logger.info("=" * 60)
 
@@ -403,6 +465,18 @@ async def startup_event():
 async def shutdown_event():
     """应用关闭事件"""
     logger.info("应用正在关闭...")
+
+    try:
+        from utils.agent_infra.queue import _global_pool
+        from utils.agent_infra import redis_queue as rq
+
+        if _global_pool is not None:
+            await _global_pool.stop()
+        if getattr(rq, "_redis_pool", None) is not None:
+            await rq._redis_pool.stop()
+        logger.info("✅ Agent Infra Worker 已停止")
+    except Exception as e:
+        logger.warning(f"⚠️ Agent Infra Worker 停止失败: {e}")
 
     # 🆕 【新增】停止端口监控服务
     try:

@@ -60,7 +60,7 @@ class StoryFiveElementsAgent(BaseJubenAgent):
     6. 模块化外包: 智能体间相互调用，上下文隔离
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化故事五元素分析智能体"""
         super().__init__("story_five_elements", model_provider)
         

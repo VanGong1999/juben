@@ -152,8 +152,12 @@ class ZhipuSearchClient:
             }
 
 
-# 创建全局实例
-zhipu_search = ZhipuSearchClient()
+# 创建全局实例（缺少 ZHIPU_API_KEY 或 zhipuai 包时不阻断启动，降级为 None）
+try:
+    zhipu_search = ZhipuSearchClient()
+except (ValueError, ImportError) as e:
+    logger.warning(f"智谱搜索客户端未初始化（缺少 ZHIPU_API_KEY 或 zhipuai 包）：{e}")
+    zhipu_search = None
 
 
 if __name__ == "__main__":

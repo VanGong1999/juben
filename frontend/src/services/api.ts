@@ -38,11 +38,11 @@ class APIClient {
     return `${this.baseURL}${path}`;
   }
 
-  private async request<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  private async request<T = any>(
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     data?: any,
-    params?: Record<string, string>
+    params?: Record<string, any>
   ): Promise<T> {
     const url = new URL(this.getUrl(path));
     if (params) {
@@ -92,14 +92,14 @@ class APIClient {
   /**
    * GET 请求
    */
-  async get<T>(path: string, params?: Record<string, string>): Promise<T> {
+  async get<T = any>(path: string, params?: Record<string, any>): Promise<T> {
     return this.request<T>('GET', path, undefined, params);
   }
 
   /**
    * POST 请求
    */
-  async post<T>(path: string, data?: any): Promise<T> {
+  async post<T = any>(path: string, data?: any): Promise<T> {
     const url = this.getUrl(path);
     log.debug('POST Request:', url, data);
     try {
@@ -115,14 +115,21 @@ class APIClient {
   /**
    * PUT 请求
    */
-  async put<T>(path: string, data?: any, params?: Record<string, string>): Promise<T> {
+  async put<T = any>(path: string, data?: any, params?: Record<string, any>): Promise<T> {
     return this.request<T>('PUT', path, data, params);
+  }
+
+  /**
+   * PATCH 请求
+   */
+  async patch<T = any>(path: string, data?: any, params?: Record<string, any>): Promise<T> {
+    return this.request<T>('PATCH', path, data, params);
   }
 
   /**
    * DELETE 请求
    */
-  async delete<T>(path: string, params?: Record<string, string>): Promise<T> {
+  async delete<T = any>(path: string, params?: Record<string, any>): Promise<T> {
     return this.request<T>('DELETE', path, undefined, params);
   }
 
@@ -151,106 +158,97 @@ class APIClient {
   /**
    * 创建 SSE 连接
    */
-  async connectSSE(
+  connectSSE(
     path: string,
     data: any,
     onMessage: (event: MessageEvent) => void,
     onError?: (error: Error) => void,
     onClose?: () => void
-  ): Promise<() => void> {
+  ): () => void {
     const url = this.getUrl(path);
     console.log('[SSE] Connecting to:', url);
     console.log('[SSE] Request data:', JSON.stringify(data).substring(0, 200));
+
+    let closed = false;
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
 
     // 添加fetch超时检测
     const timeoutId = setTimeout(() => {
       console.error('[SSE] Request timeout - no response after 30 seconds');
     }, 30000);
 
-    try {
-      console.log('[SSE] Calling fetch...');
-      const authHeader = this.getAuthHeader();
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authHeader ? { Authorization: authHeader } : {}),
-        },
-        body: JSON.stringify(data),
-      });
+    (async () => {
+      try {
+        console.log('[SSE] Calling fetch...');
+        const authHeader = this.getAuthHeader();
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authHeader ? { Authorization: authHeader } : {}),
+          },
+          body: JSON.stringify(data),
+        });
 
-      clearTimeout(timeoutId);
-      console.log('[SSE] Got response, status:', response.status);
+        clearTimeout(timeoutId);
+        console.log('[SSE] Got response, status:', response.status);
 
-      console.log('[SSE] Response status:', response.status);
-      console.log('[SSE] Response headers:', Object.fromEntries(response.headers.entries()));
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('[SSE] Response error:', errorText);
+          throw new APIError(response.status, errorText);
+        }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[SSE] Response error:', errorText);
-        throw new APIError(response.status, errorText);
-      }
+        if (!response.body) {
+          console.error('[SSE] Response body is null');
+          throw new Error('Response body is null');
+        }
 
-      if (!response.body) {
-        console.error('[SSE] Response body is null');
-        throw new Error('Response body is null');
-      }
+        reader = response.body.getReader();
+        const decoder = new TextDecoder();
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let closed = false;
+        while (!closed) {
+          const { done, value } = await reader.read();
 
-      const read = async () => {
-        try {
-          console.log('[SSE] Starting to read stream...');
-          while (!closed) {
-            const { done, value } = await reader.read();
+          if (done) {
+            console.log('[SSE] Stream completed');
+            onClose?.();
+            break;
+          }
 
-            if (done) {
-              console.log('[SSE] Stream completed');
-              onClose?.();
-              break;
-            }
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('[SSE] Received chunk:', chunk.substring(0, 200));
+          const lines = chunk.split('\n');
 
-            const chunk = decoder.decode(value, { stream: true });
-            console.log('[SSE] Received chunk:', chunk.substring(0, 200));
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data.trim()) {
-                  try {
-                    const event = new MessageEvent('message', { data });
-                    console.log('[SSE] Parsed event:', data.substring(0, 200));
-                    onMessage(event);
-                  } catch (e) {
-                    console.error('[SSE] Error parsing event:', e);
-                  }
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.slice(6);
+              if (dataStr.trim()) {
+                try {
+                  const event = new MessageEvent('message', { data: dataStr });
+                  console.log('[SSE] Parsed event:', dataStr.substring(0, 200));
+                  onMessage(event);
+                } catch (e) {
+                  console.error('[SSE] Error parsing event:', e);
                 }
               }
             }
           }
-        } catch (error) {
-          console.error('[SSE] Read error:', error);
-          if (!closed) {
-            onError?.(error as Error);
-          }
         }
-      };
+      } catch (error) {
+        console.error('[SSE] Read error:', error);
+        if (!closed) {
+          onError?.(error as Error);
+        }
+      }
+    })();
 
-      read();
-
-      // 返回关闭函数
-      return () => {
-        console.log('[SSE] Closing connection');
-        closed = true;
-        reader.cancel();
-      };
-    } catch (error) {
-      console.error('[SSE] Connection error:', error);
-      throw error;
-    }
+    // 返回关闭函数
+    return () => {
+      console.log('[SSE] Closing connection');
+      closed = true;
+      reader?.cancel();
+    };
   }
 }
 

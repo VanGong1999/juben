@@ -8,14 +8,33 @@ from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 import logging
 import asyncio
-import json
 from datetime import datetime
 
 from utils.tool_system import get_tool_registry, get_tool_executor
+from utils.agent_tools import (
+    ToolContext,
+    get_agent_tool_registry,
+    get_tool_harness,
+    resolve_tool_name,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tools", tags=["工具调用"])
+
+
+def _build_tool_context(raw: Optional[Dict[str, Any]]) -> ToolContext:
+    raw = raw or {}
+    # 默认不允许写；危险工具需显式 allow_write
+    return ToolContext(
+        user_id=str(raw.get("user_id") or "default_user"),
+        drama_id=raw.get("drama_id"),
+        session_id=raw.get("session_id"),
+        agent_id=raw.get("agent_id"),
+        workspace_root=raw.get("workspace_root"),
+        allow_write=bool(raw.get("allow_write", False)),
+        metadata=dict(raw.get("metadata") or {}),
+    )
 
 
 # ==================== 请求模型 ====================
@@ -25,6 +44,8 @@ class ToolExecuteRequest(BaseModel):
     tool_name: str = Field(..., description="工具名称")
     parameters: Dict[str, Any] = Field(default_factory=dict, description="工具参数")
     context: Optional[Dict[str, Any]] = Field(None, description="执行上下文")
+    confirm_dangerous: bool = Field(False, description="危险工具二次确认")
+    role: Optional[str] = Field(None, description="调用方角色（开发调试；生产应从 JWT 注入）")
 
 
 class ToolBatchExecuteRequest(BaseModel):
@@ -52,20 +73,19 @@ class QuickEvaluateRequest(BaseModel):
 # ==================== API 端点 ====================
 
 @router.get("/list")
-async def list_tools():
-    """
-    获取所有可用工具列表
-
-    返回系统中注册的所有工具及其描述
-    """
+async def list_tools(category: Optional[str] = None):
+    """获取 Agent Tools 目录（prebuilt / external）"""
     try:
-        registry = get_tool_registry()
-        tools = registry.get_all_schemas()
+        from utils.agent_tools import ToolCategory
 
+        registry = get_agent_tool_registry()
+        cat = ToolCategory(category) if category in ("prebuilt", "external") else None
+        tools = [t.ui_schema() for t in registry.list(category=cat, enabled_only=False)]
         return {
             "success": True,
             "data": tools,
-            "total": len(tools)
+            "total": len(tools),
+            "categories": {"prebuilt": "Harness 预置", "external": "外部工具"},
         }
     except Exception as e:
         logger.error(f"[工具列表] 错误: {e}")
@@ -73,20 +93,19 @@ async def list_tools():
 
 
 @router.get("/schemas")
-async def get_tool_schemas():
-    """
-    获取所有工具的 JSON Schema
-
-    返回用于 LLM Function Calling 的工具 Schema
-    """
+async def get_tool_schemas(category: Optional[str] = None):
+    """OpenAI Function Calling Schema"""
     try:
-        registry = get_tool_registry()
-        schemas = registry.get_all_schemas()
+        from utils.agent_tools import ToolCategory
 
+        registry = get_agent_tool_registry()
+        cat = ToolCategory(category) if category in ("prebuilt", "external") else None
+        schemas = registry.openai_tools(category=cat)
         return {
             "success": True,
             "data": schemas,
-            "format": "openai_function_calling"
+            "format": "openai_function_calling",
+            "total": len(schemas),
         }
     except Exception as e:
         logger.error(f"[工具Schema] 错误: {e}")
@@ -95,20 +114,62 @@ async def get_tool_schemas():
 
 @router.post("/execute")
 async def execute_tool(request: ToolExecuteRequest):
-    """
-    执行单个工具
-
-    根据工具名称和参数执行相应的工具
-    """
+    """执行工具：优先 Agent Tools，未命中回退旧 tool_system；危险工具需 ACL。"""
     try:
+        name = resolve_tool_name(request.tool_name)
+        harness = get_tool_harness()
+        tool = harness.registry.get(name)
+        ctx = _build_tool_context(request.context)
+
+        if tool:
+            from utils.agent_infra.tool_acl import check_tool_access
+
+            user = {"role": request.role or (request.context or {}).get("role") or "user"}
+            decision = check_tool_access(
+                tool_name=name,
+                dangerous=bool(tool.dangerous),
+                user=user,
+                allow_write=bool(ctx.allow_write),
+                confirm_dangerous=bool(request.confirm_dangerous),
+            )
+            if not decision.allowed:
+                status = 403
+                raise HTTPException(
+                    status_code=status,
+                    detail={
+                        "message": decision.reason,
+                        "require_confirm": decision.require_confirm,
+                        "tool": name,
+                    },
+                )
+
+            packed = await harness.execute(
+                name,
+                request.parameters,
+                ctx=ctx,
+            )
+            return {
+                "success": packed["success"],
+                "tool_name": packed["tool_name"],
+                "tool_call_id": packed["tool_call_id"],
+                "result": {
+                    "log_id": packed["tool_call_id"],
+                    "msg": "success" if packed["success"] else (packed.get("error") or "error"),
+                    "code": 0 if packed["success"] else -1,
+                    "data": packed["result"],
+                    "llm_text": packed.get("llm_text"),
+                },
+                "error": packed.get("error"),
+            }
+
         executor = get_tool_executor()
-        result = await executor.execute(
+        return await executor.execute(
             tool_name=request.tool_name,
             parameters=request.parameters,
-            context=request.context
+            context=request.context,
         )
-
-        return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"[工具执行] 错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -116,28 +177,17 @@ async def execute_tool(request: ToolExecuteRequest):
 
 @router.post("/batch_execute")
 async def batch_execute_tools(request: ToolBatchExecuteRequest):
-    """
-    批量执行工具
-
-    按顺序执行多个工具，返回所有结果
-    """
+    """批量执行工具"""
     try:
-        executor = get_tool_executor()
         results = []
-
         for tool_request in request.tools:
-            result = await executor.execute(
+            sub = ToolExecuteRequest(
                 tool_name=tool_request.get("tool_name"),
-                parameters=tool_request.get("parameters", {}),
-                context=tool_request.get("context")
+                parameters=tool_request.get("parameters") or {},
+                context=tool_request.get("context"),
             )
-            results.append(result)
-
-        return {
-            "success": True,
-            "data": results,
-            "total": len(results)
-        }
+            results.append(await execute_tool(sub))
+        return {"success": True, "data": results, "total": len(results)}
     except Exception as e:
         logger.error(f"[批量工具执行] 错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -145,22 +195,13 @@ async def batch_execute_tools(request: ToolBatchExecuteRequest):
 
 @router.get("/history")
 async def get_execution_history(limit: int = 50):
-    """
-    获取工具执行历史
-
-    返回最近执行的工具调用记录
-    """
+    """工具执行历史"""
     try:
-        executor = get_tool_executor()
-        history = executor.get_execution_history()
-
-        # 返回最近的 N 条记录
-        limited_history = history[-limit:] if len(history) > limit else history
-
+        history = get_tool_harness().get_history(limit=limit)
         return {
             "success": True,
-            "data": list(reversed(limited_history)),
-            "total": len(limited_history)
+            "data": list(reversed(history)),
+            "total": len(history),
         }
     except Exception as e:
         logger.error(f"[工具历史] 错误: {e}")
@@ -169,22 +210,17 @@ async def get_execution_history(limit: int = 50):
 
 @router.get("/{tool_name}/schema")
 async def get_tool_schema(tool_name: str):
-    """
-    获取单个工具的 Schema
-
-    返回指定工具的参数定义和描述
-    """
+    """单个工具 Schema"""
     try:
-        registry = get_tool_registry()
-        tool = registry.get(tool_name)
+        name = resolve_tool_name(tool_name)
+        tool = get_agent_tool_registry().get(name)
+        if tool:
+            return {"success": True, "data": tool.ui_schema()}
 
-        if not tool:
+        legacy = get_tool_registry().get(tool_name)
+        if not legacy:
             raise HTTPException(status_code=404, detail=f"工具不存在: {tool_name}")
-
-        return {
-            "success": True,
-            "data": tool.get_schema()
-        }
+        return {"success": True, "data": legacy.get_schema()}
     except HTTPException:
         raise
     except Exception as e:
@@ -196,30 +232,26 @@ async def get_tool_schema(tool_name: str):
 
 @router.post("/search")
 async def quick_search(query: str, max_results: int = 10):
-    """
-    快速搜索 - 便捷端点
-
-    直接执行搜索工具的简化接口
-    """
+    """快速搜索 — 走 web_search 工具"""
     try:
-        executor = get_tool_executor()
-        result = await executor.execute(
-            tool_name="search_url",
-            parameters={"query": query, "max_results": max_results}
+        result = await execute_tool(
+            ToolExecuteRequest(
+                tool_name="web_search",
+                parameters={"query": query, "top_k": max_results},
+            )
         )
-
-        if result["success"]:
+        if result.get("success"):
+            data = (result.get("result") or {}).get("data") or {}
+            details = data.get("details") if isinstance(data, dict) else {}
+            refs = (details or {}).get("raw", {}).get("references") if isinstance(details, dict) else []
             return {
                 "success": True,
                 "query": query,
-                "results": result["result"]["data"],
-                "total": len(result["result"]["data"])
+                "results": refs or data,
+                "total": len(refs) if isinstance(refs, list) else 0,
+                "llm_text": (result.get("result") or {}).get("llm_text"),
             }
-        else:
-            return {
-                "success": False,
-                "error": result.get("error", "执行失败")
-            }
+        return {"success": False, "error": result.get("error", "执行失败")}
     except Exception as e:
         logger.error(f"[快速搜索] 错误: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -263,19 +295,16 @@ async def quick_baike(query: str, include_videos: bool = False):
 async def health_check():
     """工具系统健康检查"""
     try:
-        registry = get_tool_registry()
-        tools = registry.list_tools()
-
+        registry = get_agent_tool_registry()
+        tools = [t.name for t in registry.list(enabled_only=False)]
         return {
             "status": "ok",
             "tools_registered": len(tools),
-            "tools": tools
+            "tools": tools,
+            "harness": "agent_tools",
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 # ==================== 评测对比 ====================

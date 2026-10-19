@@ -55,7 +55,7 @@ class SeriesAnalysisAgent(BaseJubenAgent):
     9. 模块化外包: 智能体间相互调用，上下文隔离
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化已播剧集分析智能体"""
         super().__init__("series_analysis", model_provider)
         

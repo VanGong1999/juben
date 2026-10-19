@@ -5,6 +5,7 @@
 import { Copy, Check, RefreshCw, Bookmark } from 'lucide-react';
 import { useState } from 'react';
 import type { Message } from '@/types';
+import { useI18n } from '@/i18n';
 
 interface MessageActionsProps {
   message: Message;
@@ -13,6 +14,7 @@ interface MessageActionsProps {
 }
 
 export default function MessageActions({ message, onCopy, copied }: MessageActionsProps) {
+  const { t } = useI18n();
   const [bookmarked, setBookmarked] = useState(false);
 
   if (message.role === 'user') return null;
@@ -23,7 +25,7 @@ export default function MessageActions({ message, onCopy, copied }: MessageActio
       <button
         onClick={onCopy}
         className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
-        title="复制"
+        title={t('studio.copy')}
       >
         {copied ? (
           <Check className="w-4 h-4 text-green-600" />
@@ -36,7 +38,7 @@ export default function MessageActions({ message, onCopy, copied }: MessageActio
       {message.status === 'complete' && (
         <button
           className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
-          title="重新生成"
+          title={t('chatGraph.messageActions.regenerate')}
         >
           <RefreshCw className="w-4 h-4 text-gray-400" />
         </button>
@@ -48,7 +50,7 @@ export default function MessageActions({ message, onCopy, copied }: MessageActio
         className={`p-1.5 rounded-lg transition-colors ${
           bookmarked ? 'bg-yellow-100' : 'hover:bg-gray-200'
         }`}
-        title="收藏"
+        title={t('chatGraph.messageActions.bookmark')}
       >
         <Bookmark
           className={`w-4 h-4 ${bookmarked ? 'text-yellow-600 fill-yellow-600' : 'text-gray-400'}`}

@@ -30,7 +30,7 @@ import {
   Database,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
+import { enUS, zhCN } from 'date-fns/locale';
 import type { ProjectStatus } from '@/types';
 import {
   listAssets,
@@ -63,11 +63,13 @@ import {
   restoreMemorySnapshot
 } from '@/services/memoryService';
 import { useChatStore } from '@/store/chatStore';
+import { useI18n } from '@/i18n';
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t, language } = useI18n();
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
 
   const {
@@ -242,7 +244,7 @@ export default function ProjectDetailPage() {
   const handleChecklist = async () => {
     const res = await generateChecklist({
       platform: releasePlatform,
-      title: currentProject?.name || '未命名项目',
+      title: currentProject?.name || t('project.unnamedProject'),
       episodes: Number((currentProject?.metadata as any)?.episodes || 30)
     });
     if (res.success) setChecklist(res.data?.checklist || []);
@@ -307,26 +309,26 @@ export default function ProjectDetailPage() {
     if (!currentProject) return '';
     switch (currentProject.status) {
       case 'active':
-        return '进行中';
+        return t('project.status.active');
       case 'completed':
-        return '已完成';
+        return t('project.status.completed');
       case 'archived':
-        return '已归档';
+        return t('project.status.archived');
       case 'deleted':
-        return '已删除';
+        return t('project.status.deleted');
       default:
         return currentProject.status;
     }
-  }, [currentProject]);
+  }, [currentProject, t]);
 
   const tabs = useMemo(() => ([
-    { id: 'overview', label: '概览', icon: Layers },
-    { id: 'assets', label: '资产', icon: Package },
-    { id: 'pipeline', label: '管线', icon: Activity },
-    { id: 'release', label: '流通', icon: Play },
-    { id: 'team', label: '协作', icon: Users },
-    { id: 'memory', label: '记忆', icon: Database }
-  ]), []);
+    { id: 'overview', label: t('project.tab.overview'), icon: Layers },
+    { id: 'assets', label: t('project.tab.assets'), icon: Package },
+    { id: 'pipeline', label: t('project.tab.pipeline'), icon: Activity },
+    { id: 'release', label: t('project.tab.release'), icon: Play },
+    { id: 'team', label: t('project.tab.team'), icon: Users },
+    { id: 'memory', label: t('project.tab.memory'), icon: Database }
+  ]), [t]);
 
   const selectedRun = useMemo(() => {
     if (!pipelineRuns.length) return null;
@@ -385,14 +387,14 @@ export default function ProjectDetailPage() {
 
   const phaseStats = useMemo(() => {
     const phases = [
-      { key: 'planning', label: '策划', color: 'bg-blue-500' },
-      { key: 'creation', label: '创作', color: 'bg-emerald-500' },
-      { key: 'evaluation', label: '评估', color: 'bg-orange-500' },
-      { key: 'analysis', label: '分析', color: 'bg-purple-500' },
-      { key: 'workflow', label: '工作流', color: 'bg-slate-500' },
-      { key: 'character', label: '人物', color: 'bg-pink-500' },
-      { key: 'story', label: '情节', color: 'bg-indigo-500' },
-      { key: 'utility', label: '工具', color: 'bg-gray-500' },
+      { key: 'planning', label: t('project.phase.planning'), color: 'bg-blue-500' },
+      { key: 'creation', label: t('project.phase.creation'), color: 'bg-emerald-500' },
+      { key: 'evaluation', label: t('project.phase.evaluation'), color: 'bg-orange-500' },
+      { key: 'analysis', label: t('project.phase.analysis'), color: 'bg-purple-500' },
+      { key: 'workflow', label: t('project.phase.workflow'), color: 'bg-slate-500' },
+      { key: 'character', label: t('project.phase.character'), color: 'bg-pink-500' },
+      { key: 'story', label: t('project.phase.story'), color: 'bg-indigo-500' },
+      { key: 'utility', label: t('project.phase.utility'), color: 'bg-gray-500' },
     ];
 
     const counts: Record<string, number> = {};
@@ -417,7 +419,7 @@ export default function ProjectDetailPage() {
 
     const total = Object.values(counts).reduce((acc, val) => acc + val, 0);
     return { phases, counts, total };
-  }, [projectFiles, currentProject]);
+  }, [projectFiles, currentProject, t]);
 
   return (
     <div className="flex h-screen bg-white">
@@ -447,8 +449,8 @@ export default function ProjectDetailPage() {
                     <FolderOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">项目详情</h1>
-                    <p className="text-sm text-gray-500 mt-1">管理当前项目的所有信息</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('project.detailTitle')}</h1>
+                    <p className="text-sm text-gray-500 mt-1">{t('project.detailSubtitle')}</p>
                   </div>
                 </div>
                 {currentProject && (
@@ -468,7 +470,7 @@ export default function ProjectDetailPage() {
                       className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                     >
                       <Edit3 className="w-4 h-4" />
-                      {isEditing ? '取消编辑' : '编辑项目'}
+                      {isEditing ? t('project.cancelEdit') : t('project.editProject')}
                     </button>
                     {isEditing && (
                       <button
@@ -476,7 +478,7 @@ export default function ProjectDetailPage() {
                         className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
                       >
                         <Save className="w-4 h-4" />
-                        保存
+                        {t('common.save')}
                       </button>
                     )}
                     <button
@@ -484,7 +486,7 @@ export default function ProjectDetailPage() {
                       className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
-                      删除
+                      {t('common.delete')}
                     </button>
                   </div>
                 )}
@@ -519,7 +521,7 @@ export default function ProjectDetailPage() {
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                   {error}
                   <button onClick={clearError} className="ml-2 underline hover:text-red-900">
-                    关闭
+                    {t('project.close')}
                   </button>
                 </div>
               )}
@@ -528,11 +530,11 @@ export default function ProjectDetailPage() {
                 <div className="flex items-center justify-center py-20">
                   <div className="text-center">
                     <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">加载中...</p>
+                    <p className="text-gray-500">{t('studio.loading')}</p>
                   </div>
                 </div>
               ) : !currentProject ? (
-                <div className="text-center py-20 text-gray-500">项目不存在或已删除</div>
+                <div className="text-center py-20 text-gray-500">{t('project.notFound')}</div>
               ) : activeTab === 'overview' ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-6">
@@ -543,7 +545,7 @@ export default function ProjectDetailPage() {
                             <div>
                               <h2 className="text-xl font-semibold text-gray-900">{currentProject.name}</h2>
                               <p className="text-sm text-gray-600 mt-2">
-                                {currentProject.description || '暂无描述'}
+                                {currentProject.description || t('project.noDescription')}
                               </p>
                             </div>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>
@@ -558,25 +560,25 @@ export default function ProjectDetailPage() {
                               </span>
                             ))}
                             {(currentProject.tags || []).length === 0 && (
-                              <span className="text-xs text-gray-400">暂无标签</span>
+                              <span className="text-xs text-gray-400">{t('project.noTags')}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-500 mt-4">
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              创建于 {formatDistanceToNow(new Date(currentProject.created_at), { addSuffix: true, locale: zhCN })}
+                              {t('project.createdAt')} {formatDistanceToNow(new Date(currentProject.created_at), { addSuffix: true, locale: language === 'zh' ? zhCN : enUS })}
                             </div>
                             <div className="flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              更新于 {formatDistanceToNow(new Date(currentProject.updated_at), { addSuffix: true, locale: zhCN })}
+                              {t('project.updatedAt')} {formatDistanceToNow(new Date(currentProject.updated_at), { addSuffix: true, locale: language === 'zh' ? zhCN : enUS })}
                             </div>
-                            <span>{currentProject.file_count} 个文件</span>
+                            <span>{t('project.fileCount', { count: currentProject.file_count })}</span>
                           </div>
                         </>
                       ) : (
                         <div className="space-y-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">项目名称</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.projectName')}</label>
                             <input
                               type="text"
                               value={editForm.name}
@@ -585,7 +587,7 @@ export default function ProjectDetailPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">项目描述</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.projectDesc')}</label>
                             <textarea
                               value={editForm.description}
                               onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -595,26 +597,26 @@ export default function ProjectDetailPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">状态</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.statusLabel')}</label>
                               <select
                                 value={editForm.status}
                                 onChange={(e) => setEditForm({ ...editForm, status: e.target.value as ProjectStatus })}
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg"
                               >
-                                <option value="active">进行中</option>
-                                <option value="completed">已完成</option>
-                                <option value="archived">已归档</option>
-                                <option value="deleted">已删除</option>
+                                <option value="active">{t('project.status.active')}</option>
+                                <option value="completed">{t('project.status.completed')}</option>
+                                <option value="archived">{t('project.status.archived')}</option>
+                                <option value="deleted">{t('project.status.deleted')}</option>
                               </select>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">标签</label>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">{t('project.tags')}</label>
                               <input
                                 type="text"
                                 value={editForm.tags}
                                 onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
                                 className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                                placeholder="用逗号分隔"
+                                placeholder={t('project.commaSeparated')}
                               />
                             </div>
                           </div>
@@ -625,8 +627,8 @@ export default function ProjectDetailPage() {
                     {phaseStats.total > 0 && (
                       <div className="border border-gray-200 rounded-xl p-6">
                         <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-gray-900">阶段分布</h3>
-                          <span className="text-xs text-gray-500">基于项目文件标签</span>
+                          <h3 className="font-semibold text-gray-900">{t('project.phaseDistribution')}</h3>
+                          <span className="text-xs text-gray-500">{t('project.basedOnFileTags')}</span>
                         </div>
                         <div className="w-full h-3 rounded-full bg-gray-100 overflow-hidden mb-4">
                           <div className="flex h-full">
@@ -660,18 +662,18 @@ export default function ProjectDetailPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                           <FileText className="w-5 h-5 text-gray-600" />
-                          <h3 className="font-semibold text-gray-900">项目文件</h3>
+                          <h3 className="font-semibold text-gray-900">{t('project.projectFiles')}</h3>
                         </div>
                         <button
                           onClick={() => navigate(`/files?project_id=${currentProject.id}`)}
                           className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                         >
-                          查看全部
+                          {t('project.viewAll')}
                           <ExternalLink className="w-3 h-3" />
                         </button>
                       </div>
                       {projectFiles.length === 0 ? (
-                        <div className="text-sm text-gray-500">暂无文件</div>
+                        <div className="text-sm text-gray-500">{t('project.noFiles')}</div>
                       ) : (
                         <div className="divide-y divide-gray-100">
                           {projectFiles.slice(0, 8).map((file) => (
@@ -694,21 +696,21 @@ export default function ProjectDetailPage() {
 
                   <div className="space-y-4">
                     <div className="border border-gray-200 rounded-xl p-4 space-y-3">
-                      <h4 className="font-semibold text-gray-900">快捷入口</h4>
+                      <h4 className="font-semibold text-gray-900">{t('dashboard.quickLinks')}</h4>
                       <button
                         onClick={() => {
                           localStorage.setItem('projectId', currentProject.id);
-                          navigate(`/workspace?project_id=${currentProject.id}`);
+                          navigate(`/studio?project_id=${currentProject.id}`);
                         }}
                         className="w-full px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
                       >
-                        进入工作区
+                        {t('project.enterWorkspace')}
                       </button>
                       <button
                         onClick={() => navigate(`/files?project_id=${currentProject.id}`)}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
                       >
-                        管理项目文件
+                        {t('project.manageFiles')}
                       </button>
                     </div>
                   </div>
@@ -718,29 +720,29 @@ export default function ProjectDetailPage() {
                   <div className="lg:col-span-2 space-y-6">
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">资产库</h3>
-                        <span className="text-xs text-gray-500">项目内素材集中管理</span>
+                        <h3 className="font-semibold text-gray-900">{t('project.assetLibrary')}</h3>
+                        <span className="text-xs text-gray-500">{t('project.assetLibraryDesc')}</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <input
                           type="text"
                           value={assetForm.name}
                           onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
-                          placeholder="资产名称"
+                          placeholder={t('project.assetName')}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                         <input
                           type="text"
                           value={assetForm.collection}
                           onChange={(e) => setAssetForm({ ...assetForm, collection: e.target.value })}
-                          placeholder="集合名称"
+                          placeholder={t('project.collectionName')}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                         <input
                           type="text"
                           value={assetForm.tags}
                           onChange={(e) => setAssetForm({ ...assetForm, tags: e.target.value })}
-                          placeholder="标签(逗号分隔)"
+                          placeholder={t('project.tagsComma')}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                         <select
@@ -748,25 +750,25 @@ export default function ProjectDetailPage() {
                           onChange={(e) => setAssetForm({ ...assetForm, asset_type: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         >
-                          <option value="generic">通用资产</option>
-                          <option value="character">人物设定</option>
-                          <option value="scene">场景设定</option>
-                          <option value="prop">道具/素材</option>
-                          <option value="note">Notes导入</option>
+                          <option value="generic">{t('project.assetType.generic')}</option>
+                          <option value="character">{t('project.assetType.character')}</option>
+                          <option value="scene">{t('project.assetType.scene')}</option>
+                          <option value="prop">{t('project.assetType.prop')}</option>
+                          <option value="note">{t('project.assetType.note')}</option>
                         </select>
                       </div>
                       <button
                         onClick={handleCreateAsset}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"
                       >
-                        添加资产
+                        {t('project.addAsset')}
                       </button>
                     </div>
 
                     <div className="border border-gray-200 rounded-xl p-6">
-                      <h3 className="font-semibold text-gray-900 mb-4">资产列表</h3>
+                      <h3 className="font-semibold text-gray-900 mb-4">{t('project.assetList')}</h3>
                       {assets.length === 0 ? (
-                        <div className="text-sm text-gray-500">暂无资产</div>
+                        <div className="text-sm text-gray-500">{t('project.noAssets')}</div>
                       ) : (
                         <div className="divide-y divide-gray-100">
                           {assets.map((asset) => (
@@ -788,7 +790,7 @@ export default function ProjectDetailPage() {
                                 onClick={() => handleDeleteAsset(asset.id)}
                                 className="text-xs text-red-600 hover:text-red-700"
                               >
-                                删除
+                                {t('common.delete')}
                               </button>
                             </div>
                           ))}
@@ -799,15 +801,15 @@ export default function ProjectDetailPage() {
 
                   <div className="space-y-4">
                     <div className="border border-gray-200 rounded-xl p-4">
-                      <h4 className="font-semibold text-gray-900 mb-3">资产集合</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('project.assetCollections')}</h4>
                       {Object.keys(assetCollections).length === 0 ? (
-                        <div className="text-sm text-gray-500">暂无集合</div>
+                        <div className="text-sm text-gray-500">{t('project.noCollections')}</div>
                       ) : (
                         <div className="space-y-3">
                           {Object.entries(assetCollections).map(([collection, items]: [string, any]) => (
                             <div key={collection} className="text-sm">
                               <div className="font-medium text-gray-900">{collection}</div>
-                              <div className="text-xs text-gray-500">{items.length} 条资产</div>
+                              <div className="text-xs text-gray-500">{t('project.assetCount', { count: items.length })}</div>
                             </div>
                           ))}
                         </div>
@@ -820,8 +822,8 @@ export default function ProjectDetailPage() {
                   <div className="lg:col-span-2 space-y-6">
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">创作管线</h3>
-                        <span className="text-xs text-gray-500">一键串联策划-创作-评估</span>
+                        <h3 className="font-semibold text-gray-900">{t('project.pipeline')}</h3>
+                        <span className="text-xs text-gray-500">{t('project.pipelineDesc')}</span>
                       </div>
                       <select
                         value={selectedTemplateId}
@@ -838,20 +840,20 @@ export default function ProjectDetailPage() {
                         value={pipelineInput}
                         onChange={(e) => setPipelineInput(e.target.value)}
                         rows={4}
-                        placeholder="输入用户需求或创作目标"
+                        placeholder={t('project.pipelineInputPlaceholder')}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                       />
                       <button
                         onClick={handleRunPipeline}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"
                       >
-                        启动管线
+                        {t('project.runPipeline')}
                       </button>
                     </div>
 
                     <div className="border border-gray-200 rounded-xl p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-semibold text-gray-900">运行记录</h3>
+                        <h3 className="font-semibold text-gray-900">{t('project.runHistory')}</h3>
                         <select
                           value={selectedRun?.id || ''}
                           onChange={(e) => setSelectedRunId(e.target.value)}
@@ -865,7 +867,7 @@ export default function ProjectDetailPage() {
                         </select>
                       </div>
                       {!selectedRun ? (
-                        <div className="text-sm text-gray-500">暂无运行记录</div>
+                        <div className="text-sm text-gray-500">{t('project.noRuns')}</div>
                       ) : (
                         <div className="space-y-4">
                           {selectedRun.steps?.map((step: any) => (
@@ -876,7 +878,7 @@ export default function ProjectDetailPage() {
                               </div>
                               <div className="text-xs text-gray-500 mt-2">Agent: {step.agent_id}</div>
                               <div className="text-xs text-gray-600 mt-2 whitespace-pre-wrap">
-                                {step.output || '暂无输出'}
+                                {step.output || t('project.noOutput')}
                               </div>
                             </div>
                           ))}
@@ -887,7 +889,7 @@ export default function ProjectDetailPage() {
 
                   <div className="space-y-4">
                     <div className="border border-gray-200 rounded-xl p-4">
-                      <h4 className="font-semibold text-gray-900 mb-3">RAG 引用链</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3">{t('project.citationChain')}</h4>
                       <div className="flex flex-wrap gap-2 mb-3">
                         <button
                           onClick={() => setRagSourceFilter('all')}
@@ -897,7 +899,7 @@ export default function ProjectDetailPage() {
                               : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
-                          全部
+                          {t('common.all')}
                         </button>
                         {Object.values(ragSourceStats).map((item) => (
                           <button
@@ -914,18 +916,18 @@ export default function ProjectDetailPage() {
                         ))}
                       </div>
                       {filteredRagTrace.length === 0 ? (
-                        <div className="text-sm text-gray-500">暂无引用</div>
+                        <div className="text-sm text-gray-500">{t('project.noCitations')}</div>
                       ) : (
                         <div className="space-y-2 max-h-96 overflow-y-auto">
                           {filteredRagTrace.map((item, idx) => (
                             <div key={`${item.timestamp}-${idx}`} className="border border-gray-100 rounded-lg p-3 text-xs">
-                              <div className="font-medium text-gray-900">{item.step_name || '步骤'}</div>
-                              <div className="text-gray-500 mt-1">来源: {item.source}</div>
+                              <div className="font-medium text-gray-900">{item.step_name || t('project.step')}</div>
+                              <div className="text-gray-500 mt-1">{t('project.source')} {item.source}</div>
                               {item.collection && (
-                                <div className="text-gray-500">集合: {item.collection}</div>
+                                <div className="text-gray-500">{t('project.collection')} {item.collection}</div>
                               )}
-                              <div className="text-gray-600 mt-1">查询: {item.query}</div>
-                              <div className="text-gray-500 mt-1">命中: {item.result_count}</div>
+                              <div className="text-gray-600 mt-1">{t('project.query')} {item.query}</div>
+                              <div className="text-gray-500 mt-1">{t('project.hits')} {item.result_count}</div>
                               {item.error && <div className="text-red-500 mt-1">{item.error}</div>}
                             </div>
                           ))}
@@ -939,7 +941,7 @@ export default function ProjectDetailPage() {
                   <div className="lg:col-span-2 space-y-6">
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">平台规范</h3>
+                        <h3 className="font-semibold text-gray-900">{t('project.platformSpec')}</h3>
                         <select
                           value={releasePlatform}
                           onChange={(e) => setReleasePlatform(e.target.value)}
@@ -954,10 +956,10 @@ export default function ProjectDetailPage() {
                       </div>
                       {releaseTemplates[releasePlatform] && (
                         <div className="text-sm text-gray-600 space-y-1">
-                          <div>集数建议: {releaseTemplates[releasePlatform].episodes}</div>
-                          <div>单集时长: {releaseTemplates[releasePlatform].episode_length_sec}s</div>
-                          <div>强钩子窗口: {releaseTemplates[releasePlatform].hook_window_sec}s</div>
-                          <div>标签: {(releaseTemplates[releasePlatform].tags || []).join(' / ')}</div>
+                          <div>{t('project.release.episodes')} {releaseTemplates[releasePlatform].episodes}</div>
+                          <div>{t('project.release.episodeLength')} {releaseTemplates[releasePlatform].episode_length_sec}s</div>
+                          <div>{t('project.release.hookWindow')} {releaseTemplates[releasePlatform].hook_window_sec}s</div>
+                          <div>{t('project.release.tags')} {(releaseTemplates[releasePlatform].tags || []).join(' / ')}</div>
                           <div className="text-gray-500">{releaseTemplates[releasePlatform].description}</div>
                         </div>
                       )}
@@ -965,7 +967,7 @@ export default function ProjectDetailPage() {
                         onClick={handleChecklist}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"
                       >
-                        生成投放检查清单
+                        {t('project.generateChecklist')}
                       </button>
                       {checklist.length > 0 && (
                         <ul className="text-sm text-gray-700 space-y-2">
@@ -981,13 +983,13 @@ export default function ProjectDetailPage() {
 
                   <div className="space-y-4">
                     <div className="border border-gray-200 rounded-xl p-4 space-y-3">
-                      <h4 className="font-semibold text-gray-900">ROI 预估</h4>
+                      <h4 className="font-semibold text-gray-900">{t('project.roiEstimate')}</h4>
                       <input
                         type="number"
                         value={roiForm.views}
                         onChange={(e) => setRoiForm({ ...roiForm, views: Number(e.target.value) })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        placeholder="曝光量"
+                        placeholder={t('project.roi.views')}
                       />
                       <input
                         type="number"
@@ -995,7 +997,7 @@ export default function ProjectDetailPage() {
                         value={roiForm.ctr}
                         onChange={(e) => setRoiForm({ ...roiForm, ctr: Number(e.target.value) })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        placeholder="点击率"
+                        placeholder={t('project.roi.ctr')}
                       />
                       <input
                         type="number"
@@ -1003,7 +1005,7 @@ export default function ProjectDetailPage() {
                         value={roiForm.cvr}
                         onChange={(e) => setRoiForm({ ...roiForm, cvr: Number(e.target.value) })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        placeholder="转化率"
+                        placeholder={t('project.roi.cvr')}
                       />
                       <input
                         type="number"
@@ -1019,20 +1021,20 @@ export default function ProjectDetailPage() {
                         value={roiForm.cost}
                         onChange={(e) => setRoiForm({ ...roiForm, cost: Number(e.target.value) })}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        placeholder="投放成本"
+                        placeholder={t('project.roi.cost')}
                       />
                       <button
                         onClick={handleCalculateRoi}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"
                       >
-                        计算 ROI
+                        {t('project.calculateRoi')}
                       </button>
                       {roiResult && (
                         <div className="text-sm text-gray-700 space-y-1">
-                          <div>点击: {roiResult.clicks}</div>
-                          <div>转化: {roiResult.conversions}</div>
-                          <div>收入: {roiResult.revenue}</div>
-                          <div>ROI: {roiResult.roi}</div>
+                          <div>{t('project.roi.clicks')} {roiResult.clicks}</div>
+                          <div>{t('project.roi.conversions')} {roiResult.conversions}</div>
+                          <div>{t('project.roi.revenue')} {roiResult.revenue}</div>
+                          <div>{t('project.roi.value')} {roiResult.roi}</div>
                         </div>
                       )}
                     </div>
@@ -1042,20 +1044,20 @@ export default function ProjectDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-6">
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
-                      <h3 className="font-semibold text-gray-900">团队成员</h3>
+                      <h3 className="font-semibold text-gray-900">{t('project.teamMembers')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <input
                           type="text"
                           value={memberForm.user_id}
                           onChange={(e) => setMemberForm({ ...memberForm, user_id: e.target.value })}
-                          placeholder="用户ID"
+                          placeholder={t('project.userId')}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                         <input
                           type="text"
                           value={memberForm.display_name}
                           onChange={(e) => setMemberForm({ ...memberForm, display_name: e.target.value })}
-                          placeholder="显示名"
+                          placeholder={t('project.displayName')}
                           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                         <select
@@ -1073,13 +1075,13 @@ export default function ProjectDetailPage() {
                         onClick={handleAddMember}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"
                       >
-                        添加成员
+                        {t('project.addMember')}
                       </button>
                     </div>
 
                     <div className="border border-gray-200 rounded-xl p-6">
                       {teamMembers.length === 0 ? (
-                        <div className="text-sm text-gray-500">暂无成员</div>
+                        <div className="text-sm text-gray-500">{t('project.noMembers')}</div>
                       ) : (
                         <div className="divide-y divide-gray-100">
                           {teamMembers.map((member) => (
@@ -1094,7 +1096,7 @@ export default function ProjectDetailPage() {
                                 onClick={() => handleRemoveMember(member.user_id)}
                                 className="text-xs text-red-600 hover:text-red-700"
                               >
-                                移除
+                                {t('project.remove')}
                               </button>
                             </div>
                           ))}
@@ -1105,9 +1107,9 @@ export default function ProjectDetailPage() {
 
                   <div className="space-y-4">
                     <div className="border border-gray-200 rounded-xl p-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">协作说明</h4>
+                      <h4 className="font-semibold text-gray-900 mb-2">{t('project.collabNote')}</h4>
                       <p className="text-xs text-gray-600">
-                        使用成员角色控制协作权限，Owner/Editor 负责内容生产，Viewer 只读查看。
+                        {t('project.collabDesc')}
                       </p>
                     </div>
                   </div>
@@ -1116,94 +1118,94 @@ export default function ProjectDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2 space-y-6">
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
-                      <h3 className="font-semibold text-gray-900">记忆开关</h3>
+                      <h3 className="font-semibold text-gray-900">{t('settings.memory')}</h3>
                       <div className="flex items-center justify-between text-sm">
-                        <span>用户维度记忆</span>
+                        <span>{t('settings.userMemory')}</span>
                         <button
                           onClick={() => handleToggleUserMemory(!memorySettings?.user_enabled)}
                           className={`px-3 py-1 rounded-full text-xs border ${
                             memorySettings?.user_enabled ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
-                          {memorySettings?.user_enabled ? '已开启' : '已关闭'}
+                          {memorySettings?.user_enabled ? t('settings.enabled') : t('settings.disabled')}
                         </button>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span>项目维度记忆</span>
+                        <span>{t('settings.projectMemory')}</span>
                         <button
                           onClick={() => handleToggleProjectMemory(!memorySettings?.project_enabled)}
                           className={`px-3 py-1 rounded-full text-xs border ${
                             memorySettings?.project_enabled ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
-                          {memorySettings?.project_enabled ? '已开启' : '已关闭'}
+                          {memorySettings?.project_enabled ? t('settings.enabled') : t('settings.disabled')}
                         </button>
                       </div>
                       <div className="text-xs text-gray-500">
-                        当前生效: {memorySettings?.effective_enabled ? '开启' : '关闭'}
+                        {t('project.currentEffective')} {memorySettings?.effective_enabled ? t('settings.on') : t('settings.off')}
                       </div>
                     </div>
 
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
-                      <h3 className="font-semibold text-gray-900">记忆质量</h3>
+                      <h3 className="font-semibold text-gray-900">{t('project.memoryQuality')}</h3>
                       <input
                         type="text"
                         value={memoryQuery}
                         onChange={(e) => setMemoryQuery(e.target.value)}
-                        placeholder="用于评估的查询关键词（可选）"
+                        placeholder={t('project.memoryQueryPlaceholder')}
                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
                       />
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="border border-gray-100 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">命中率</div>
+                          <div className="text-xs text-gray-500">{t('project.hitRate')}</div>
                           <div className="text-lg font-semibold text-gray-900">{memoryQuality?.hit_rate ?? 0}</div>
                         </div>
                         <div className="border border-gray-100 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">冲突率</div>
+                          <div className="text-xs text-gray-500">{t('project.conflictRate')}</div>
                           <div className="text-lg font-semibold text-gray-900">{memoryQuality?.conflict_rate ?? 0}</div>
                         </div>
                         <div className="border border-gray-100 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">记忆条数</div>
+                          <div className="text-xs text-gray-500">{t('project.memoryCount')}</div>
                           <div className="text-lg font-semibold text-gray-900">{memoryQuality?.memory_count ?? 0}</div>
                         </div>
                         <div className="border border-gray-100 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">冲突键</div>
+                          <div className="text-xs text-gray-500">{t('project.conflictKeys')}</div>
                           <div className="text-sm text-gray-700">
-                            {(memoryQuality?.conflict_keys || []).length ? (memoryQuality?.conflict_keys || []).join(',') : '无'}
+                            {(memoryQuality?.conflict_keys || []).length ? (memoryQuality?.conflict_keys || []).join(',') : t('project.none')}
                           </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="border border-gray-100 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">短期记忆</div>
+                          <div className="text-xs text-gray-500">{t('project.shortTerm')}</div>
                           <div className="text-lg font-semibold text-gray-900">{memoryMetrics?.short_term?.message_count ?? 0}</div>
                         </div>
                         <div className="border border-gray-100 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">中期记忆</div>
+                          <div className="text-xs text-gray-500">{t('project.midTerm')}</div>
                           <div className="text-lg font-semibold text-gray-900">{memoryMetrics?.middle_term?.memory_count ?? 0}</div>
                         </div>
                       </div>
                     </div>
 
                     <div className="border border-gray-200 rounded-xl p-6 space-y-4">
-                      <h3 className="font-semibold text-gray-900">记忆快照</h3>
+                      <h3 className="font-semibold text-gray-900">{t('project.memorySnapshots')}</h3>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={snapshotLabel}
                           onChange={(e) => setSnapshotLabel(e.target.value)}
-                          placeholder="快照标签（可选）"
+                          placeholder={t('project.snapshotLabel')}
                           className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm"
                         />
                         <button
                           onClick={handleCreateSnapshot}
                           className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm"
                         >
-                          创建快照
+                          {t('project.createSnapshot')}
                         </button>
                       </div>
                       {memorySnapshots.length === 0 ? (
-                        <div className="text-sm text-gray-500">暂无快照</div>
+                        <div className="text-sm text-gray-500">{t('project.noSnapshots')}</div>
                       ) : (
                         <div className="divide-y divide-gray-100">
                           {memorySnapshots.map((snapshot) => (
@@ -1216,7 +1218,7 @@ export default function ProjectDetailPage() {
                                 onClick={() => handleRestoreSnapshot(snapshot.id)}
                                 className="text-xs text-blue-600 hover:text-blue-700"
                               >
-                                回滚
+                                {t('project.restore')}
                               </button>
                             </div>
                           ))}
@@ -1227,9 +1229,9 @@ export default function ProjectDetailPage() {
 
                   <div className="space-y-4">
                     <div className="border border-gray-200 rounded-xl p-4">
-                      <h4 className="font-semibold text-gray-900 mb-2">记忆说明</h4>
+                      <h4 className="font-semibold text-gray-900 mb-2">{t('project.memoryNote')}</h4>
                       <p className="text-xs text-gray-600">
-                        快照用于保存当前会话的中期记忆状态，回滚只影响记忆，不会删除聊天记录。
+                        {t('project.memoryDesc')}
                       </p>
                     </div>
                   </div>
@@ -1245,22 +1247,22 @@ export default function ProjectDetailPage() {
       {showDeleteModal && currentProject && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">删除项目</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">{t('project.deleteProject')}</h2>
             <p className="text-gray-600 mb-6">
-              确定要删除项目 "{currentProject.name}" 吗？此操作无法撤销。
+              {t('project.deleteProjectConfirm', { name: currentProject.name })}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50"
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleDelete}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                删除
+                {t('common.delete')}
               </button>
             </div>
           </div>

@@ -40,25 +40,25 @@ except ImportError:
         return decorator
 
 try:
-    from ..config.settings import JubenSettings
-    from ..utils.logger import JubenLogger
-    from ..utils.zhipu_search import zhipu_search
-    from ..utils.knowledge_base_client import KnowledgeBaseClient
-    from ..utils.token_accumulator import TokenUsage, create_token_accumulator, add_token_usage, get_billing_summary
-    from ..utils.langsmith_client import create_langsmith_llm_client
-    from ..utils.storage_manager import get_storage, ChatMessage, ContextState, Note
-    from ..utils.agent_output_storage import get_agent_output_storage
-    from ..utils.performance_monitor import get_performance_monitor, PerformanceContext
-    from ..utils.project_manager import get_project_manager
-    from ..utils.enhanced_context_manager import EnhancedContextManager, get_enhanced_context_manager
-    from ..utils.context_mixin import ContextManagementMixin
-    from ..utils.structured_output_guard import StructuredOutputGuard
-    from ..utils.agent_naming import canonical_agent_id, AGENT_CATEGORY_MAPPING, OUTPUT_TAG_PHASE_MAPPING
-    from ..utils.memory_manager import get_unified_memory_manager, get_user_profile_manager
-    from ..utils.memory_settings import get_memory_settings_manager
-    from ..utils.output_schema_registry import get_output_schema_registry
-    from ..services.output_archive_service import OutputArchiveService
-    from apis.core.schemas import FileType
+    from config.settings import JubenSettings
+    from utils.logger import JubenLogger
+    from utils.zhipu_search import zhipu_search
+    from utils.knowledge_base_client import KnowledgeBaseClient
+    from utils.token_accumulator import TokenUsage, create_token_accumulator, add_token_usage, get_billing_summary
+    from utils.langsmith_client import create_langsmith_llm_client
+    from utils.storage_manager import get_storage, ChatMessage, ContextState, Note
+    from utils.agent_output_storage import get_agent_output_storage
+    from utils.performance_monitor import get_performance_monitor, PerformanceContext
+    from utils.project_manager import get_project_manager
+    from utils.enhanced_context_manager import EnhancedContextManager, get_enhanced_context_manager
+    from utils.context_mixin import ContextManagementMixin
+    from utils.structured_output_guard import StructuredOutputGuard
+    from utils.agent_naming import canonical_agent_id, AGENT_CATEGORY_MAPPING, OUTPUT_TAG_PHASE_MAPPING
+    from utils.memory_manager import get_unified_memory_manager, get_user_profile_manager
+    from utils.memory_settings import get_memory_settings_manager
+    from utils.output_schema_registry import get_output_schema_registry
+    from services.output_archive_service import OutputArchiveService
+    from utils.project_types import FileType
 except ImportError:
     # 处理相对导入问题
     import sys
@@ -83,7 +83,7 @@ except ImportError:
     from utils.memory_settings import get_memory_settings_manager
     from utils.output_schema_registry import get_output_schema_registry
     from services.output_archive_service import OutputArchiveService
-    from apis.core.schemas import FileType
+    from utils.project_types import FileType
 
 
 class BaseJubenAgent(ABC, ContextManagementMixin):
@@ -114,7 +114,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     # 🔧 类级别logger用于类方法
     _class_logger: Optional[logging.Logger] = None
 
-    def __init__(self, agent_name: str, model_provider: str = "zhipu", enable_enhanced_context: bool = False):
+    def __init__(self, agent_name: str, model_provider: str = "deepseek", enable_enhanced_context: bool = False):
         """
         初始化基础Agent
 
@@ -240,7 +240,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 return cls._connection_pool_manager
 
             try:
-                from ..utils.connection_pool_manager import get_connection_pool_manager
+                from utils.connection_pool_manager import get_connection_pool_manager
                 cls._connection_pool_manager = await get_connection_pool_manager()
 
                 # 🔧 使用logging模块而不是不存在的cls.logger
@@ -264,7 +264,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     def _init_notes_manager(self):
         """🆕 初始化Notes管理器"""
         try:
-            from ..utils.notes_manager import get_notes_manager
+            from utils.notes_manager import get_notes_manager
             self.notes_manager = get_notes_manager()
             self.logger.info("✅ Notes管理器初始化成功")
         except ImportError as e:
@@ -274,7 +274,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     def _init_reference_resolver(self):
         """🆕 初始化智能引用解析器"""
         try:
-            from ..utils.reference_resolver import get_juben_reference_resolver
+            from utils.reference_resolver import get_juben_reference_resolver
             self.reference_resolver = get_juben_reference_resolver()
             self.logger.info("✅ 智能引用解析器初始化成功")
         except ImportError as e:
@@ -284,7 +284,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     def _init_multimodal_processor(self):
         """🆕 初始化多模态处理器"""
         try:
-            from ..utils.multimodal_processor import get_multimodal_processor
+            from utils.multimodal_processor import get_multimodal_processor
             self.multimodal_processor = get_multimodal_processor()
             self.logger.info("✅ 多模态处理器初始化成功")
         except ImportError as e:
@@ -292,17 +292,8 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
             self.multimodal_processor = None
     
     def _init_stop_manager(self):
-        """🆕 初始化停止管理器"""
-        try:
-            from ..utils.stop_manager import get_juben_stop_manager
-            self.stop_manager = get_juben_stop_manager()
-            self.logger.info("✅ 停止管理器初始化成功")
-        except ImportError as e:
-            self.logger.warning(f"❌ 停止管理器初始化失败: {e}")
-            self.stop_manager = None
-        except Exception as e:
-            self.logger.warning(f"❌ 停止管理器初始化异常: {e}")
-            self.stop_manager = None
+        """停止管理器是 async 单例，延迟到使用时 await 初始化（见 check_stop_status 等）。"""
+        self.stop_manager = None
 
     def _init_project_manager(self):
         """🆕 初始化项目管理器"""
@@ -450,7 +441,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                     self.logger.debug(f"🔧 {self.agent_name} 获取Redis客户端成功 (pool_type={self._redis_pool_type})")
                 else:
                     # 回退到原始方式
-                    from ..utils.redis_client import get_redis_client
+                    from utils.redis_client import get_redis_client
                     self.redis_client = await get_redis_client()
                     self.logger.debug(f"🔧 {self.agent_name} 使用原始Redis客户端")
             
@@ -461,7 +452,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
             # 回退到原始方式
             if self.redis_client is None:
                 try:
-                    from ..utils.redis_client import get_redis_client
+                    from utils.redis_client import get_redis_client
                     self.redis_client = await get_redis_client()
                 except ImportError:
                     self.logger.warning(f"⚠️ Redis客户端不可用，跳过Redis功能")
@@ -472,7 +463,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
         """🚀 【新增】获取数据库客户端，使用连接池管理器"""
         try:
             # 当前使用PostgreSQL连接池
-            from ..utils.database_client import get_postgres_pool
+            from utils.database_client import get_postgres_pool
             return await get_postgres_pool()
         except Exception as e:
             self.logger.error(f"❌ {self.agent_name} 获取数据库客户端失败: {e}")
@@ -505,8 +496,14 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     def _init_clients(self):
         """初始化各种客户端"""
         try:
-            # 初始化智谱搜索客户端
-            self.search_client = zhipu_search
+            # 网络搜索：优先 DeepSeek Search，保留智谱搜索对象作兼容
+            try:
+                from utils.deepseek_client import get_deepseek_client
+
+                ds = get_deepseek_client()
+                self.search_client = ds if ds.available else zhipu_search
+            except Exception:
+                self.search_client = zhipu_search
 
             # 初始化知识库客户端
             self.knowledge_client = KnowledgeBaseClient()
@@ -547,7 +544,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
         """初始化LLM客户端"""
         try:
             try:
-                from ..utils.llm_client import get_llm_client
+                from utils.llm_client import get_llm_client
             except ImportError:
                 from utils.llm_client import get_llm_client
             
@@ -566,6 +563,57 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 'chat': lambda self, messages, **kwargs: "模拟响应",
                 'stream_chat': lambda self, messages, **kwargs: iter(["模拟", "响应"])
             })()
+
+    def apply_llm_overrides(
+        self,
+        *,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> None:
+        """按请求覆盖 LLM 提供商 / 模型 / Key / Base URL（用户自备凭证）。"""
+        provider = (provider or "").strip() or self.model_provider
+        model = (model or "").strip() or None
+        api_key = (api_key or "").strip() or None
+        base_url = (base_url or "").strip() or None
+
+        # 无任何覆盖时保持默认客户端
+        if (
+            provider == self.model_provider
+            and not model
+            and not api_key
+            and not base_url
+        ):
+            return
+
+        try:
+            try:
+                from utils.llm_client import get_llm_client
+            except ImportError:
+                from utils.llm_client import get_llm_client
+
+            kwargs: Dict[str, Any] = {"force_new": True}
+            if model:
+                kwargs["model"] = model
+            if api_key:
+                kwargs["api_key"] = api_key
+            if base_url:
+                kwargs["base_url"] = base_url
+
+            base_llm_client = get_llm_client(provider, **kwargs)
+            enable_tracing = os.getenv("LANGCHAIN_API_KEY") is not None
+            self.llm_client = create_langsmith_llm_client(base_llm_client, enable_tracing)
+            self.model_provider = provider
+            self.logger.info(
+                f"已应用用户 LLM 覆盖: provider={provider} "
+                f"model={model or getattr(base_llm_client, 'model', '?')} "
+                f"base_url={'yes' if base_url else 'default'} "
+                f"key={'yes' if api_key else 'env'}"
+            )
+        except Exception as e:
+            self.logger.error(f"应用 LLM 覆盖失败: {e}")
+            raise
     
     def _load_system_prompt(self):
         """
@@ -1152,6 +1200,139 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
         except Exception as e:
             self.logger.error(f"LLM调用失败: {e}")
             raise
+
+    async def _run_tool_loop(
+        self,
+        messages: List[Dict[str, Any]],
+        *,
+        user_id: str = "unknown",
+        session_id: str = "unknown",
+        drama_id: Optional[str] = None,
+        tool_names: Optional[List[str]] = None,
+        max_steps: int = 8,
+        allow_write: bool = False,
+        checkpoint_id: Optional[str] = None,
+        on_step: Optional[Callable] = None,
+        prompt_cache_extra: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """接入 Agent Infra run_tool_loop（LLM-native tool calling + Deferred Tool Loading）。"""
+        from utils.agent_infra.checkpoint import CheckpointStore
+        from utils.agent_infra.disclosure import prepare_disclosure
+        from utils.agent_infra.runtime import run_tool_loop
+        from utils.agent_tools import ToolContext, get_agent_tool_registry, get_tool_harness
+
+        registry = get_agent_tool_registry()
+        # 渐进式披露：核心 + tool_search 常驻；其余进名录（若调用方指定 tool_names 则作为 extra_core）
+        disclosure = prepare_disclosure(
+            registry,
+            extra_core=list(tool_names) if tool_names else None,
+            include_meta=True,
+            include_skills_catalog=True,
+            include_agents_catalog=False,
+            allow_write=allow_write,
+        )
+        tools = disclosure.tools
+        # 将名录追加进首条 system（若有）
+        if disclosure.prompt_append and messages:
+            msgs = [dict(m) for m in messages]
+            for i, m in enumerate(msgs):
+                if m.get("role") == "system":
+                    msgs[i] = {
+                        **m,
+                        "content": (m.get("content") or "") + "\n\n" + disclosure.prompt_append,
+                    }
+                    break
+            else:
+                msgs.insert(0, {"role": "system", "content": disclosure.prompt_append})
+            messages = msgs
+
+        abort_flag = {"v": False}
+
+        def abort_check() -> bool:
+            return abort_flag["v"]
+
+        store = CheckpointStore() if checkpoint_id else None
+        return await run_tool_loop(
+            client=self.llm_client,
+            messages=messages,
+            tools=tools,
+            harness=get_tool_harness(),
+            tool_ctx=ToolContext(
+                user_id=user_id,
+                session_id=session_id,
+                drama_id=drama_id,
+                agent_id=self.agent_name,
+                allow_write=allow_write,
+                metadata={"activated_tools": sorted(disclosure.activated)},
+            ),
+            max_steps=max_steps,
+            checkpoint_store=store,
+            checkpoint_id=checkpoint_id or f"{session_id}:{self.agent_name}",
+            on_step=on_step,
+            abort_check=abort_check,
+            prompt_cache_extra=prompt_cache_extra,
+        )
+
+    async def _iter_tool_loop(
+        self,
+        *,
+        query: str,
+        user_id: str = "unknown",
+        session_id: str = "unknown",
+        drama_id: Optional[str] = None,
+        tool_names: Optional[List[str]] = None,
+        max_steps: int = 8,
+        allow_write: bool = False,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """带预算上下文的 tool loop，逐步 yield 事件。"""
+        from utils.agent_infra.context_budget import assemble_budgeted_prompt
+        from utils.agent_infra.prompt_cache import strip_internal_fields
+
+        assembled = await assemble_budgeted_prompt(
+            system_prompt=self.system_prompt,
+            user_messages=[{"role": "user", "content": query}],
+            drama_id=drama_id,
+            user_id=user_id,
+            query=query,
+            session_id=session_id,
+            agent_id=self.agent_name,
+        )
+        messages = strip_internal_fields(assembled.messages)
+
+        queue: List[Dict[str, Any]] = []
+
+        async def on_step(ev: Dict[str, Any]) -> None:
+            if ev.get("type") == "tool":
+                packed = ev.get("result") or {}
+                queue.append(
+                    await self._emit_event(
+                        "tool_call",
+                        packed.get("tool_name") or "",
+                        metadata={"parameters": packed.get("parameters"), "tool_call_id": packed.get("tool_call_id")},
+                    )
+                )
+                queue.append(
+                    await self._emit_event(
+                        "tool_return",
+                        packed.get("llm_text") or packed.get("error") or "",
+                        metadata={"success": packed.get("success"), "tool_name": packed.get("tool_name")},
+                    )
+                )
+
+        result = await self._run_tool_loop(
+            messages,
+            user_id=user_id,
+            session_id=session_id,
+            drama_id=drama_id,
+            tool_names=tool_names,
+            max_steps=max_steps,
+            allow_write=allow_write,
+            on_step=on_step,
+            prompt_cache_extra=assembled.extra_body,
+        )
+        for ev in queue:
+            yield ev
+        yield await self._emit_event("tool_loop_result", result.to_dict() if hasattr(result, "to_dict") else result)
 
     async def _call_llm_with_retry(
         self,
@@ -2521,6 +2702,9 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     ) -> List[Dict[str, Any]]:
         """
         构建结构化上下文打包信息（系统消息）
+
+        优先走五层 Agent Memory（常驻短索引 + 历史按需召回）；
+        再补充剧本/图/Notes 等会话工件摘要。
         """
         if not self.context_pack_enabled:
             return []
@@ -2528,28 +2712,41 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
             return []
 
         blocks: List[str] = []
+        drama_id = getattr(self, "_current_project_id", None) or getattr(self, "_current_drama_id", None)
 
-        # 用户画像
+        # 五层记忆工作包（常驻优先，情节/语义 top-k，不全量注入）
         try:
-            profile_manager = get_user_profile_manager()
-            profile = await profile_manager.get_profile(user_id)
-            profile_text = self._format_user_profile(profile)
-            if profile_text:
-                blocks.append(f"【用户画像】{profile_text}")
-        except Exception:
-            pass
+            from utils.agent_memory import get_agent_memory_service
 
-        # 中期记忆（任务摘要）
-        try:
-            memory_manager = get_unified_memory_manager()
-            mid = await memory_manager.get_middle_term_context(
-                user_id, session_id, user_input, limit=self.context_middle_term_limit
+            bundle = get_agent_memory_service().assemble_working_memory(
+                user_id=user_id,
+                drama_id=drama_id,
+                query=user_input or "",
+                budget_chars=min(int(getattr(self, "context_pack_max_chars", 8000) or 8000), 8000),
             )
-            mid_text = mid.get("formatted_context", "")
-            if mid_text and "暂无相关历史任务记录" not in mid_text:
-                blocks.append(f"【中期记忆】\n{mid_text}")
+            prompt_block = bundle.to_prompt_block()
+            if prompt_block.strip():
+                blocks.append(prompt_block)
         except Exception:
-            pass
+            # 回退：旧用户画像 + 中期摘要
+            try:
+                profile_manager = get_user_profile_manager()
+                profile = await profile_manager.get_profile(user_id)
+                profile_text = self._format_user_profile(profile)
+                if profile_text:
+                    blocks.append(f"【用户画像】{profile_text}")
+            except Exception:
+                pass
+            try:
+                memory_manager = get_unified_memory_manager()
+                mid = await memory_manager.get_middle_term_context(
+                    user_id, session_id, user_input, limit=self.context_middle_term_limit
+                )
+                mid_text = mid.get("formatted_context", "")
+                if mid_text and "暂无相关历史任务记录" not in mid_text:
+                    blocks.append(f"【中期记忆】\n{mid_text}")
+            except Exception:
+                pass
 
         # 剧本结构摘要
         try:
@@ -2657,20 +2854,25 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
 
         Returns:
             构建好的消息列表
+
+        Prompt-cache（OpenClaw/Pi）：
+        - self.system_prompt 保持 stable prefix
+        - 故事事实 / ContextPack / 风格示例等易变内容进 dynamic suffix（_cacheable=False）
         """
-        # 添加系统提示词（包含故事事实）
+        # 稳定前缀：仅基础 system prompt（跨 turn 字节级稳定）
         system_content = self.system_prompt
 
-        # 🆕 注入故事事实到系统提示词
+        extra_messages: List[Dict[str, Any]] = []
+        dynamic_blocks: List[str] = []
+
+        # 易变：故事事实 → dynamic（勿拼进 stable system）
         if enable_story_facts and session_id != "unknown":
             facts_constraints = await self._inject_story_facts(session_id, max_facts)
             if facts_constraints:
-                system_content = f"{system_content}\n\n{facts_constraints}"
+                dynamic_blocks.append(facts_constraints)
                 self.logger.debug(f"✅ 注入故事事实约束 (session_id: {session_id})")
 
-        extra_messages: List[Dict[str, Any]] = []
-
-        # 🆕🆕 注入个性化风格示例（优先注入，因为这是用户自己的风格）
+        # 易变：个性化风格示例
         if enable_personalized_style and user_id != "unknown":
             personalized_messages = await self._inject_personalized_style_examples(
                 user_input=user_input,
@@ -2678,35 +2880,46 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 count=3
             )
             if personalized_messages:
-                extra_messages.append({
-                    "role": "system",
-                    "content": "【您的写作风格】以下是您过去修改时的写作风格示例，请尽量模仿这种风格：\n\n" + "\n\n".join([
-                        msg['content'] for msg in personalized_messages
-                    ])
-                })
+                dynamic_blocks.append(
+                    "【您的写作风格】以下是您过去修改时的写作风格示例，请尽量模仿这种风格：\n\n"
+                    + "\n\n".join([msg["content"] for msg in personalized_messages])
+                )
                 self.logger.debug(f"✅ 注入 {len(personalized_messages)} 条个性化风格示例")
 
-        # 🆕 注入通用风格示例（在系统提示词之后）
+        # 易变：通用风格示例
         if enable_style_examples:
             style_messages = await self._inject_style_examples(
                 input_data or {"input": user_input},
                 style_example_count
             )
             if style_messages:
-                extra_messages.append({
-                    "role": "system",
-                    "content": "【参考风格示例】请参考以下对话风格：\n\n" + "\n\n".join([
-                        f"用户: {msg['content']}" if msg['role'] == 'user' else f"助手: {msg['content']}"
-                        for msg in style_messages
-                    ])
-                })
-                extra_messages.extend(style_messages)
+                dynamic_blocks.append(
+                    "【参考风格示例】请参考以下对话风格：\n\n"
+                    + "\n\n".join(
+                        [
+                            f"用户: {msg['content']}" if msg["role"] == "user" else f"助手: {msg['content']}"
+                            for msg in style_messages
+                        ]
+                    )
+                )
                 self.logger.debug(f"✅ 注入 {len(style_messages)} 条通用风格示例")
 
-        # 🆕 注入结构化上下文包
+        # 易变：结构化上下文包
         context_pack = await self._build_context_pack(user_id, session_id, user_input)
         if context_pack:
-            extra_messages.extend(context_pack)
+            for pack_msg in context_pack:
+                content = pack_msg.get("content") or ""
+                if content:
+                    dynamic_blocks.append(str(content))
+
+        if dynamic_blocks:
+            extra_messages.append(
+                {
+                    "role": "system",
+                    "content": "\n\n".join(dynamic_blocks),
+                    "_cacheable": False,
+                }
+            )
 
         # 如果启用RAG，使用rebuild_context_with_rag
         if enable_rag:
@@ -2861,6 +3074,69 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
         except Exception as e:
             self.logger.warning(f"故事事实注入失败: {e}")
             return ""
+
+    # 子类可覆盖：允许 spawn 的专家白名单；None 表示不限制
+    allowed_subagents: Optional[List[str]] = None
+
+    async def spawn_subagent(
+        self,
+        agent_id: str,
+        task: str,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+        context_keys: Optional[List[str]] = None,
+        timeout: float = 120,
+        depth: int = 0,
+    ) -> Dict[str, Any]:
+        """统一 Agent-as-tool：调用子专家并返回聚合结果。"""
+        from utils.agent_infra.subagents import SubagentRunner, SubagentSpec
+
+        allow = set(self.allowed_subagents) if self.allowed_subagents is not None else None
+        runner = SubagentRunner()
+        result = await runner.spawn(
+            SubagentSpec(
+                agent_id=agent_id,
+                task=task,
+                context_keys=list(context_keys or []),
+                timeout=timeout,
+            ),
+            parent_agent_id=getattr(self, "agent_name", "") or "",
+            context=context,
+            depth=depth,
+            allowed_subagents=allow,
+        )
+        return {
+            "success": result.success,
+            "tool_name": result.agent_id,
+            "tool_agent": result.agent_id,
+            "result": result.content,
+            "error": result.error,
+            "checkpoint_id": result.checkpoint_id,
+            "duration_ms": result.duration_ms,
+        }
+
+    async def handoff_to(
+        self,
+        agent_id: str,
+        *,
+        session_id: str,
+        reason: str = "",
+        context_keys: Optional[List[str]] = None,
+        payload_ref: str = "",
+    ) -> Dict[str, Any]:
+        """会话级交接：下一轮由目标专家直接对用户说话。"""
+        from utils.agent_infra.handoffs import apply_handoff
+        from utils.agent_infra.orchestration import HandoffSpec
+
+        spec = HandoffSpec(
+            from_agent=getattr(self, "agent_name", "") or "",
+            to_agent=agent_id,
+            reason=reason or "handoff",
+            context_keys=list(context_keys or []),
+            payload_ref=payload_ref,
+        )
+        state = apply_handoff(session_id or "default", spec)
+        return {"success": True, "handoff": spec.to_dict(), "session": state.to_dict()}
 
     def get_agent_info(self) -> Dict[str, Any]:
         """获取Agent信息"""
@@ -3487,7 +3763,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 return await self.stop_manager.is_stopped(user_id, session_id)
             else:
                 # 尝试直接导入停止管理器
-                from ..utils.stop_manager import get_juben_stop_manager
+                from utils.stop_manager import get_juben_stop_manager
                 stop_manager = await get_juben_stop_manager()
                 return await stop_manager.is_stopped(user_id, session_id)
         except ImportError:
@@ -3504,7 +3780,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 await self.stop_manager.check_and_raise_if_stopped(user_id, session_id, current_step)
             else:
                 # 尝试直接导入停止管理器
-                from ..utils.stop_manager import get_juben_stop_manager, JubenStoppedException
+                from utils.stop_manager import get_juben_stop_manager, JubenStoppedException
                 stop_manager = await get_juben_stop_manager()
                 await stop_manager.check_and_raise_if_stopped(user_id, session_id, current_step)
         except ImportError:
@@ -3516,7 +3792,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
     async def request_stop(self, user_id: str, session_id: str, reason: str = "user_request", message: Optional[str] = None):
         """请求停止当前执行"""
         try:
-            from ..utils.stop_manager import StopReason
+            from utils.stop_manager import StopReason
             
             if self.stop_manager:
                 stop_reason = StopReason.USER_REQUEST if reason == "user_request" else StopReason.ERROR
@@ -3529,7 +3805,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 )
             else:
                 # 尝试直接导入停止管理器
-                from ..utils.stop_manager import get_juben_stop_manager
+                from utils.stop_manager import get_juben_stop_manager
                 stop_manager = await get_juben_stop_manager()
                 stop_reason = StopReason.USER_REQUEST if reason == "user_request" else StopReason.ERROR
                 return await stop_manager.request_stop(
@@ -3553,7 +3829,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
                 return await self.stop_manager.clear_stop_state(user_id, session_id)
             else:
                 # 尝试直接导入停止管理器
-                from ..utils.stop_manager import get_juben_stop_manager
+                from utils.stop_manager import get_juben_stop_manager
                 stop_manager = await get_juben_stop_manager()
                 return await stop_manager.clear_stop_state(user_id, session_id)
         except ImportError:
@@ -3568,7 +3844,7 @@ class BaseJubenAgent(ABC, ContextManagementMixin):
         """获取文件内容用于Agent处理"""
         try:
             # 尝试使用多模态处理器
-            from ..utils.multimodal_processor import get_multimodal_processor
+            from utils.multimodal_processor import get_multimodal_processor
             processor = get_multimodal_processor()
             return await processor.get_file_content_for_agent(user_id, session_id, file_refs)
         except ImportError:

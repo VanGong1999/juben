@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Check, Eye, EyeOff } from 'lucide-react';
+import { useI18n, translate } from '@/i18n';
 
 export interface ValidationRule {
   /** 验证函数 */
@@ -24,22 +25,22 @@ export interface FieldValidation {
  * 预定义的验证规则
  */
 export const ValidationRules = {
-  required: (message = '此字段为必填项'): ValidationRule => ({
+  required: (message = translate('ui.validation.required')): ValidationRule => ({
     validate: (value: string) => value.trim().length > 0,
     message,
   }),
 
   minLength: (min: number, message?: string): ValidationRule => ({
     validate: (value: string) => value.length >= min,
-    message: message || `至少需要 ${min} 个字符`,
+    message: message || translate('ui.validation.minLength', undefined, { count: min }),
   }),
 
   maxLength: (max: number, message?: string): ValidationRule => ({
     validate: (value: string) => value.length <= max,
-    message: message || `不能超过 ${max} 个字符`,
+    message: message || translate('ui.validation.maxLength', undefined, { count: max }),
   }),
 
-  email: (message = '请输入有效的邮箱地址'): ValidationRule => ({
+  email: (message = translate('ui.validation.email')): ValidationRule => ({
     validate: (value: string) => {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(value);
@@ -47,7 +48,7 @@ export const ValidationRules = {
     message,
   }),
 
-  password: (message = '密码至少8位，包含字母和数字'): ValidationRule => ({
+  password: (message = translate('ui.validation.password')): ValidationRule => ({
     validate: (value: string) => {
       const hasLetter = /[a-zA-Z]/.test(value);
       const hasNumber = /[0-9]/.test(value);
@@ -57,7 +58,7 @@ export const ValidationRules = {
     message,
   }),
 
-  url: (message = '请输入有效的URL'): ValidationRule => ({
+  url: (message = translate('ui.validation.url')): ValidationRule => ({
     validate: (value: string) => {
       try {
         new URL(value);
@@ -69,7 +70,7 @@ export const ValidationRules = {
     message,
   }),
 
-  pattern: (pattern: RegExp, message = '格式不正确'): ValidationRule => ({
+  pattern: (pattern: RegExp, message = translate('ui.validation.pattern')): ValidationRule => ({
     validate: (value: string) => pattern.test(value),
     message,
   }),
@@ -133,6 +134,7 @@ export function FormField({
     isValid: true,
     error: undefined,
   });
+  const { t } = useI18n();
 
   useEffect(() => {
     if (validateOnChange || touched) {
@@ -204,7 +206,7 @@ export function FormField({
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            aria-label={showPassword ? '隐藏密码' : '显示密码'}
+            aria-label={showPassword ? t('ui.hidePassword') : t('ui.showPassword')}
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>

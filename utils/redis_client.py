@@ -159,20 +159,29 @@ class JubenRedisClient:
         
         return self._client
     
-    async def set(self, key: str, value: Any, expire: int = None) -> bool:
-        """设置键值"""
+    async def set(
+        self,
+        key: str,
+        value: Any,
+        expire: int = None,
+        nx: bool = False,
+        xx: bool = False,
+        ex: int = None,
+    ) -> bool:
+        """设置键值（支持 nx/xx/ex 以兼容分布式锁等场景）"""
         try:
             client = await self._get_client()
             if not client:
                 return False
-            
+
             # 序列化值
             if isinstance(value, (dict, list)):
                 value = json.dumps(value, ensure_ascii=False)
-            
-            result = await client.set(key, value, ex=expire)
+
+            effective_ex = ex if ex is not None else expire
+            result = await client.set(key, value, ex=effective_ex, nx=nx, xx=xx)
             return bool(result)
-            
+
         except Exception as e:
             self.logger.error(f"❌ Redis SET失败: {key}, {e}")
             return False

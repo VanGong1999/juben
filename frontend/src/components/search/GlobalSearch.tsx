@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAgentStore } from '@/store/agentStore';
 import { useProjectStore } from '@/store/projectStore';
 import { useChatStore } from '@/store/chatStore';
+import { useI18n } from '@/i18n';
 
 interface SearchResult {
   id: string;
@@ -34,6 +35,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
   const { agents } = useAgentStore();
   const { projects } = useProjectStore();
   const { messages } = useChatStore();
+  const { t, language } = useI18n();
 
   // 聚焦输入框
   useEffect(() => {
@@ -66,7 +68,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
             title: agent.displayName,
             description: agent.description,
             icon: <span className="text-xl">{agent.icon}</span>,
-            route: `/workspace?agent=${agent.id}`,
+            route: `/studio?agent=${agent.id}`,
           });
         }
       });
@@ -101,9 +103,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
             title:
               message.content.substring(0, 50) +
               (message.content.length > 50 ? '...' : ''),
-            description: message.agentName || '系统消息',
+            description: message.agentName || t('ui.globalSearch.systemMessage'),
             icon: <MessageSquare className="w-5 h-5" />,
-            route: `/workspace#message-${message.id}`,
+            route: `/studio#message-${message.id}`,
             timestamp: message.timestamp,
           });
         }
@@ -153,9 +155,9 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
   const getTypeLabel = (type: SearchResult['type']) => {
     const labels = {
       agent: 'Agent',
-      project: '项目',
-      message: '消息',
-      file: '文件',
+      project: t('ui.globalSearch.type.project'),
+      message: t('ui.globalSearch.type.message'),
+      file: t('ui.globalSearch.type.file'),
     };
     return labels[type];
   };
@@ -192,7 +194,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="搜索 Agents、项目、消息..."
+            placeholder={t('ui.globalSearch.placeholder')}
             className="flex-1 bg-transparent border-none focus:outline-none text-gray-900 dark:text-white placeholder-gray-400"
           />
           {query && (
@@ -211,15 +213,15 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
             <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
               ↑↓
             </kbd>
-            <span>导航</span>
+            <span>{t('ui.globalSearch.navigate')}</span>
             <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
               Enter
             </kbd>
-            <span>选择</span>
+            <span>{t('ui.globalSearch.select')}</span>
             <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
               Esc
             </kbd>
-            <span>关闭</span>
+            <span>{t('project.close')}</span>
           </div>
         </div>
 
@@ -228,16 +230,16 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
           {query && results.length === 0 && (
             <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
               <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>未找到相关结果</p>
-              <p className="text-sm mt-1">试试其他关键词</p>
+              <p>{t('ui.globalSearch.noResults')}</p>
+              <p className="text-sm mt-1">{t('ui.globalSearch.tryOther')}</p>
             </div>
           )}
 
           {!query && (
             <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
               <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>输入关键词开始搜索</p>
-              <p className="text-sm mt-1">支持搜索 Agents、项目、消息等</p>
+              <p>{t('ui.globalSearch.startTyping')}</p>
+              <p className="text-sm mt-1">{t('ui.globalSearch.scope')}</p>
             </div>
           )}
 
@@ -278,7 +280,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
                     {result.timestamp && (
                       <div className="flex items-center gap-1 mt-1 text-xs text-gray-400">
                         <Clock className="w-3 h-3" />
-                        <span>{new Date(result.timestamp).toLocaleString()}</span>
+                        <span>{new Date(result.timestamp).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}</span>
                       </div>
                     )}
                   </div>
@@ -292,7 +294,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ isOpen, onClose }) =
         {results.length > 0 && (
           <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              找到 {results.length} 个结果
+              {t('ui.foundResults', { count: results.length })}
             </p>
           </div>
         )}

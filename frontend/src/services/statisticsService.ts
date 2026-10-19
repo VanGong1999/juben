@@ -11,7 +11,7 @@ export interface SystemStats {
   total_access: number;
   today_access: number;
   today_unique_users: number;
-  status: 'healthy' | 'degraded' | 'down';
+  status: 'healthy' | 'degraded' | 'down' | 'unknown';
 }
 
 export interface DailyStats {
@@ -43,6 +43,13 @@ export interface AgentUsageStats {
   usage_count: number;
   token_usage: number;
   avg_duration: number;
+}
+
+export interface ResponseTimeDistribution {
+  fast: number;    // < 1s
+  normal: number;  // 1-2s
+  slow: number;    // 2-5s
+  very_slow: number; // > 5s
 }
 
 export interface SystemHealth {

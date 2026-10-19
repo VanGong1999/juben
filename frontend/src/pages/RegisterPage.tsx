@@ -1,12 +1,13 @@
 /**
- * 注册页面
+ * 注册 — 与登录同品牌左右分栏
  */
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { Lock, User, Mail, Eye, EyeOff, Check } from 'lucide-react';
+import { Lock, User, Mail, Eye, EyeOff, Check, Film } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface FormData {
   username: string;
@@ -20,6 +21,7 @@ export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { register } = useAuthStore();
   const { success, error } = useNotificationStore();
+  const { t } = useI18n();
 
   const [formData, setFormData] = useState<FormData>({
     username: '',
@@ -33,7 +35,6 @@ export const RegisterPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 密码强度检查
   const getPasswordStrength = (password: string) => {
     let strength = 0;
     if (password.length >= 8) strength++;
@@ -48,19 +49,18 @@ export const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 验证
     if (!formData.username || !formData.email || !formData.password) {
-      error('输入错误', '请填写所有必填字段');
+      error(t('register.toast.inputError'), t('register.toast.fillRequired'));
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      error('输入错误', '两次输入的密码不一致');
+      error(t('register.toast.inputError'), t('register.toast.pwMismatch'));
       return;
     }
 
     if (formData.password.length < 6) {
-      error('输入错误', '密码长度至少为6位');
+      error(t('register.toast.inputError'), t('register.toast.pwTooShort'));
       return;
     }
 
@@ -74,293 +74,193 @@ export const RegisterPage: React.FC = () => {
         password: formData.password,
       });
 
-      success('注册成功', '欢迎加入短剧策划助手！');
-      navigate('/workspace');
+      success(t('register.toast.success'), t('register.toast.welcome'));
+      navigate('/');
     } catch (err) {
-      error('注册失败', err instanceof Error ? err.message : '请稍后重试');
+      error(t('register.toast.failed'), err instanceof Error ? err.message : t('register.toast.retryLater'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full">
-        {/* Logo和标题 */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-black rounded-2xl mb-4">
-            <span className="text-2xl font-bold text-white">剧</span>
+    <div className="min-h-screen bg-pearl flex">
+      <div className="hidden lg:flex flex-1 flex-col justify-between p-14 relative overflow-hidden border-r border-pearl-line">
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-atelier-teal flex items-center justify-center">
+            <Film className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            创建账号
+          <div>
+            <div className="font-display text-2xl font-semibold text-ink">AI影视</div>
+            <div className="text-[10px] text-ink-faint tracking-[0.2em] uppercase">Editorial</div>
+          </div>
+        </div>
+        <div className="relative z-10 max-w-md">
+          <p className="text-[11px] tracking-[0.16em] uppercase text-ink-faint mb-4">
+            {t('register.heroChip')}
+          </p>
+          <h1 className="font-display text-5xl font-semibold text-ink leading-[1.12]">
+            {t('register.heroTitle1')}
+            <br />
+            <span className="italic text-atelier-teal">{t('register.heroTitle2')}</span>
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            加入短剧策划助手
+          <p className="mt-5 text-ink-muted leading-relaxed">
+            {t('register.heroDesc')}
           </p>
         </div>
+        <p className="relative z-10 text-xs text-ink-faint">Powered by GLM-4.7-Flash</p>
+      </div>
 
-        {/* 注册表单 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* 用户名 */}
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                用户名 <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex w-14 h-14 rounded-xl bg-atelier-teal items-center justify-center mb-3">
+              <Film className="w-7 h-7 text-white" />
+            </div>
+            <h1 className="font-display text-3xl font-semibold text-ink">AI影视</h1>
+          </div>
+
+          <div className="surface-panel p-8 animate-fade-in">
+            <h2 className="font-display text-2xl font-semibold text-ink mb-1">{t('register.createAccount')}</h2>
+            <p className="text-sm text-ink-muted mb-7">{t('register.subtitle')}</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-ink mb-1.5">
+                  {t('register.username')} <span className="text-atelier-gold">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint" />
+                  <input
+                    id="username"
+                    type="text"
+                    className="input pl-10"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder={t('register.usernamePlaceholder')}
+                    autoComplete="username"
+                    disabled={isLoading}
+                    required
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-ink mb-1.5">
+                  {t('register.email')} <span className="text-atelier-gold">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint" />
+                  <input
+                    id="email"
+                    type="email"
+                    className="input pl-10"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="your@email.com"
+                    autoComplete="email"
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="displayName" className="block text-sm font-medium text-ink mb-1.5">
+                  {t('register.displayName')}
+                </label>
                 <input
-                  id="username"
+                  id="displayName"
                   type="text"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="输入用户名"
-                  autoComplete="username"
+                  className="input"
+                  value={formData.displayName}
+                  onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                  placeholder={t('register.displayNamePlaceholder')}
                   disabled={isLoading}
-                  required
                 />
               </div>
-            </div>
 
-            {/* 邮箱 */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                邮箱 <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-ink mb-1.5">
+                  {t('register.password')} <span className="text-atelier-gold">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="input pl-10 pr-10"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder={t('register.passwordPlaceholder')}
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-                <input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="your@email.com"
-                  autoComplete="email"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-            </div>
-
-            {/* 显示名称 */}
-            <div>
-              <label
-                htmlFor="displayName"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                显示名称
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                value={formData.displayName}
-                onChange={(e) =>
-                  setFormData({ ...formData, displayName: e.target.value })
-                }
-                className="block w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                placeholder="如何称呼您"
-                autoComplete="name"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* 密码 */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                密码 <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="输入密码"
-                  autoComplete="new-password"
-                  disabled={isLoading}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-
-              {/* 密码强度指示器 */}
-              {formData.password && (
-                <div className="mt-2">
-                  <div className="flex gap-1 mb-1">
+                {formData.password && (
+                  <div className="mt-2 flex gap-1">
                     {[1, 2, 3, 4].map((level) => (
                       <div
                         key={level}
                         className={`h-1 flex-1 rounded ${
-                          passwordStrength >= level
-                            ? level === 1
-                              ? 'bg-red-500'
-                              : level === 2
-                              ? 'bg-yellow-500'
-                              : level === 3
-                              ? 'bg-blue-500'
-                              : 'bg-green-500'
-                            : 'bg-gray-200 dark:bg-gray-700'
+                          passwordStrength >= level ? 'bg-atelier-teal' : 'bg-pearl-soft'
                         }`}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {passwordStrength === 1 && '弱'}
-                    {passwordStrength === 2 && '一般'}
-                    {passwordStrength === 3 && '良好'}
-                    {passwordStrength === 4 && '强'}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* 确认密码 */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                确认密码 <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="再次输入密码"
-                  autoComplete="new-password"
-                  disabled={isLoading}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  disabled={isLoading}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
+                )}
               </div>
 
-              {/* 密码匹配指示器 */}
-              {formData.confirmPassword && (
-                <div className="mt-1 flex items-center gap-1">
-                  {formData.password === formData.confirmPassword ? (
-                    <>
-                      <Check className="h-4 w-4 text-green-500" />
-                      <span className="text-xs text-green-600 dark:text-green-400">
-                        密码匹配
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-red-600 dark:text-red-400">
-                      密码不匹配
-                    </span>
-                  )}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-ink mb-1.5">
+                  {t('register.confirmPassword')} <span className="text-atelier-gold">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-faint" />
+                  <input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="input pl-10 pr-10"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    placeholder={t('register.confirmPlaceholder')}
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              )}
-            </div>
+                {formData.confirmPassword && formData.password === formData.confirmPassword && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-atelier-teal">
+                    <Check className="h-3.5 w-3.5" />
+                    {t('register.passwordMatch')}
+                  </div>
+                )}
+              </div>
 
-            {/* 同意条款 */}
-            <div className="flex items-start">
-              <input
-                id="terms"
-                type="checkbox"
-                required
-                className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label
-                htmlFor="terms"
-                className="ml-2 text-sm text-gray-600 dark:text-gray-400"
-              >
-                我已阅读并同意{' '}
-                <Link
-                  to="/terms"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                >
-                  服务条款
-                </Link>{' '}
-                和{' '}
-                <Link
-                  to="/privacy"
-                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                >
-                  隐私政策
-                </Link>
-              </label>
-            </div>
+              <button type="submit" className="btn btn-primary w-full py-2.5 mt-2" disabled={isLoading}>
+                {isLoading ? t('register.loading') : t('register.createAccount')}
+              </button>
+            </form>
 
-            {/* 注册按钮 */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? '注册中...' : '创建账号'}
-            </button>
-          </form>
-
-          {/* 登录链接 */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              已有账号？{' '}
-              <Link
-                to="/login"
-                className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                立即登录
+            <p className="mt-6 text-center text-sm text-ink-muted">
+              {t('register.hasAccount')}{' '}
+              <Link to="/login" className="text-atelier-teal font-semibold hover:underline">
+                {t('register.login')}
               </Link>
             </p>
           </div>

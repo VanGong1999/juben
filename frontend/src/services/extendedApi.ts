@@ -11,7 +11,7 @@ import type { ChatRequest, SSEEvent } from '@/types';
 /**
  * 获取可用模型列表
  */
-export async function getModels(provider: string = 'zhipu') {
+export async function getModels(provider: string = 'deepseek') {
   try {
     return await api.get<{
       success: boolean;

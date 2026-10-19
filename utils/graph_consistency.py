@@ -8,7 +8,7 @@ from utils.graph_manager import get_graph_manager
 
 
 async def validate_graph(story_id: str) -> Dict[str, Any]:
-    manager = get_graph_manager()
+    manager = await get_graph_manager()
     data = await manager.get_story_elements(story_id)
     nodes = data.get("nodes", [])
     relationships = data.get("relationships", [])

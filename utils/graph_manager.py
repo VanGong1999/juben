@@ -246,6 +246,25 @@ class WorldRuleData:
         }
 
 
+def _neo4j_to_jsonable(obj: Any) -> Any:
+    """将 Neo4j 返回对象递归转换为 JSON 可序列化类型。
+
+    Neo4j 驱动返回的 created_at/updated_at/timestamp 等为 neo4j.time.DateTime，
+    无法被 FastAPI/Pydantic 直接序列化，需在此统一转换。
+    """
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    if isinstance(obj, dict):
+        return {k: _neo4j_to_jsonable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_neo4j_to_jsonable(v) for v in obj]
+    if hasattr(obj, "iso_format"):
+        return obj.iso_format()
+    if hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    return str(obj)
+
+
 class GraphDBManager:
     """
     生产级剧本创作图谱存储引擎
@@ -526,7 +545,7 @@ class GraphDBManager:
     ) -> Dict[str, Any]:
         """合并角色节点（原子操作）"""
         query = f"""
-        MERGE (c:{NodeType.CHARACTER} {{character_id: $character_id}})
+        MERGE (c:{NodeType.CHARACTER.value} {{character_id: $character_id}})
         ON CREATE SET
             c.created_at = datetime($timestamp),
             c.version = $version,
@@ -562,7 +581,7 @@ class GraphDBManager:
             "flaws": data.flaws,
             "strengths": data.strengths,
             "first_appearance": data.first_appearance,
-            "metadata": data.metadata,
+            "metadata": json.dumps(data.metadata, ensure_ascii=False),
             "version": version,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -579,7 +598,7 @@ class GraphDBManager:
                 "created": node.get("created_at") is not None,
                 "updated": node.get("updated_at") is not None,
                 "version": version,
-                "node": dict(node),
+                "node": _neo4j_to_jsonable(dict(node)),
             }
 
         return {"success": False, "error": "创建节点失败"}
@@ -592,7 +611,7 @@ class GraphDBManager:
     ) -> Dict[str, Any]:
         """合并故事节点（原子操作）"""
         query = f"""
-        MERGE (s:{NodeType.STORY} {{story_id: $story_id}})
+        MERGE (s:{NodeType.STORY.value} {{story_id: $story_id}})
         ON CREATE SET
             s.created_at = datetime($timestamp),
             s.version = $version
@@ -616,7 +635,7 @@ class GraphDBManager:
             "genre": data.genre,
             "tags": data.tags,
             "status": data.status,
-            "metadata": data.metadata,
+            "metadata": json.dumps(data.metadata, ensure_ascii=False),
             "version": version,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -633,7 +652,7 @@ class GraphDBManager:
                 "created": node.get("created_at") is not None,
                 "updated": node.get("updated_at") is not None,
                 "version": version,
-                "node": dict(node),
+                "node": _neo4j_to_jsonable(dict(node)),
             }
 
         return {"success": False, "error": "创建节点失败"}
@@ -669,7 +688,7 @@ class GraphDBManager:
             "name": data.name,
             "description": data.description,
             "category": data.category,
-            "metadata": data.metadata,
+            "metadata": json.dumps(data.metadata, ensure_ascii=False),
             "version": version,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -686,7 +705,7 @@ class GraphDBManager:
                 "created": node.get("created_at") is not None,
                 "updated": node.get("updated_at") is not None,
                 "version": version,
-                "node": dict(node),
+                "node": _neo4j_to_jsonable(dict(node)),
             }
 
         return {"success": False, "error": "创建节点失败"}
@@ -697,10 +716,11 @@ class GraphDBManager:
         data: PlotNodeData,
         version: int,
     ) -> Dict[str, Any]:
-        """合并情节节点（原子操作）"""
+        """合并情节节点（原子操作，按 story_id + sequence_number 唯一）"""
         query = f"""
-        MERGE (p:{NodeType.PLOT_NODE} {{plot_id: $plot_id}})
+        MERGE (p:{NodeType.PLOT_NODE.value} {{story_id: $story_id, sequence_number: $sequence_number}})
         ON CREATE SET
+            p.plot_id = $plot_id,
             p.created_at = datetime($timestamp),
             p.version = $version
         ON MATCH SET
@@ -709,10 +729,8 @@ class GraphDBManager:
             p.tension_score = $tension_score,
             p.importance = $importance
         SET
-            p.story_id = $story_id,
             p.title = $title,
             p.description = $description,
-            p.sequence_number = $sequence_number,
             p.timestamp = datetime($timestamp),
             p.chapter = $chapter,
             p.characters_involved = $characters_involved,
@@ -737,7 +755,7 @@ class GraphDBManager:
             "conflicts": data.conflicts,
             "themes": data.themes,
             "importance": data.importance,
-            "metadata": data.metadata,
+            "metadata": json.dumps(data.metadata, ensure_ascii=False),
             "version": version,
         }
 
@@ -753,7 +771,7 @@ class GraphDBManager:
                 "created": node.get("created_at") is not None,
                 "updated": node.get("updated_at") is not None,
                 "version": version,
-                "node": dict(node),
+                "node": _neo4j_to_jsonable(dict(node)),
             }
 
         return {"success": False, "error": "创建节点失败"}
@@ -766,7 +784,7 @@ class GraphDBManager:
     ) -> Dict[str, Any]:
         """合并世界观规则节点（原子操作）"""
         query = f"""
-        MERGE (r:{NodeType.WORLD_RULE} {{rule_id: $rule_id}})
+        MERGE (r:{NodeType.WORLD_RULE.value} {{rule_id: $rule_id}})
         ON CREATE SET
             r.created_at = datetime($timestamp),
             r.version = $version
@@ -798,7 +816,7 @@ class GraphDBManager:
             "exceptions": data.exceptions,
             "constraints": data.constraints,
             "examples": data.examples,
-            "metadata": data.metadata,
+            "metadata": json.dumps(data.metadata, ensure_ascii=False),
             "version": version,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
@@ -815,7 +833,7 @@ class GraphDBManager:
                 "created": node.get("created_at") is not None,
                 "updated": node.get("updated_at") is not None,
                 "version": version,
-                "node": dict(node),
+                "node": _neo4j_to_jsonable(dict(node)),
             }
 
         return {"success": False, "error": "创建节点失败"}
@@ -851,9 +869,9 @@ class GraphDBManager:
             raise ValueError("trust_level 必须在 -100 到 100 之间")
 
         query = f"""
-        MATCH (c1:{NodeType.CHARACTER} {{character_id: $character_id_1}})
-        MATCH (c2:{NodeType.CHARACTER} {{character_id: $character_id_2}})
-        MERGE (c1)-[r:{RelationType.SOCIAL_BOND}]->(c2)
+        MATCH (c1:{NodeType.CHARACTER.value} {{character_id: $character_id_1}})
+        MATCH (c2:{NodeType.CHARACTER.value} {{character_id: $character_id_2}})
+        MERGE (c1)-[r:{RelationType.SOCIAL_BOND.value}]->(c2)
         ON CREATE SET
             r.created_at = datetime($timestamp),
             r.trust_level = $trust_level,
@@ -875,7 +893,7 @@ class GraphDBManager:
             "trust_level": trust_level,
             "bond_type": bond_type,
             "hidden_relation": hidden_relation,
-            "metadata": metadata or {},
+            "metadata": json.dumps(metadata or {}, ensure_ascii=False),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -895,7 +913,7 @@ class GraphDBManager:
                         "to": character_id_2,
                         "trust_level": trust_level,
                         "bond_type": bond_type,
-                        "relation": dict(rel),
+                        "relation": _neo4j_to_jsonable(dict(rel)),
                     }
 
                 return {"success": False, "error": "创建关系失败"}
@@ -938,7 +956,7 @@ class GraphDBManager:
         WHERE from.character_id = $from_id OR from.plot_id = $from_id OR from.rule_id = $from_id
         MATCH (to)
         WHERE to.character_id = $to_id OR to.plot_id = $to_id OR to.rule_id = $to_id
-        MERGE (from)-[r:{RelationType.INFLUENCES}]->(to)
+        MERGE (from)-[r:{RelationType.INFLUENCES.value}]->(to)
         ON CREATE SET
             r.created_at = datetime($timestamp),
             r.impact_score = $impact_score,
@@ -960,7 +978,7 @@ class GraphDBManager:
             "impact_score": impact_score,
             "influence_type": influence_type,
             "description": description,
-            "metadata": metadata or {},
+            "metadata": json.dumps(metadata or {}, ensure_ascii=False),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -980,7 +998,7 @@ class GraphDBManager:
                         "to": to_element_id,
                         "impact_score": impact_score,
                         "influence_type": influence_type,
-                        "relation": dict(rel),
+                        "relation": _neo4j_to_jsonable(dict(rel)),
                     }
 
                 return {"success": False, "error": "创建关系失败"}
@@ -1016,12 +1034,12 @@ class GraphDBManager:
         }
         """
         query = f"""
-        MATCH (center:{NodeType.CHARACTER} {{character_id: $character_id}})
+        MATCH (center:{NodeType.CHARACTER.value} {{character_id: $character_id}})
 
         // 获取社交网络（双向）
         CALL {{
             WITH center
-            MATCH (center)-[r1:SOCIAL_BOND*1..{depth}]-(connected:{NodeType.CHARACTER})
+            MATCH (center)-[r1:SOCIAL_BOND*1..{depth}]-(connected:{NodeType.CHARACTER.value})
             RETURN connected,
                    r1,
                    'social' AS network_type,
@@ -1091,7 +1109,7 @@ class GraphDBManager:
                         "character_id": character_id,
                     }
 
-                center = dict(record["center"])
+                center = _neo4j_to_jsonable(dict(record["center"]))
                 network_data = record["network_data"]
 
                 # 分类整理网络数据
@@ -1176,7 +1194,7 @@ class GraphDBManager:
     # ============ 审核队列（GraphReviewQueue） ============
 
     def _serialize_review_node(self, node: Any) -> Dict[str, Any]:
-        data = dict(node)
+        data = _neo4j_to_jsonable(dict(node))
         for key in ("created_at", "updated_at"):
             value = data.get(key)
             if hasattr(value, "isoformat"):
@@ -1318,7 +1336,7 @@ class GraphDBManager:
     async def get_character_by_id(self, character_id: str) -> Optional[Dict[str, Any]]:
         """根据ID获取角色"""
         query = f"""
-        MATCH (c:{NodeType.CHARACTER} {{character_id: $character_id}})
+        MATCH (c:{NodeType.CHARACTER.value} {{character_id: $character_id}})
         RETURN c
         """
 
@@ -1328,7 +1346,7 @@ class GraphDBManager:
                 record = await result.single()
 
                 if record:
-                    return dict(record["c"])
+                    return _neo4j_to_jsonable(dict(record["c"]))
 
                 return None
 
@@ -1347,7 +1365,7 @@ class GraphDBManager:
             raise ValueError(f"order_by 必须是以下之一: {valid_order_fields}")
 
         query = f"""
-        MATCH (p:{NodeType.PLOT_NODE} {{story_id: $story_id}})
+        MATCH (p:{NodeType.PLOT_NODE.value} {{story_id: $story_id}})
         RETURN p
         ORDER BY p.{order_by} ASC
         """
@@ -1357,7 +1375,7 @@ class GraphDBManager:
                 result = await session.run(query, {"story_id": story_id})
                 records = await result.data()
 
-                return [dict(record["p"]) for record in records]
+                return [_neo4j_to_jsonable(dict(record["p"])) for record in records]
 
         except Exception as e:
             logger.error(f"get_plot_by_story 失败: {e}")
@@ -1408,7 +1426,7 @@ class GraphDBManager:
         where_clause = " AND ".join(conditions)
 
         query = f"""
-        MATCH (c:{NodeType.CHARACTER})
+        MATCH (c:{NodeType.CHARACTER.value})
         WHERE {where_clause}
         RETURN c
         ORDER BY c.arc DESC
@@ -1420,7 +1438,7 @@ class GraphDBManager:
                 result = await session.run(query, params)
                 records = await result.data()
 
-                return [dict(record["c"]) for record in records]
+                return [_neo4j_to_jsonable(dict(record["c"])) for record in records]
 
         except Exception as e:
             logger.error(f"search_characters 失败: {e}")
@@ -1442,7 +1460,7 @@ class GraphDBManager:
         where_clause = " AND ".join(conditions)
 
         query = f"""
-        MATCH (r:{NodeType.WORLD_RULE})
+        MATCH (r:{NodeType.WORLD_RULE.value})
         WHERE {where_clause}
         RETURN r
         ORDER BY r.severity, r.name
@@ -1453,7 +1471,7 @@ class GraphDBManager:
                 result = await session.run(query, params)
                 records = await result.data()
 
-                return [dict(record["r"]) for record in records]
+                return [_neo4j_to_jsonable(dict(record["r"])) for record in records]
 
         except Exception as e:
             logger.error(f"get_world_rules 失败: {e}")
@@ -1469,24 +1487,25 @@ class GraphDBManager:
             Dict: 统计数据
         """
         query = f"""
-        MATCH (c:{NodeType.CHARACTER} {{story_id: $story_id}})
-        WITH count(c) AS character_count
+        MATCH (s:{NodeType.STORY.value} {{story_id: $story_id}})
+        OPTIONAL MATCH (c:{NodeType.CHARACTER.value} {{story_id: $story_id}})
+        WITH s, count(DISTINCT c) AS character_count
 
-        MATCH (p:{NodeType.PLOT_NODE} {{story_id: $story_id}})
-        WITH character_count, count(p) AS plot_count
+        OPTIONAL MATCH (p:{NodeType.PLOT_NODE.value} {{story_id: $story_id}})
+        WITH character_count, count(DISTINCT p) AS plot_count
 
-        MATCH (r:{NodeType.WORLD_RULE} {{story_id: $story_id}})
-        WITH character_count, plot_count, count(r) AS rule_count
+        OPTIONAL MATCH (r:{NodeType.WORLD_RULE.value} {{story_id: $story_id}})
+        WITH character_count, plot_count, count(DISTINCT r) AS rule_count
 
         // 角色状态分布
-        MATCH (c:{NodeType.CHARACTER} {{story_id: $story_id}})
+        OPTIONAL MATCH (c2:{NodeType.CHARACTER.value} {{story_id: $story_id}})
         WITH character_count, plot_count, rule_count,
-             collect(DISTINCT c.status) AS status_list
+             collect(DISTINCT c2.status) AS status_list
 
         // 平均张力
-        MATCH (p:{NodeType.PLOT_NODE} {{story_id: $story_id}})
+        OPTIONAL MATCH (p2:{NodeType.PLOT_NODE.value} {{story_id: $story_id}})
         WITH character_count, plot_count, rule_count, status_list,
-             avg(p.tension_score) AS avg_tension
+             avg(p2.tension_score) AS avg_tension
 
         // 关系统计
         OPTIONAL MATCH ()-[rel:SOCIAL_BOND]->()
@@ -1536,10 +1555,10 @@ class GraphDBManager:
     # ============ 读取与维护 ============
 
     def _resolve_node_id(self, node: Any) -> str:
-        """从节点属性中解析统一ID"""
+        """从节点属性中解析统一ID（优先节点自身唯一 ID，最后才是 story_id）"""
         if not node:
             return ""
-        for key in ("story_id", "character_id", "plot_id", "rule_id", "node_id", "id", "name", "title"):
+        for key in ("character_id", "plot_id", "rule_id", "node_id", "story_id", "id", "name", "title"):
             value = node.get(key) if hasattr(node, "get") else None
             if value:
                 return str(value)
@@ -1605,7 +1624,7 @@ class GraphDBManager:
                 for node in nodes:
                     node_labels = list(node.labels)
                     node_type = node_labels[0] if node_labels else "Unknown"
-                    node_dict = dict(node)
+                    node_dict = _neo4j_to_jsonable(dict(node))
                     node_id = self._resolve_node_id(node_dict)
                     graph_nodes.append({
                         "id": node_id,
@@ -1641,10 +1660,19 @@ class GraphDBManager:
                             "type": rel.type,
                             "source": source_id,
                             "target": target_id,
-                            "properties": dict(rel),
+                            "properties": _neo4j_to_jsonable(dict(rel)),
                         })
                     except Exception:
                         continue
+
+                try:
+                    from utils.graph_enrichment import enrich_graph_relationships
+
+                    graph_relationships = enrich_graph_relationships(
+                        graph_nodes, graph_relationships
+                    )
+                except Exception as enrich_err:
+                    logger.warning(f"关系推断补全跳过: {enrich_err}")
 
                 return {
                     "stories": stories,
@@ -1715,9 +1743,10 @@ class GraphDBManager:
 
                 results = []
                 for node in records:
+                    node = node[0]  # result.values() 返回 [[node], ...]
                     node_labels = list(node.labels)
                     node_type = node_labels[0] if node_labels else "Unknown"
-                    node_dict = dict(node)
+                    node_dict = _neo4j_to_jsonable(dict(node))
                     results.append({
                         "id": self._resolve_node_id(node_dict),
                         "labels": node_labels,
@@ -1741,7 +1770,7 @@ class GraphDBManager:
             async with self._get_session() as session:
                 result = await session.run(query, {"limit": limit})
                 records = await result.values("s")
-                return [dict(node) for node in records]
+                return [_neo4j_to_jsonable(dict(node[0])) for node in records]
         except Exception as e:
             logger.error(f"list_stories 失败: {e}")
             return []
@@ -1753,7 +1782,7 @@ class GraphDBManager:
             async with self._get_session() as session:
                 result = await session.run(query, {"story_id": story_id})
                 record = await result.single()
-                return dict(record["s"]) if record else None
+                return _neo4j_to_jsonable(dict(record["s"])) if record else None
         except Exception as e:
             logger.error(f"get_story 失败: {e}")
             return None
@@ -1802,7 +1831,7 @@ class GraphDBManager:
                 record = await result.single()
                 if record:
                     rel = record["r"]
-                    return {"success": True, "relationship": dict(rel), "id": str(record["rid"])}
+                    return {"success": True, "relationship": _neo4j_to_jsonable(dict(rel)), "id": str(record["rid"])}
                 return {"success": False, "error": "创建关系失败"}
         except Exception as e:
             logger.error(f"create_relationship 失败: {e}")
@@ -1831,7 +1860,7 @@ class GraphDBManager:
                     return []
                 path = record["p"]
                 nodes = [dict(n) for n in path.nodes]
-                relationships = [dict(r) for r in path.relationships]
+                relationships = [_neo4j_to_jsonable(dict(r)) for r in path.relationships]
                 return [{"nodes": nodes, "relationships": relationships}]
         except Exception as e:
             logger.error(f"find_shortest_path 失败: {e}")
@@ -1880,7 +1909,7 @@ class GraphDBManager:
                 record = await result.single()
                 if record:
                     node = record["n"]
-                    return {"success": True, "node": dict(node)}
+                    return {"success": True, "node": _neo4j_to_jsonable(dict(node))}
                 return {"success": False, "error": "节点不存在"}
         except Exception as e:
             logger.error(f"update_node 失败: {e}")
@@ -1971,42 +2000,58 @@ class GraphDBManager:
 _graph_manager_instance: Optional[GraphDBManager] = None
 
 
+_graph_backend: str = "unknown"
+
+
 async def get_graph_manager(
     uri: str = "bolt://localhost:7687",
     username: str = "neo4j",
     password: str = "",
     database: str = "neo4j",
-) -> GraphDBManager:
+):
     """
-    获取 GraphDBManager 单例
+    获取图谱管理器单例。
 
-    Args:
-        uri: Neo4j URI
-        username: 用户名
-        password: 密码
-        database: 数据库名称
-
-    Returns:
-        GraphDBManager: 数据库管理器实例
+    优先 Neo4j；连接失败时自动回退到 FileGraphStore（data/knowledge/graph），
+    保证工具箱图谱页在无 Neo4j 时仍可生产级演示与审核。
     """
-    global _graph_manager_instance
+    global _graph_manager_instance, _graph_backend
 
-    if _graph_manager_instance is None:
-        _graph_manager_instance = GraphDBManager(
+    if _graph_manager_instance is not None:
+        return _graph_manager_instance
+
+    try:
+        mgr = GraphDBManager(
             uri=uri,
             username=username,
             password=password,
             database=database,
         )
-        await _graph_manager_instance.initialize()
+        await mgr.initialize()
+        _graph_manager_instance = mgr
+        _graph_backend = "neo4j"
+        logger.info("图谱后端: Neo4j")
+        return _graph_manager_instance
+    except Exception as e:
+        logger.warning("Neo4j 不可用，回退 FileGraphStore: %s", e)
+        from utils.file_graph_store import get_file_graph_store
 
-    return _graph_manager_instance
+        _graph_manager_instance = await get_file_graph_store()
+        _graph_backend = "file"
+        return _graph_manager_instance
+
+
+def get_graph_backend() -> str:
+    return _graph_backend
 
 
 async def close_graph_manager():
     """关闭 GraphDBManager 连接"""
-    global _graph_manager_instance
+    global _graph_manager_instance, _graph_backend
 
     if _graph_manager_instance:
-        await _graph_manager_instance.close()
+        close = getattr(_graph_manager_instance, "close", None)
+        if close:
+            await close()
         _graph_manager_instance = None
+        _graph_backend = "unknown"

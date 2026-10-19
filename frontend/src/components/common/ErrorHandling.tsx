@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { AlertCircle, RefreshCw, X, Home, ArrowLeft, Bug } from 'lucide-react';
+import { AlertCircle, RefreshCw, X, Home, ArrowLeft, Bug, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '@/i18n';
 
 export interface ErrorInfo {
   /** 错误类型 */
@@ -51,6 +52,7 @@ export function ErrorCard({
   showDetails = false,
   actions,
 }: ErrorCardProps) {
+  const { t } = useI18n();
   const errorInfo: ErrorInfo = typeof error === 'string' ? { message: error } : error;
 
   const getErrorType = () => {
@@ -96,7 +98,7 @@ export function ErrorCard({
           )}
 
           {errorInfo.code && (
-            <p className="text-xs text-gray-500 mt-1">错误代码: {errorInfo.code}</p>
+            <p className="text-xs text-gray-500 mt-1">{t('ui.errorCode')} {errorInfo.code}</p>
           )}
 
           <div className="flex items-center gap-2 mt-3">
@@ -107,7 +109,7 @@ export function ErrorCard({
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <RefreshCw className={`w-3 h-3 ${isRetrying ? 'animate-spin' : ''}`} />
-                {isRetrying ? '重试中...' : '重试'}
+                {isRetrying ? t('ui.retrying') : t('common.retry')}
               </button>
             )}
 
@@ -142,43 +144,44 @@ export function ErrorPage({
   actions,
 }: ErrorPageProps) {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const getErrorConfig = () => {
     switch (error.type) {
       case 'network':
         return {
-          title: '网络连接失败',
-          description: '请检查您的网络连接后重试',
+          title: t('ui.error.network'),
+          description: t('ui.error.networkDesc'),
           illustration: '🌐',
         };
       case 'validation':
         return {
-          title: '输入验证失败',
-          description: '请检查您的输入是否正确',
+          title: t('ui.error.validation'),
+          description: t('ui.error.validationDesc'),
           illustration: '✓',
         };
       case 'auth':
         return {
-          title: '权限不足',
-          description: '您没有访问此页面的权限',
+          title: t('ui.error.auth'),
+          description: t('ui.error.authDesc'),
           illustration: '🔒',
         };
       case 'notFound':
         return {
-          title: '页面未找到',
-          description: '您访问的页面不存在',
+          title: t('ui.error.notFound'),
+          description: t('ui.error.notFoundDesc'),
           illustration: '🔍',
         };
       case 'server':
         return {
-          title: '服务器错误',
-          description: '服务器遇到了问题，请稍后重试',
+          title: t('ui.error.server'),
+          description: t('ui.error.serverDesc'),
           illustration: '⚠️',
         };
       default:
         return {
-          title: '发生错误',
-          description: '应用程序遇到了意外错误',
+          title: t('ui.error.default'),
+          description: t('ui.error.defaultDesc'),
           illustration: '❌',
         };
     }
@@ -208,7 +211,7 @@ export function ErrorPage({
               onClick={onRetry}
               className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
-              重试
+              {t('common.retry')}
             </button>
           )}
 
@@ -218,7 +221,7 @@ export function ErrorPage({
               className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              返回上一页
+              {t('ui.backPrev')}
             </button>
           )}
 
@@ -228,7 +231,7 @@ export function ErrorPage({
               className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <Home className="w-4 h-4" />
-              返回首页
+              {t('ui.backHome')}
             </button>
           )}
 
@@ -236,7 +239,7 @@ export function ErrorPage({
         </div>
 
         {error.code && (
-          <p className="text-xs text-gray-400 mt-6">错误代码: {error.code}</p>
+          <p className="text-xs text-gray-400 mt-6">{t('ui.errorCode')} {error.code}</p>
         )}
       </div>
     </div>
@@ -348,7 +351,7 @@ interface DebugInfoProps {
 export function DebugInfo({ title, data, expanded = false }: DebugInfoProps) {
   const [isExpanded, setIsExpanded] = React.useState(expanded);
 
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env.DEV) {
     return null;
   }
 

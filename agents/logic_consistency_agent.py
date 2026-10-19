@@ -96,7 +96,7 @@ class LogicConsistencyAgent(BaseJubenAgent):
     4. 触发回滚机制
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化逻辑一致性检测 Agent"""
         super().__init__("logic_consistency", model_provider)
 
@@ -214,6 +214,10 @@ class LogicConsistencyAgent(BaseJubenAgent):
 
             # 生成可读报告
             report_text = await self._generate_readable_report(report)
+
+            # 把报告正文作为 llm_chunk 流式输出（否则 tool_complete 的 result 不显示为正文）
+            if report_text:
+                yield {"event_type": "llm_chunk", "data": report_text, "metadata": {}}
 
             yield {
                 "event_type": "tool_complete",

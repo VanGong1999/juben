@@ -66,7 +66,7 @@ class MetaOptimizerAgent(BaseJubenAgent):
     def __init__(self):
         super().__init__(
             agent_name="meta_optimizer",
-            model_provider="zhipu"
+            model_provider="deepseek"
         )
 
         # 覆盖系统提示词

@@ -50,9 +50,9 @@ export default function Skeleton({
             key={i}
             className={combinedClasses}
             style={{
+              ...commonStyle,
               height: height || '16px',
               width: i === lines - 1 ? '60%' : '100%',
-              ...commonStyle,
             }}
           />
         ))}
@@ -66,9 +66,9 @@ export default function Skeleton({
       <div
         className={`${combinedClasses} rounded-full`}
         style={{
+          ...commonStyle,
           width: width || '40px',
           height: height || '40px',
-          ...commonStyle,
         }}
       />
     );

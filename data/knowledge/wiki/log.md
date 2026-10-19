@@ -1,0 +1,22 @@
+# Wiki Log
+
+- [2026-10-17 14:47:02] rebuild_index pages=1
+- [2026-10-17 14:47:02] write_raw craft/hook-paywall-notes.txt
+- [2026-10-17 14:47:02] write_wiki craft/hook-3s.md
+- [2026-10-17 14:47:02] write_wiki craft/cliffhanger.md
+- [2026-10-17 14:47:02] write_wiki concepts/emotion-first.md
+- [2026-10-17 14:47:02] write_wiki concepts/ip-value-lens.md
+- [2026-10-17 14:47:02] rebuild_index pages=5
+- [2026-10-17 14:47:02] seed_if_empty: craft+concepts seeded
+- [2026-10-18 19:15:43] write_wiki craft/beat-dialogue.md
+- [2026-10-18 19:15:43] write_wiki craft/character-voice.md
+- [2026-10-18 19:15:43] write_wiki craft/cliffhanger.md
+- [2026-10-18 19:15:43] write_wiki concepts/emotion-first.md
+- [2026-10-18 19:15:43] write_wiki craft/episode-rhythm.md
+- [2026-10-18 19:15:43] write_wiki craft/hook-3s.md
+- [2026-10-18 19:15:43] write_wiki craft/satisfaction-payoff.md
+- [2026-10-18 19:15:43] write_wiki craft/villain-ladder.md
+- [2026-10-18 19:15:43] rebuild_index pages=10
+- [2026-10-18 19:19:40] write_raw short-dramas/catalog.md
+- [2026-10-18 19:19:40] write_wiki craft/genres-playbook.md
+- [2026-10-18 19:19:40] rebuild_index pages=11

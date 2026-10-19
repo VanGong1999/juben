@@ -2,7 +2,7 @@
 小说初筛评估和分析智能体的API路由
 """
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Dict, Any, Optional, List
 import asyncio
 import json
@@ -19,44 +19,42 @@ router = APIRouter(prefix="/api/novel-screening", tags=["小说初筛评估"])
 # 请求模型
 class NovelScreeningRequest(BaseModel):
     """小说初筛评估请求模型"""
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "file": "这是一个关于现代都市爱情的故事...",
+            "chunk_size": 10000,
+            "length_size": 800,
+            "theme": "都市爱情"
+        }
+    })
+
     file: Optional[str] = Field(None, description="完整小说文件内容")
     short_file: Optional[str] = Field(None, description="短篇小说文件内容")
     chunk_size: int = Field(10000, description="文本分割块大小", ge=1000, le=50000)
     length_size: int = Field(800, description="文本截断长度", ge=100, le=2000)
     theme: str = Field("小说", description="故事题材类型")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "file": "这是一个关于现代都市爱情的故事...",
-                "chunk_size": 10000,
-                "length_size": 800,
-                "theme": "都市爱情"
-            }
-        }
 
 
 class NovelScreeningResponse(BaseModel):
     """小说初筛评估响应模型"""
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "success": True,
+            "message": "小说初筛评估完成",
+            "data": {
+                "rating": "A",
+                "document_url": "https://example.com/document/123",
+                "analysis": "评估分析结果...",
+                "workflow": "full_file_branch"
+            },
+            "timestamp": "2024-01-01T00:00:00"
+        }
+    })
+
     success: bool = Field(description="请求是否成功")
     message: str = Field(description="响应消息")
     data: Optional[Dict[str, Any]] = Field(None, description="响应数据")
     timestamp: str = Field(description="响应时间戳")
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "success": True,
-                "message": "小说初筛评估完成",
-                "data": {
-                    "rating": "A",
-                    "document_url": "https://example.com/document/123",
-                    "analysis": "评估分析结果...",
-                    "workflow": "full_file_branch"
-                },
-                "timestamp": "2024-01-01T00:00:00"
-            }
-        }
 
 
 class NovelScreeningStreamResponse(BaseModel):

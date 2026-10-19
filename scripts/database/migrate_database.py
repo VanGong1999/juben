@@ -39,7 +39,8 @@ async def main():
                 continue
 
             sql_content = sql_file.read_text(encoding="utf-8")
-            logger.info(f"应用迁移: {version}")            await conn.execute(sql_content)
+            logger.info(f"应用迁移: {version}")
+            await conn.execute(sql_content)
             await conn.execute("INSERT INTO schema_migrations (version) VALUES ($1)", version)
 
         logger.info("迁移完成")

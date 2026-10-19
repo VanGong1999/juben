@@ -15,6 +15,7 @@ interface AgentState {
   // Actions
   setAgents: (agents: Agent[]) => void;
   setActiveAgent: (agentId: string) => void;
+  returnToConductor: () => void;
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: AgentCategory | 'all') => void;
 
@@ -26,9 +27,9 @@ interface AgentState {
 export const useAgentStore = create<AgentState>()(
   devtools(
     (set, get) => ({
-      // Initial state
+      // Initial state — 默认自动编排，不强制先选专家
       agents: [],
-      activeAgent: 'short_drama_planner',
+      activeAgent: 'auto',
       searchQuery: '',
       selectedCategory: 'all',
 
@@ -36,19 +37,43 @@ export const useAgentStore = create<AgentState>()(
       setAgents: (agents) =>
         set((state) => {
           const currentActive = state.activeAgent;
-          const hasActive = agents.some((a) => a.id === currentActive);
+          const hasActive =
+            currentActive === 'auto' ||
+            currentActive === 'juben_conductor' ||
+            agents.some((a) => a.id === currentActive);
           return {
             agents,
-            activeAgent: hasActive ? currentActive : agents[0]?.id || currentActive,
+            activeAgent: hasActive ? currentActive : 'auto',
           };
         }),
       setActiveAgent: (agentId) => set({ activeAgent: agentId }),
+      returnToConductor: () => set({ activeAgent: 'auto' }),
       setSearchQuery: (query) => set({ searchQuery: query }),
       setSelectedCategory: (category) => set({ selectedCategory: category }),
 
       // Getters
       getActiveAgent: () => {
         const state = get();
+        if (state.activeAgent === 'auto') {
+          return (
+            state.agents.find((a) => a.id === 'auto') ||
+            state.agents.find((a) => a.id === 'juben_conductor') || {
+              id: 'auto',
+              name: 'JubenConductor',
+              displayName: '自动编排',
+              description: '按需组合调用专家',
+              category: 'orchestration' as AgentCategory,
+              icon: '🧭',
+              model: '',
+              apiEndpoint: '/juben/chat',
+              features: [],
+              capabilities: [],
+              inputExample: '',
+              outputExample: '',
+              status: 'active' as const,
+            }
+          );
+        }
         return state.agents.find((a) => a.id === state.activeAgent);
       },
 

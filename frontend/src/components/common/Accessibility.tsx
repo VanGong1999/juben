@@ -4,17 +4,19 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
+import { useI18n, translate } from '@/i18n';
 
 /**
  * 跳转到主内容链接（用于屏幕阅读器）
  */
 export function SkipToContent({ mainId = 'main-content' }: { mainId?: string }) {
+  const { t } = useI18n();
   return (
     <a
       href={`#${mainId}`}
       className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-black focus:text-white focus:rounded-lg"
     >
-      跳转到主内容
+      {t('ui.skipToContent')}
     </a>
   );
 }
@@ -387,7 +389,7 @@ interface ShortcutListProps {
   title?: string;
 }
 
-export function ShortcutList({ shortcuts, title = '快捷键' }: ShortcutListProps) {
+export function ShortcutList({ shortcuts, title = translate('ui.shortcuts') }: ShortcutListProps) {
   return (
     <div className="p-4 bg-gray-50 rounded-lg" role="region" aria-label={title}>
       {title && (

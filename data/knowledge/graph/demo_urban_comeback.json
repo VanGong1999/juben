@@ -1,0 +1,462 @@
+{
+  "story": {
+    "story_id": "demo_urban_comeback",
+    "name": "都市逆袭·假千金",
+    "description": "退婚开局的都市商战逆袭短剧示例图谱，用于工具箱可视化与审核演示",
+    "genre": "都市逆袭",
+    "tags": [
+      "短剧",
+      "商战",
+      "打脸"
+    ],
+    "status": "active",
+    "created_at": "2026-10-17T14:05:46.176031+00:00"
+  },
+  "nodes": [
+    {
+      "id": "demo_urban_comeback",
+      "type": "Story",
+      "labels": [
+        "Story"
+      ],
+      "properties": {
+        "story_id": "demo_urban_comeback",
+        "name": "都市逆袭·假千金",
+        "description": "退婚开局的都市商战逆袭短剧示例图谱，用于工具箱可视化与审核演示",
+        "genre": "都市逆袭",
+        "tags": [
+          "短剧",
+          "商战",
+          "打脸"
+        ],
+        "status": "active",
+        "created_at": "2026-10-17T14:05:46.176031+00:00"
+      }
+    },
+    {
+      "id": "char_linxiao",
+      "type": "Character",
+      "labels": [
+        "Character"
+      ],
+      "properties": {
+        "character_id": "char_linxiao",
+        "name": "林晓",
+        "story_id": "demo_urban_comeback",
+        "status": "alive",
+        "location": "魔都写字楼",
+        "persona": [
+          "隐忍",
+          "聪明",
+          "重情义"
+        ],
+        "arc": 20,
+        "backstory": "被家族与未婚夫背叛后进入对手公司卧底",
+        "motivations": [
+          "夺回股权",
+          "证明自己"
+        ],
+        "flaws": [
+          "过度隐忍",
+          "报复心重"
+        ],
+        "strengths": [
+          "洞察力",
+          "执行力"
+        ]
+      }
+    },
+    {
+      "id": "char_chenshuo",
+      "type": "Character",
+      "labels": [
+        "Character"
+      ],
+      "properties": {
+        "character_id": "char_chenshuo",
+        "name": "陈朔",
+        "story_id": "demo_urban_comeback",
+        "status": "alive",
+        "location": "星海集团",
+        "persona": [
+          "强势",
+          "护短",
+          "腹黑"
+        ],
+        "arc": 10,
+        "backstory": "星海少东，表面纨绔实则掌控棋局",
+        "motivations": [
+          "巩固集团",
+          "得到林晓真心"
+        ],
+        "flaws": [
+          "控制欲"
+        ],
+        "strengths": [
+          "资源",
+          "谋略"
+        ]
+      }
+    },
+    {
+      "id": "char_suwan",
+      "type": "Character",
+      "labels": [
+        "Character"
+      ],
+      "properties": {
+        "character_id": "char_suwan",
+        "name": "苏晚",
+        "story_id": "demo_urban_comeback",
+        "status": "alive",
+        "location": "林家",
+        "persona": [
+          "心机",
+          "嫉妒"
+        ],
+        "arc": -30,
+        "backstory": "林晓继妹，联合外人抢夺继承权",
+        "motivations": [
+          "取代林晓",
+          "上位"
+        ],
+        "flaws": [
+          "短视"
+        ],
+        "strengths": [
+          "伪装"
+        ]
+      }
+    },
+    {
+      "id": "char_zhaoming",
+      "type": "Character",
+      "labels": [
+        "Character"
+      ],
+      "properties": {
+        "character_id": "char_zhaoming",
+        "name": "赵明",
+        "story_id": "demo_urban_comeback",
+        "status": "alive",
+        "location": "林家联姻方",
+        "persona": [
+          "伪善",
+          "拜金"
+        ],
+        "arc": -40,
+        "backstory": "林晓前未婚夫，背叛联姻",
+        "motivations": [
+          "攀附权贵"
+        ],
+        "flaws": [
+          "软弱"
+        ],
+        "strengths": [
+          "外表"
+        ]
+      }
+    },
+    {
+      "id": "plot_01",
+      "type": "PlotNode",
+      "labels": [
+        "PlotNode"
+      ],
+      "properties": {
+        "plot_id": "plot_01",
+        "story_id": "demo_urban_comeback",
+        "title": "订婚宴翻车",
+        "description": "林晓当众被退婚，家族冷眼，苏晚落井下石",
+        "sequence_number": 1,
+        "tension_score": 85,
+        "chapter": 1,
+        "characters_involved": [
+          "char_linxiao",
+          "char_suwan",
+          "char_zhaoming"
+        ],
+        "locations": [
+          "林家宴会厅"
+        ],
+        "conflicts": [
+          "家族背叛"
+        ],
+        "themes": [
+          "逆袭开局"
+        ],
+        "importance": 90
+      }
+    },
+    {
+      "id": "plot_02",
+      "type": "PlotNode",
+      "labels": [
+        "PlotNode"
+      ],
+      "properties": {
+        "plot_id": "plot_02",
+        "story_id": "demo_urban_comeback",
+        "title": "星海面试入职",
+        "description": "林晓化名进入星海，偶遇陈朔被识破却被留下",
+        "sequence_number": 2,
+        "tension_score": 70,
+        "chapter": 5,
+        "characters_involved": [
+          "char_linxiao",
+          "char_chenshuo"
+        ],
+        "locations": [
+          "星海集团"
+        ],
+        "conflicts": [
+          "身份隐瞒"
+        ],
+        "themes": [
+          "假身份"
+        ],
+        "importance": 80
+      }
+    },
+    {
+      "id": "plot_03",
+      "type": "PlotNode",
+      "labels": [
+        "PlotNode"
+      ],
+      "properties": {
+        "plot_id": "plot_03",
+        "story_id": "demo_urban_comeback",
+        "title": "股权局中局",
+        "description": "苏晚与赵明联手做空林氏，林晓与陈朔反向收网",
+        "sequence_number": 3,
+        "tension_score": 92,
+        "chapter": 40,
+        "characters_involved": [
+          "char_linxiao",
+          "char_chenshuo",
+          "char_suwan",
+          "char_zhaoming"
+        ],
+        "locations": [
+          "交易大厅"
+        ],
+        "conflicts": [
+          "商业战"
+        ],
+        "themes": [
+          "打脸反转"
+        ],
+        "importance": 95
+      }
+    },
+    {
+      "id": "rule_identity",
+      "type": "WorldRule",
+      "labels": [
+        "WorldRule"
+      ],
+      "properties": {
+        "rule_id": "rule_identity",
+        "story_id": "demo_urban_comeback",
+        "name": "假身份时限",
+        "description": "林晓假身份最多维持到第60集，必须主动揭露或被揭穿",
+        "rule_type": "plot",
+        "constraints": [
+          "不可无限拖延揭身份"
+        ],
+        "examples": [
+          "面试被识破但暂不公开"
+        ]
+      }
+    },
+    {
+      "id": "loc_banquet",
+      "type": "Location",
+      "labels": [
+        "Location"
+      ],
+      "properties": {
+        "node_id": "loc_banquet",
+        "story_id": "demo_urban_comeback",
+        "name": "林家宴会厅",
+        "description": "开场退婚主场",
+        "category": "location"
+      }
+    },
+    {
+      "id": "loc_xinghai",
+      "type": "Location",
+      "labels": [
+        "Location"
+      ],
+      "properties": {
+        "node_id": "loc_xinghai",
+        "story_id": "demo_urban_comeback",
+        "name": "星海集团",
+        "description": "逆袭主战场",
+        "category": "location"
+      }
+    },
+    {
+      "id": "mot_revenge",
+      "type": "Motivation",
+      "labels": [
+        "Motivation"
+      ],
+      "properties": {
+        "node_id": "mot_revenge",
+        "story_id": "demo_urban_comeback",
+        "name": "夺回一切",
+        "description": "林晓核心动机",
+        "category": "motivation"
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r1",
+      "type": "SOCIAL_BOND",
+      "source": "char_linxiao",
+      "target": "char_chenshuo",
+      "properties": {
+        "bond_type": "romantic",
+        "trust_level": 40
+      }
+    },
+    {
+      "id": "r2",
+      "type": "SOCIAL_BOND",
+      "source": "char_linxiao",
+      "target": "char_suwan",
+      "properties": {
+        "bond_type": "enemy",
+        "trust_level": -80
+      }
+    },
+    {
+      "id": "r3",
+      "type": "SOCIAL_BOND",
+      "source": "char_linxiao",
+      "target": "char_zhaoming",
+      "properties": {
+        "bond_type": "enemy",
+        "trust_level": -90
+      }
+    },
+    {
+      "id": "r4",
+      "type": "SOCIAL_BOND",
+      "source": "char_suwan",
+      "target": "char_zhaoming",
+      "properties": {
+        "bond_type": "ally",
+        "trust_level": 50
+      }
+    },
+    {
+      "id": "r5",
+      "type": "INVOLVED_IN",
+      "source": "char_linxiao",
+      "target": "plot_01",
+      "properties": {}
+    },
+    {
+      "id": "r6",
+      "type": "INVOLVED_IN",
+      "source": "char_suwan",
+      "target": "plot_01",
+      "properties": {}
+    },
+    {
+      "id": "r7",
+      "type": "INVOLVED_IN",
+      "source": "char_zhaoming",
+      "target": "plot_01",
+      "properties": {}
+    },
+    {
+      "id": "r8",
+      "type": "INVOLVED_IN",
+      "source": "char_linxiao",
+      "target": "plot_02",
+      "properties": {}
+    },
+    {
+      "id": "r9",
+      "type": "INVOLVED_IN",
+      "source": "char_chenshuo",
+      "target": "plot_02",
+      "properties": {}
+    },
+    {
+      "id": "r10",
+      "type": "NEXT",
+      "source": "plot_01",
+      "target": "plot_02",
+      "properties": {}
+    },
+    {
+      "id": "r11",
+      "type": "NEXT",
+      "source": "plot_02",
+      "target": "plot_03",
+      "properties": {}
+    },
+    {
+      "id": "r12",
+      "type": "LEADS_TO",
+      "source": "plot_01",
+      "target": "plot_02",
+      "properties": {
+        "description": "退婚后进入星海"
+      }
+    },
+    {
+      "id": "r13",
+      "type": "DRIVEN_BY",
+      "source": "char_linxiao",
+      "target": "mot_revenge",
+      "properties": {}
+    },
+    {
+      "id": "r14",
+      "type": "LOCATED_IN",
+      "source": "plot_01",
+      "target": "loc_banquet",
+      "properties": {}
+    },
+    {
+      "id": "r15",
+      "type": "LOCATED_IN",
+      "source": "plot_02",
+      "target": "loc_xinghai",
+      "properties": {}
+    },
+    {
+      "id": "r16",
+      "type": "INFLUENCES",
+      "source": "char_chenshuo",
+      "target": "plot_03",
+      "properties": {
+        "impact_score": 80
+      }
+    },
+    {
+      "id": "r17",
+      "type": "OPPOSES",
+      "source": "char_suwan",
+      "target": "char_linxiao",
+      "properties": {}
+    },
+    {
+      "id": "r18",
+      "type": "CONTAINS",
+      "source": "demo_urban_comeback",
+      "target": "char_linxiao",
+      "properties": {}
+    }
+  ],
+  "updated_at": "2026-10-17T14:05:46.176127+00:00",
+  "backend": "file"
+}

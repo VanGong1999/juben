@@ -4,6 +4,7 @@
  * 增强版：支持路由懒加载错误处理
  */
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { translate } from '@/i18n';
 
 interface Props {
   children: ReactNode;
@@ -89,15 +90,15 @@ export class ErrorBoundary extends Component<Props, State> {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">内容更新中</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">{translate('ui.contentUpdating')}</h2>
                 <p className="text-gray-600 mb-6">
-                  页面内容已更新，请刷新页面加载最新版本
+                  {translate('ui.contentUpdated')}
                 </p>
                 <button
                   onClick={() => window.location.reload()}
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  立即刷新
+                  {translate('ui.refreshNow')}
                 </button>
               </div>
             </div>
@@ -116,21 +117,21 @@ export class ErrorBoundary extends Component<Props, State> {
                 </svg>
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">出现错误</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">页面加载时遇到问题</p>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{translate('ui.errorOccurred')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{translate('ui.pageLoadFailed')}</p>
               </div>
             </div>
             <div className="bg-red-50 dark:bg-red-900/20 rounded-md p-3 mb-4">
               <p className="text-sm text-red-800 dark:text-red-200 font-mono break-all">
-                {this.state.error?.message || '未知错误'}
+                {this.state.error?.message || translate('workspace.unknownError')}
               </p>
             </div>
             <div className="flex gap-2">
               <button onClick={this.handleReset} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors text-sm">
-                重新加载
+                {translate('ui.reload')}
               </button>
               <button onClick={() => window.location.href = '/'} className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors text-sm">
-                返回首页
+                {translate('ui.backHome')}
               </button>
             </div>
           </div>

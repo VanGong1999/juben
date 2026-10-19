@@ -10,6 +10,7 @@ import type { Message } from '@/types';
 import { createNote } from '@/services/noteService';
 import { useWorkspaceStore } from '@/store/workspaceStore';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 
 interface EnhancedMessageActionsProps {
   message: Message;
@@ -32,6 +33,7 @@ export default function EnhancedMessageActions({
   canRegenerate = false,
   canEdit = false,
 }: EnhancedMessageActionsProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [savingToNote, setSavingToNote] = useState(false);
@@ -86,7 +88,7 @@ export default function EnhancedMessageActions({
     try {
       // 仅针对 AI 消息保存到 Note
       if (message.role !== 'assistant') {
-        showError('仅支持保存 AI 消息内容', '用户消息无法保存为 Note');
+        showError(t('chatGraph.messageActions.onlyAssistantTitle'), t('chatGraph.messageActions.onlyAssistantDesc'));
         return;
       }
 
@@ -131,7 +133,7 @@ export default function EnhancedMessageActions({
       }
 
       if (!text || text.length === 0) {
-        showError('无法保存', '消息内容为空，无法保存为 Note');
+        showError(t('chatGraph.messageActions.cannotSaveTitle'), t('chatGraph.messageActions.emptyContentDesc'));
         setSavingToNote(false);
         return;
       }
@@ -140,11 +142,11 @@ export default function EnhancedMessageActions({
       const sessionId = localStorage.getItem('sessionId') || 'default_session';
       const action = message.metadata?.agentId || message.agentName || 'agent_output';
       const name = `${action}_${Date.now()}`;
-      const title = message.agentName 
-        ? `${message.agentName} 输出片段` 
+      const title = message.agentName
+        ? t('chatGraph.messageActions.outputSnippet', { name: message.agentName })
         : message.metadata?.contentType === 'mind_map'
-        ? '思维导图'
-        : 'AI 输出片段';
+        ? t('chatGraph.messageActions.mindMap')
+        : t('chatGraph.messageActions.aiSnippet');
 
       console.log('[EnhancedMessageActions] 保存到 Note:', { userId, sessionId, action, name, textLength: text.length });
 
@@ -165,7 +167,7 @@ export default function EnhancedMessageActions({
       });
 
       if (res.success) {
-        success('保存成功', `内容已保存到 Notes，可在左侧工作区查看`);
+        success(t('chatGraph.messageActions.saveSuccessTitle'), t('chatGraph.messageActions.saveSuccessDesc'));
         
         // 刷新当前会话的 Notes 列表，确保左侧 Notes 面板能立即看到
         try {
@@ -175,12 +177,12 @@ export default function EnhancedMessageActions({
           // 即使刷新失败也不影响保存成功的提示
         }
       } else {
-        showError('保存失败', res.message || '无法保存到 Notes，请稍后重试');
+        showError(t('chatGraph.messageActions.saveFailedTitle'), res.message || t('chatGraph.messageActions.saveFailedDesc'));
         console.error('[EnhancedMessageActions] 保存到 Note 失败:', res);
       }
     } catch (err) {
       console.error('[EnhancedMessageActions] 保存选中内容到 Note 失败:', err);
-      showError('保存失败', err instanceof Error ? err.message : '保存过程中发生错误，请稍后重试');
+      showError(t('chatGraph.messageActions.saveFailedTitle'), err instanceof Error ? err.message : t('chatGraph.messageActions.saveErrorDesc'));
     } finally {
       setSavingToNote(false);
     }
@@ -192,7 +194,7 @@ export default function EnhancedMessageActions({
       <button
         onClick={handleCopy}
         className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
-        title="复制"
+        title={t('studio.copy')}
       >
         {copied ? (
           <Check className="w-4 h-4 text-green-600" />
@@ -207,7 +209,7 @@ export default function EnhancedMessageActions({
           onClick={handleEdit}
           disabled={isStreaming}
           className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="编辑"
+          title={t('project.edit')}
         >
           <Edit2 className="w-4 h-4 text-gray-400" />
         </button>
@@ -223,7 +225,7 @@ export default function EnhancedMessageActions({
               ? 'opacity-50 cursor-not-allowed'
               : 'hover:bg-gray-200'
           }`}
-          title="重新生成"
+          title={t('chatGraph.messageActions.regenerate')}
         >
           <RefreshCw className={`w-4 h-4 text-gray-400 ${isStreaming ? 'animate-spin' : ''}`} />
         </button>
@@ -235,7 +237,7 @@ export default function EnhancedMessageActions({
           onClick={handleBranch}
           disabled={isStreaming}
           className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="创建分支"
+          title={t('chatGraph.messageActions.branch')}
         >
           <GitBranch className="w-4 h-4 text-gray-400" />
         </button>
@@ -247,7 +249,7 @@ export default function EnhancedMessageActions({
           onClick={handleDelete}
           disabled={isStreaming}
           className="p-1.5 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="删除"
+          title={t('common.delete')}
         >
           <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-600" />
         </button>
@@ -259,7 +261,7 @@ export default function EnhancedMessageActions({
         className={`p-1.5 rounded-lg transition-colors ${
           bookmarked ? 'bg-yellow-100' : 'hover:bg-gray-200'
         }`}
-        title="收藏"
+        title={t('chatGraph.messageActions.bookmark')}
       >
         <Bookmark
           className={`w-4 h-4 ${
@@ -288,13 +290,13 @@ export default function EnhancedMessageActions({
               : 'hover:bg-gray-200'
           }`}
           title={
-            savingToNote 
-              ? '正在保存...' 
+            savingToNote
+              ? t('chatGraph.messageActions.savingToNote')
               : message.status === 'error'
-              ? '错误消息无法保存'
+              ? t('chatGraph.messageActions.errorCannotSave')
               : (isStreaming && !message.content?.trim())
-              ? '等待内容输出...'
-              : '将选中内容保存为 Note（未选中则保存整条消息）'
+              ? t('chatGraph.messageActions.waitingContent')
+              : t('chatGraph.messageActions.saveSelection')
           }
         >
           <FilePlus2 className={`w-4 h-4 ${savingToNote ? 'text-blue-600 animate-pulse' : 'text-gray-400'}`} />

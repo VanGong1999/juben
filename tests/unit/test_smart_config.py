@@ -353,6 +353,8 @@ class TestConfigLoading:
         from utils.smart_config import SmartConfig
 
         config = SmartConfig()
+        # 测试中临时文件位于系统临时目录，绕过安全路径校验（该校验由 test_is_safe_path 单独测试）
+        config._is_safe_path = lambda path: True
         import asyncio
 
         async def load_test():

@@ -131,7 +131,7 @@ export async function webSearch(params: WebSearchParams): Promise<ApiResponse<We
       top_k: params.top_k || 10,
       search_recency_filter: params.search_recency_filter
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[百度搜索] 请求失败:', error);
     throw error;
@@ -144,9 +144,9 @@ export async function webSearch(params: WebSearchParams): Promise<ApiResponse<We
 export async function quickSearch(query: string, top_k: number = 10): Promise<ApiResponse<WebSearchResult[]>> {
   try {
     const response = await api.get<ApiResponse<WebSearchResult[]>>(`/baidu/search/${encodeURIComponent(query)}`, {
-      params: { top_k }
+      top_k
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[快速搜索] 请求失败:', error);
     throw error;
@@ -164,7 +164,7 @@ export async function getLemmaList(params: LemmaListParams): Promise<ApiResponse
       lemma_title: params.lemma_title,
       top_k: params.top_k || 5
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[百科词条] 请求失败:', error);
     throw error;
@@ -182,7 +182,7 @@ export async function getLemmaContent(params: LemmaContentParams): Promise<ApiRe
       search_key: params.search_key,
       search_type: params.search_type || 'lemmaTitle'
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[百度百科] 请求失败:', error);
     throw error;
@@ -203,7 +203,7 @@ export async function searchSecondKnow(params: SecondKnowParams): Promise<ApiRes
       video_type: params.video_type || 0,
       platform: params.platform || 'user'
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[秒懂百科] 请求失败:', error);
     throw error;
@@ -221,7 +221,7 @@ export async function comprehensiveSearch(params: ComprehensiveParams): Promise<
       keyword: params.keyword,
       max_videos: params.max_videos || 3
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[组合查询] 请求失败:', error);
     throw error;
@@ -234,9 +234,9 @@ export async function comprehensiveSearch(params: ComprehensiveParams): Promise<
 export async function quickBaike(keyword: string, includeVideos: boolean = true): Promise<ApiResponse<ComprehensiveResult>> {
   try {
     const response = await api.get<ApiResponse<ComprehensiveResult>>(`/baidu/baike/${encodeURIComponent(keyword)}`, {
-      params: { include_videos: includeVideos }
+      include_videos: includeVideos
     });
-    return response.data;
+    return response;
   } catch (error) {
     console.error('[快速百科] 请求失败:', error);
     throw error;
@@ -254,8 +254,12 @@ export async function healthCheck(): Promise<{
   services: Array<{ name: string; status: string }>;
 }> {
   try {
-    const response = await api.get('/baidu/health');
-    return response.data;
+    const response = await api.get<{
+      status: string;
+      api_key_configured: boolean;
+      services: Array<{ name: string; status: string }>;
+    }>('/baidu/health');
+    return response;
   } catch (error) {
     console.error('[健康检查] 请求失败:', error);
     throw error;

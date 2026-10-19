@@ -1,36 +1,28 @@
 /**
  * 笔记管理页面
- * 管理用户在创作过程中产生的所有笔记
+ * 管理用户在创作过程中产生的所有笔记（统一杂志编辑风）
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import StatusBar from '@/components/layout/StatusBar';
-import MobileMenu from '@/components/common/MobileMenu';
-import SettingsModal from '@/components/modals/SettingsModal';
+import AppShell from '@/components/layout/AppShell';
 import {
   FileText,
   Search,
-  Filter,
   Download,
   Trash2,
   Edit,
   Check,
   X,
-  Star,
-  FolderOpen,
-  Tag,
   Calendar,
-  ChevronDown,
-  Plus
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import * as noteService from '@/services/noteService';
+import clsx from 'clsx';
+import { useI18n } from '@/i18n';
 
 type Note = {
   id: string;
@@ -52,9 +44,8 @@ type ContentFilter = 'all' | 'text' | 'markdown' | 'code' | 'image';
 type ExportFormat = 'json' | 'md' | 'txt';
 
 export default function NotesPage() {
-  const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const { user } = useAuthStore();
-  const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,11 +82,11 @@ export default function NotesPage() {
         const data = await response.json();
         setNotes(data.notes || []);
       } else {
-        setError('获取笔记列表失败');
+        setError(t('toolbox.notes.toast.getFailed'));
       }
     } catch (err) {
       console.error('加载笔记失败:', err);
-      setError('加载笔记失败，请重试');
+      setError(t('toolbox.notes.toast.loadFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +98,7 @@ export default function NotesPage() {
 
   // 删除笔记
   const handleDeleteNote = async (noteId: string) => {
-    if (!confirm('确定要删除这条笔记吗？')) return;
+    if (!confirm(t('toolbox.notes.toast.deleteConfirm'))) return;
 
     try {
       const response = await fetch(`/api/notes/${noteId}`, {
@@ -120,11 +111,11 @@ export default function NotesPage() {
       if (response.ok) {
         setNotes(notes.filter(n => n.id !== noteId));
       } else {
-        alert('删除失败');
+        alert(t('toolbox.notes.toast.deleteFailed'));
       }
     } catch (err) {
       console.error('删除笔记失败:', err);
-      alert('删除失败');
+      alert(t('toolbox.notes.toast.deleteFailed'));
     }
   };
 
@@ -148,11 +139,11 @@ export default function NotesPage() {
         setEditingNote(null);
         setEditContent('');
       } else {
-        alert(result.message || '保存失败');
+        alert(result.message || t('toolbox.notes.toast.saveFailed'));
       }
     } catch (err) {
       console.error('保存失败:', err);
-      alert('保存失败');
+      alert(t('toolbox.notes.toast.saveFailed'));
     }
   };
 
@@ -203,11 +194,11 @@ export default function NotesPage() {
           setShowExportModal(false);
         }
       } else {
-        alert('导出失败');
+        alert(t('toolbox.notes.toast.exportFailed'));
       }
     } catch (err) {
       console.error('导出失败:', err);
-      alert('导出失败');
+      alert(t('toolbox.notes.toast.exportFailed'));
     }
   };
 
@@ -225,16 +216,6 @@ export default function NotesPage() {
 
     return true;
   });
-
-  // 按动作分组
-  const groupedNotes = filteredNotes.reduce((acc, note) => {
-    const action = note.action || 'unknown';
-    if (!acc[action]) {
-      acc[action] = [];
-    }
-    acc[action].push(note);
-    return acc;
-  }, {} as Record<string, Note[]>);
 
   // 获取所有动作类型
   const actionTypes = Array.from(new Set(notes.map(n => n.action))).sort();
@@ -255,240 +236,215 @@ export default function NotesPage() {
 
   const getActionLabel = (action: string) => {
     const labelMap: Record<string, string> = {
-      'story-analysis': '故事分析',
-      'character-creation': '角色创建',
-      'plot-design': '情节设计',
-      'dialogue-generation': '对话生成',
-      'scene-description': '场景描述',
-      'script-evaluation': '剧本评估',
-      'mind-map': '思维导图',
-      'workflow': '工作流',
+      'story-analysis': t('toolbox.notes.action.story-analysis'),
+      'character-creation': t('toolbox.notes.action.character-creation'),
+      'plot-design': t('toolbox.notes.action.plot-design'),
+      'dialogue-generation': t('toolbox.notes.action.dialogue-generation'),
+      'scene-description': t('toolbox.notes.action.scene-description'),
+      'script-evaluation': t('toolbox.notes.action.script-evaluation'),
+      'mind-map': t('toolbox.notes.action.mind-map'),
+      'workflow': t('toolbox.notes.action.workflow'),
     };
     return labelMap[action] || action;
   };
 
   return (
-    <div className="flex h-screen bg-white">
-      <MobileMenu />
-      <Sidebar />
-
-      <div
-        className={`flex flex-col flex-1 transition-all duration-300 ${
-          !sidebarOpen ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-80'
-        }`}
-      >
-        <Header />
-        <StatusBar />
-
-        <div className="flex flex-col flex-1 overflow-hidden">
-          {/* 页面头部 */}
-          <div className="border-b border-gray-200 bg-white">
-            <div className="max-w-7xl mx-auto px-6 py-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">笔记管理</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                      管理您的创作笔记，共 {notes.length} 条
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setShowExportModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all hover-scale"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="font-medium">导出</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 工具栏 */}
-              <div className="flex items-center gap-4">
-                {/* 搜索框 */}
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="搜索笔记..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm"
-                  />
-                </div>
-
-                {/* 动作过滤 */}
-                <select
-                  value={actionFilter}
-                  onChange={(e) => setActionFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black"
-                >
-                  <option value="all">全部类型</option>
-                  {actionTypes.map(action => (
-                    <option key={action} value={action}>
-                      {getActionLabel(action)}
-                    </option>
-                  ))}
-                </select>
-
-                {/* 视图切换 */}
-                <div className="flex items-center gap-1 border border-gray-200 rounded-lg overflow-hidden">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 hover:bg-gray-100 transition-colors ${
-                      viewMode === 'grid' ? 'bg-gray-100' : ''
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <rect x="3" y="3" width="7" height="7" />
-                      <rect x="14" y="3" width="7" height="7" />
-                      <rect x="14" y="14" width="7" height="7" />
-                      <rect x="3" y="14" width="7" height="7" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 hover:bg-gray-100 transition-colors ${
-                      viewMode === 'list' ? 'bg-gray-100' : ''
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <line x1="8" y1="6" x2="21" y2="6" />
-                      <line x1="8" y1="12" x2="21" y2="12" />
-                      <line x1="8" y1="18" x2="21" y2="18" />
-                      <line x1="3" y1="6" x2="3.01" y2="6" />
-                      <line x1="3" y1="12" x2="3.01" y2="12" />
-                      <line x1="3" y1="18" x2="3.01" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
+    <AppShell
+      title={t('toolbox.notes.title')}
+      subtitle={t('toolbox.notes.subtitle', { count: notes.length })}
+      actions={
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => setShowExportModal(true)}
+        >
+          <Download className="w-3.5 h-3.5" />
+          {t('toolbox.export')}
+        </button>
+      }
+    >
+      <div className="p-4 sm:p-8 max-w-6xl mx-auto space-y-5">
+        {/* 工具栏 */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+            <input
+              type="text"
+              className="input pl-10"
+              placeholder={t('toolbox.notes.searchPlaceholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
-          {/* 笔记列表 */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-7xl mx-auto">
-              {error && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                  {error}
-                  <button onClick={() => setError('')} className="ml-2 underline hover:text-red-900">
-                    关闭
-                  </button>
-                </div>
-              )}
+          <select
+            value={actionFilter}
+            onChange={(e) => setActionFilter(e.target.value)}
+            className="rounded-lg border border-pearl-line bg-white px-3 py-2 text-sm text-ink focus:outline-none focus:border-atelier-teal"
+          >
+            <option value="all">{t('toolbox.notes.allTypes')}</option>
+            {actionTypes.map(action => (
+              <option key={action} value={action}>
+                {getActionLabel(action)}
+              </option>
+            ))}
+          </select>
 
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">加载中...</p>
-                  </div>
-                </div>
-              ) : filteredNotes.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {searchQuery ? '没有找到匹配的笔记' : '还没有笔记'}
-                  </h3>
-                  <p className="text-gray-500">
-                    {searchQuery
-                      ? '尝试调整搜索条件'
-                      : '开始创作后，您的笔记将显示在这里'}
-                  </p>
-                </div>
-              ) : viewMode === 'list' ? (
-                <div className="space-y-3">
-                  {filteredNotes.map((note) => (
-                    <NoteListItem
-                      key={note.id}
-                      note={note}
-                      isSelected={selectedNotes.has(note.id)}
-                      isEditing={editingNote?.id === note.id}
-                      editContent={editContent}
-                      onToggleSelect={() => toggleSelectNote(note.id)}
-                      onEdit={() => {
-                        setEditingNote(note);
-                        setEditContent(note.context);
-                      }}
-                      onSave={handleSaveEdit}
-                      onCancel={() => {
-                        setEditingNote(null);
-                        setEditContent('');
-                      }}
-                      onDelete={() => handleDeleteNote(note.id)}
-                      onEditContentChange={setEditContent}
-                      getActionIcon={getActionIcon}
-                      getActionLabel={getActionLabel}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredNotes.map((note) => (
-                    <NoteCard
-                      key={note.id}
-                      note={note}
-                      isSelected={selectedNotes.has(note.id)}
-                      onToggleSelect={() => toggleSelectNote(note.id)}
-                      onEdit={() => {
-                        setEditingNote(note);
-                        setEditContent(note.context);
-                      }}
-                      onDelete={() => handleDeleteNote(note.id)}
-                      getActionIcon={getActionIcon}
-                      getActionLabel={getActionLabel}
-                    />
-                  ))}
-                </div>
+          <div className="flex items-center gap-0.5 p-0.5 rounded-lg border border-pearl-line">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={clsx(
+                'p-1.5 rounded-md transition-colors',
+                viewMode === 'grid' ? 'bg-pearl-soft text-ink' : 'text-ink-faint hover:text-ink'
               )}
-            </div>
+              title={t('toolbox.notes.cardView')}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={clsx(
+                'p-1.5 rounded-md transition-colors',
+                viewMode === 'list' ? 'bg-pearl-soft text-ink' : 'text-ink-faint hover:text-ink'
+              )}
+              title={t('toolbox.notes.listView')}
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
         </div>
-      </div>
 
-      <SettingsModal />
+        {error && (
+          <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError('')}
+              className="shrink-0 text-xs underline hover:text-red-900"
+            >
+              {t('toolbox.close')}
+            </button>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-ink-muted">
+            <div className="w-10 h-10 border-[3px] border-pearl-line border-t-atelier-teal rounded-full animate-spin" />
+            <p className="text-sm mt-3">{t('toolbox.notes.loading')}</p>
+          </div>
+        ) : filteredNotes.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-16 h-16 rounded-2xl bg-pearl-soft flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-7 h-7 text-ink-faint" />
+            </div>
+            <h3 className="font-display text-lg font-semibold text-ink">
+              {searchQuery ? t('toolbox.notes.noMatch') : t('toolbox.notes.noNotes')}
+            </h3>
+            <p className="text-sm text-ink-muted mt-1">
+              {searchQuery ? t('toolbox.notes.noMatchHint') : t('toolbox.notes.noNotesHint')}
+            </p>
+          </div>
+        ) : viewMode === 'list' ? (
+          <div className="space-y-3">
+            {filteredNotes.map((note) => (
+              <NoteListItem
+                key={note.id}
+                note={note}
+                isSelected={selectedNotes.has(note.id)}
+                isEditing={editingNote?.id === note.id}
+                editContent={editContent}
+                onToggleSelect={() => toggleSelectNote(note.id)}
+                onEdit={() => {
+                  setEditingNote(note);
+                  setEditContent(note.context);
+                }}
+                onSave={handleSaveEdit}
+                onCancel={() => {
+                  setEditingNote(null);
+                  setEditContent('');
+                }}
+                onDelete={() => handleDeleteNote(note.id)}
+                onEditContentChange={setEditContent}
+                getActionIcon={getActionIcon}
+                getActionLabel={getActionLabel}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredNotes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                isSelected={selectedNotes.has(note.id)}
+                onToggleSelect={() => toggleSelectNote(note.id)}
+                onEdit={() => {
+                  setEditingNote(note);
+                  setEditContent(note.context);
+                }}
+                onDelete={() => handleDeleteNote(note.id)}
+                getActionIcon={getActionIcon}
+                getActionLabel={getActionLabel}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* 编辑笔记模态框 */}
       {editingNote && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">编辑笔记</h2>
-              <p className="text-sm text-gray-500 mt-1">{editingNote.title || editingNote.name}</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="w-full h-full min-h-[400px] p-4 border border-gray-200 rounded-lg focus:outline-none focus:border-black font-mono text-sm resize-none"
-                placeholder="笔记内容..."
-              />
-            </div>
-
-            <div className="p-6 border-t border-gray-200 flex gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+            onClick={() => {
+              setEditingNote(null);
+              setEditContent('');
+            }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-atelier-lg max-w-3xl w-full max-h-[80vh] flex flex-col animate-slide-up">
+            <div className="px-6 py-4 border-b border-pearl-line flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="font-display text-lg font-semibold text-ink">{t('toolbox.notes.editNote')}</h2>
+                <p className="text-xs text-ink-muted mt-0.5 truncate">
+                  {editingNote.title || editingNote.name}
+                </p>
+              </div>
               <button
+                type="button"
+                className="p-2 rounded-lg hover:bg-pearl-soft text-ink-muted shrink-0"
                 onClick={() => {
                   setEditingNote(null);
                   setEditContent('');
                 }}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                取消
+                <X className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full h-full min-h-[400px] p-4 rounded-xl border border-pearl-line bg-white text-sm leading-relaxed text-ink resize-none focus:outline-none focus:border-atelier-teal focus:ring-2 focus:ring-atelier-teal/15"
+                placeholder={t('toolbox.notes.contentPlaceholder')}
+              />
+            </div>
+
+            <div className="px-6 py-4 border-t border-pearl-line flex gap-3">
               <button
-                onClick={handleSaveEdit}
-                className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                type="button"
+                className="btn btn-secondary flex-1"
+                onClick={() => {
+                  setEditingNote(null);
+                  setEditContent('');
+                }}
               >
-                保存
+                {t('common.cancel')}
+              </button>
+              <button type="button" className="btn btn-primary flex-1" onClick={handleSaveEdit}>
+                {t('common.save')}
               </button>
             </div>
           </div>
@@ -497,53 +453,67 @@ export default function NotesPage() {
 
       {/* 导出模态框 */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">导出笔记</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+            onClick={() => setShowExportModal(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-atelier-lg max-w-md w-full p-6 animate-slide-up">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <h2 className="font-display text-lg font-semibold text-ink">{t('toolbox.notes.exportNote')}</h2>
+              <button
+                type="button"
+                className="p-2 rounded-lg hover:bg-pearl-soft text-ink-muted"
+                onClick={() => setShowExportModal(false)}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">导出格式</label>
+                <label className="block text-sm font-medium text-ink mb-2">{t('toolbox.notes.exportFormat')}</label>
                 <div className="space-y-2">
                   {(['json', 'md', 'txt'] as ExportFormat[]).map((format) => (
-                    <label key={format} className="flex items-center gap-2 cursor-pointer">
+                    <label
+                      key={format}
+                      className="flex items-center gap-2.5 p-2.5 rounded-lg border border-pearl-line cursor-pointer hover:border-atelier-teal/40 transition-colors"
+                    >
                       <input
                         type="radio"
                         name="exportFormat"
                         value={format}
                         checked={exportFormat === format}
                         onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
-                        className="text-black focus:ring-black"
+                        className="text-atelier-teal focus:ring-atelier-teal"
                       />
-                      <span className="text-sm">
-                        {format === 'json' && 'JSON 格式'}
-                        {format === 'md' && 'Markdown 格式'}
-                        {format === 'txt' && '纯文本格式'}
+                      <span className="text-sm text-ink">
+                        {format === 'json' && t('toolbox.notes.jsonFormat')}
+                        {format === 'md' && t('toolbox.notes.mdFormat')}
+                        {format === 'txt' && t('toolbox.notes.txtFormat')}
                       </span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 pt-4 border-t border-pearl-line">
                 <button
+                  type="button"
+                  className="btn btn-secondary flex-1"
                   onClick={() => setShowExportModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  取消
+                  {t('common.cancel')}
                 </button>
-                <button
-                  onClick={handleExportNotes}
-                  className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                  导出
+                <button type="button" className="btn btn-primary flex-1" onClick={handleExportNotes}>
+                  {t('toolbox.export')}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }
 
@@ -567,65 +537,76 @@ function NoteCard({
   getActionIcon: (action: string) => string;
   getActionLabel: (action: string) => string;
 }) {
+  const { t } = useI18n();
   return (
-    <div className={`group bg-white border rounded-xl p-4 transition-all hover:shadow-lg ${
-      isSelected ? 'border-black bg-gray-50' : 'border-gray-200 hover:border-gray-300'
-    }`}>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{getActionIcon(note.action)}</span>
-          <div>
-            <h3 className="font-semibold text-gray-900 text-sm">
+    <div
+      className={clsx(
+        'card group p-5 flex flex-col gap-3 transition-all hover:shadow-atelier',
+        isSelected && 'ring-2 ring-atelier-teal'
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-lg bg-atelier-teal-soft flex items-center justify-center text-base shrink-0">
+            {getActionIcon(note.action)}
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-display font-semibold text-ink text-sm truncate">
               {note.title || note.name}
             </h3>
-            <p className="text-xs text-gray-500">
-              {getActionLabel(note.action)}
-            </p>
+            <span className="badge badge-default mt-1">{getActionLabel(note.action)}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onToggleSelect}
-            className={`p-1.5 rounded-lg transition-colors ${
-              isSelected ? 'bg-black text-white' : 'hover:bg-gray-100'
-            }`}
-          >
-            {isSelected ? <Check className="w-4 h-4" /> : <div className="w-4 h-4 border-2 border-gray-300 rounded" />}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onToggleSelect}
+          className={clsx(
+            'p-1.5 rounded-lg transition-colors shrink-0',
+            isSelected ? 'bg-atelier-teal text-white' : 'hover:bg-pearl-soft'
+          )}
+          title={t('toolbox.notes.select')}
+        >
+          {isSelected ? (
+            <Check className="w-4 h-4" />
+          ) : (
+            <div className="w-4 h-4 border-2 border-pearl-line rounded" />
+          )}
+        </button>
       </div>
 
-      <p className="text-sm text-gray-600 mb-4 line-clamp-3 min-h-[60px]">
+      <p className="text-sm text-ink-muted leading-relaxed line-clamp-3 min-h-[60px]">
         {note.context}
       </p>
 
       {note.user_comment && (
-        <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-500">{note.user_comment}</p>
+        <div className="p-2.5 rounded-lg bg-pearl-soft">
+          <p className="text-xs text-ink-muted">{note.user_comment}</p>
         </div>
       )}
 
-      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-        <div className="flex items-center gap-1 text-xs text-gray-500">
+      <div className="flex items-center justify-between pt-3 border-t border-pearl-line/70">
+        <div className="flex items-center gap-1 text-xs text-ink-faint">
           <Calendar className="w-3 h-3" />
           {formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: zhCN })}
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
+            type="button"
             onClick={onEdit}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-            title="编辑"
+            className="p-1.5 hover:bg-pearl-soft rounded-lg transition-colors text-ink-muted hover:text-atelier-teal"
+            title={t('toolbox.notes.edit')}
           >
-            <Edit className="w-4 h-4 text-gray-500" />
+            <Edit className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={onDelete}
-            className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
-            title="删除"
+            className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-ink-muted hover:text-red-500"
+            title={t('common.delete')}
           >
-            <Trash2 className="w-4 h-4 text-red-500" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -663,45 +644,63 @@ function NoteListItem({
   getActionIcon: (action: string) => string;
   getActionLabel: (action: string) => string;
 }) {
+  const { t } = useI18n();
   return (
-    <div className={`bg-white border rounded-lg p-4 transition-all ${
-      isSelected ? 'border-black bg-gray-50' : 'border-gray-200'
-    }`}>
+    <div
+      className={clsx(
+        'card group p-4 transition-all hover:shadow-atelier',
+        isSelected && 'ring-2 ring-atelier-teal'
+      )}
+    >
       <div className="flex items-start gap-4">
         <button
+          type="button"
           onClick={onToggleSelect}
-          className={`mt-1 p-1.5 rounded-lg transition-colors ${
-            isSelected ? 'bg-black text-white' : 'hover:bg-gray-100'
-          }`}
+          className={clsx(
+            'mt-0.5 p-1.5 rounded-lg transition-colors shrink-0',
+            isSelected ? 'bg-atelier-teal text-white' : 'hover:bg-pearl-soft'
+          )}
+          title={t('toolbox.notes.select')}
         >
-          {isSelected ? <Check className="w-4 h-4" /> : <div className="w-4 h-4 border-2 border-gray-300 rounded" />}
+          {isSelected ? (
+            <Check className="w-4 h-4" />
+          ) : (
+            <div className="w-4 h-4 border-2 border-pearl-line rounded" />
+          )}
         </button>
 
-        <span className="text-2xl">{getActionIcon(note.action)}</span>
+        <div className="w-9 h-9 rounded-lg bg-atelier-teal-soft flex items-center justify-center text-base shrink-0">
+          {getActionIcon(note.action)}
+        </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-2">
-            <div>
-              <h3 className="font-semibold text-gray-900">{note.title || note.name}</h3>
-              <p className="text-xs text-gray-500">
-                {getActionLabel(note.action)} · {formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: zhCN })}
+            <div className="min-w-0">
+              <h3 className="font-display font-semibold text-ink truncate">
+                {note.title || note.name}
+              </h3>
+              <p className="text-xs text-ink-faint mt-0.5">
+                {getActionLabel(note.action)} ·{' '}
+                {formatDistanceToNow(new Date(note.created_at), { addSuffix: true, locale: zhCN })}
               </p>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               <button
+                type="button"
                 onClick={onEdit}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                title="编辑"
+                className="p-1.5 hover:bg-pearl-soft rounded-lg transition-colors text-ink-muted hover:text-atelier-teal"
+                title={t('toolbox.notes.edit')}
               >
-                <Edit className="w-4 h-4 text-gray-500" />
+                <Edit className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={onDelete}
-                className="p-1.5 hover:bg-red-100 rounded-lg transition-colors"
-                title="删除"
+                className="p-1.5 hover:bg-red-50 rounded-lg transition-colors text-ink-muted hover:text-red-500"
+                title={t('common.delete')}
               >
-                <Trash2 className="w-4 h-4 text-red-500" />
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -711,31 +710,25 @@ function NoteListItem({
               <textarea
                 value={editContent}
                 onChange={(e) => onEditContentChange(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm resize-none"
+                className="w-full p-3 rounded-xl border border-pearl-line bg-white text-sm text-ink resize-none focus:outline-none focus:border-atelier-teal focus:ring-2 focus:ring-atelier-teal/15"
                 rows={6}
               />
               <div className="flex gap-2">
-                <button
-                  onClick={onSave}
-                  className="px-3 py-1.5 bg-black text-white rounded-lg text-sm hover:bg-gray-800"
-                >
-                  保存
+                <button type="button" className="btn btn-primary btn-sm" onClick={onSave}>
+                  {t('common.save')}
                 </button>
-                <button
-                  onClick={onCancel}
-                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm hover:bg-gray-50"
-                >
-                  取消
+                <button type="button" className="btn btn-secondary btn-sm" onClick={onCancel}>
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-600">{note.context}</p>
+            <p className="text-sm text-ink-muted leading-relaxed">{note.context}</p>
           )}
 
           {note.user_comment && !isEditing && (
-            <div className="mt-2 p-2 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500">{note.user_comment}</p>
+            <div className="mt-2 p-2.5 rounded-lg bg-pearl-soft">
+              <p className="text-xs text-ink-muted">{note.user_comment}</p>
             </div>
           )}
         </div>

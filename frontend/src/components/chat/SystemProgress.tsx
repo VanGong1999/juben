@@ -5,6 +5,7 @@
 
 import { useMemo } from 'react';
 import { CheckCircle, Circle, Loader2, Search, Database, Globe, FileText, Wrench } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface SystemEvent {
   content: string;
@@ -60,6 +61,7 @@ function getEventStatus(content: string): 'pending' | 'active' | 'completed' | '
 }
 
 export default function SystemProgress({ events, isStreaming }: SystemProgressProps) {
+  const { t } = useI18n();
   // 过滤并格式化事件
   const displayEvents = useMemo(() => {
     try {
@@ -70,7 +72,7 @@ export default function SystemProgress({ events, isStreaming }: SystemProgressPr
 
       return events.map((event, index) => {
         // 确保每个 event 都有 content
-        const content = event?.content || '未知事件';
+        const content = event?.content || t('chatGraph.systemProgress.unknownEvent');
         const status = getEventStatus(content);
         const { icon: Icon, color, bg, spin } = getEventIcon(content);
 
@@ -89,7 +91,7 @@ export default function SystemProgress({ events, isStreaming }: SystemProgressPr
       console.error('[SystemProgress] Error processing events:', error);
       return [];
     }
-  }, [events]);
+  }, [events, t]);
 
   if (!displayEvents || displayEvents.length === 0) {
     return null;
@@ -99,7 +101,7 @@ export default function SystemProgress({ events, isStreaming }: SystemProgressPr
     <div className="mb-3 rounded-xl border border-gray-200 bg-white/80 p-3">
       <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-        <span>执行过程</span>
+        <span>{t('chatGraph.systemProgress.title')}</span>
       </div>
 
       <div className="relative">

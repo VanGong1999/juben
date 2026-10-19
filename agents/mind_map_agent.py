@@ -30,7 +30,7 @@ class MindMapAgent(BaseJubenAgent):
     2. 将提取出的主题与要点转换为前端可渲染的思维导图 JSON 结构。
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("mind_map_agent", model_provider)
 
         # 覆盖默认系统提示词：明确「先总结，再提取结构」的工作方式

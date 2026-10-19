@@ -40,7 +40,7 @@ class TextSplitterAgent(BaseJubenAgent):
     3. 返回分割后的文本片段数组
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化文本分割智能体"""
         super().__init__("text_splitter", model_provider)
 

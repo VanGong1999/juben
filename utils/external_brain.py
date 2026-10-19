@@ -122,7 +122,7 @@ class BrainState:
 class ExternalBrain:
     """外部大脑系统"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """
         初始化外部大脑系统
         

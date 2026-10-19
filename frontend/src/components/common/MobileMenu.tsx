@@ -8,11 +8,13 @@ import { useAgents } from '@/hooks/useAgents';
 import { X, Home, Settings, Info, ScanText, HardDrive } from 'lucide-react';
 import { getAgentCategories } from '@/config/agents';
 import { Link } from 'react-router-dom';
+import { useI18n } from '@/i18n';
 
 export default function MobileMenu() {
   const { mobileMenuOpen, setMobileMenuOpen, setSidebarOpen } = useUIStore();
   const { agents, activeAgent, setActiveAgent } = useAgentStore();
   const { filteredAgents } = useAgents();
+  const { t } = useI18n();
   const categories = getAgentCategories().filter((cat) =>
     agents.some((agent) => agent.category === cat.category)
   );
@@ -31,7 +33,7 @@ export default function MobileMenu() {
       <div className="fixed left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white z-50 flex flex-col animate-slide-up">
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">菜单</h2>
+          <h2 className="text-lg font-semibold">{t('ui.menu')}</h2>
           <button
             onClick={() => setMobileMenuOpen(false)}
             className="p-2 rounded-lg hover:bg-gray-100"
@@ -52,7 +54,7 @@ export default function MobileMenu() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <Home className="w-5 h-5 text-gray-600" />
-              <span className="font-medium text-gray-900">Agent 列表</span>
+              <span className="font-medium text-gray-900">{t('ui.agentList')}</span>
             </button>
             <Link
               to="/ocr"
@@ -60,7 +62,7 @@ export default function MobileMenu() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <ScanText className="w-5 h-5 text-gray-600" />
-              <span className="font-medium text-gray-900">OCR 识别</span>
+              <span className="font-medium text-gray-900">{t('studio.header.nav.ocr')}</span>
             </Link>
             <Link
               to="/files"
@@ -68,19 +70,19 @@ export default function MobileMenu() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <HardDrive className="w-5 h-5 text-gray-600" />
-              <span className="font-medium text-gray-900">文件系统</span>
+              <span className="font-medium text-gray-900">{t('studio.header.nav.files')}</span>
             </Link>
             <button
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <Settings className="w-5 h-5 text-gray-600" />
-              <span className="font-medium text-gray-900">设置</span>
+              <span className="font-medium text-gray-900">{t('nav.settings')}</span>
             </button>
             <button
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <Info className="w-5 h-5 text-gray-600" />
-              <span className="font-medium text-gray-900">关于</span>
+              <span className="font-medium text-gray-900">{t('ui.about')}</span>
             </button>
           </div>
 
@@ -101,7 +103,7 @@ export default function MobileMenu() {
 
           {/* 快速 Agent 切换 */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-3 px-2">快速切换</h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-3 px-2">{t('ui.quickSwitch')}</h3>
             <div className="space-y-1">
               {filteredAgents.slice(0, 5).map((agent) => (
                 <button

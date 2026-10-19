@@ -39,7 +39,7 @@ class ScriptEvaluationAgent(BaseJubenAgent):
     4. 支持Agent as Tool机制
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("script_evaluation", model_provider)
         
         # 系统提示词配置
@@ -133,17 +133,17 @@ class ScriptEvaluationAgent(BaseJubenAgent):
 请给出详细的评估结果和修改建议。
 """
             
-            # 调用LLM进行评估
+            # 调用LLM进行评估（astream_chat 返回字符串流，非 OpenAI chunk 对象）
             async for chunk in self.llm_client.astream_chat(
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": evaluation_prompt}
                 ]
             ):
-                if chunk.choices and chunk.choices[0].delta.content:
+                if isinstance(chunk, str) and chunk:
                     yield {
                         "type": "content",
-                        "content": chunk.choices[0].delta.content,
+                        "content": chunk,
                         "timestamp": datetime.now().isoformat()
                     }
             

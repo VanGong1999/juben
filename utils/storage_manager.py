@@ -343,7 +343,12 @@ class JubenStorageManager:
         try:
             message_dict = asdict(message)
             message_dict.pop('id', None)  # 移除id，让数据库自动生成
-            
+
+            # created_at 转 datetime（DB 列是 TIMESTAMPTZ，不接受 ISO 字符串）
+            created_at = message_dict.get("created_at")
+            if isinstance(created_at, str):
+                created_at = datetime.fromisoformat(created_at)
+
             # 1. 保存到PostgreSQL
             async def _save_to_db():
                 sql = """
@@ -359,8 +364,8 @@ class JubenStorageManager:
                     message_dict["message_type"],
                     message_dict["content"],
                     message_dict.get("agent_name"),
-                    message_dict.get("message_metadata") or {},
-                    message_dict["created_at"],
+                    json.dumps(message_dict.get("message_metadata") or {}, ensure_ascii=False),
+                    created_at,
                 )
                 return row["id"] if row else None
             
@@ -416,11 +421,86 @@ class JubenStorageManager:
                 await self.redis_client.lrange(cache_key, 0, 99)
             
             return messages or []
-            
+
         except Exception as e:
             self.logger.error(f"❌ 获取聊天消息失败: {e}")
             return []
-    
+
+    async def list_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """列出某用户的会话（去重 session_id，含标题/最近活跃/消息数）。"""
+        try:
+            async def _query():
+                sql = """
+                SELECT
+                    session_id,
+                    MAX(created_at) AS last_active,
+                    COUNT(*) AS message_count,
+                    (SELECT content FROM chat_messages m2
+                     WHERE m2.session_id = m1.session_id AND m2.message_type = 'user'
+                     ORDER BY created_at ASC LIMIT 1) AS title
+                FROM chat_messages m1
+                WHERE user_id = $1
+                GROUP BY session_id
+                ORDER BY last_active DESC
+                """
+                return await fetch_all(sql, user_id)
+
+            rows = await self.error_handler.with_retry(_query, "列出会话")
+            return [dict(r) for r in (rows or [])]
+        except Exception as e:
+            self.logger.error(f"❌ 列出会话失败: {e}")
+            return []
+
+    async def get_session_history(self, session_id: str, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """获取某会话的全部消息（按时间正序）；user_id 非空时强制归属过滤。"""
+        try:
+            async def _query():
+                if user_id:
+                    sql = """
+                    SELECT id, user_id, session_id, message_type, content, agent_name, message_metadata, created_at
+                    FROM chat_messages
+                    WHERE session_id = $1 AND user_id = $2
+                    ORDER BY created_at ASC
+                    """
+                    return await fetch_all(sql, session_id, user_id)
+                sql = """
+                SELECT id, user_id, session_id, message_type, content, agent_name, message_metadata, created_at
+                FROM chat_messages
+                WHERE session_id = $1
+                ORDER BY created_at ASC
+                """
+                rows = await fetch_all(sql, session_id)
+                for row in rows:
+                    if row.get("message_metadata"):
+                        row["message_metadata"] = (
+                            json.loads(row["message_metadata"])
+                            if isinstance(row["message_metadata"], str)
+                            else row["message_metadata"]
+                        )
+                return rows
+
+            rows = await self.error_handler.with_retry(_query, "获取会话历史")
+            return [dict(r) for r in (rows or [])]
+        except Exception as e:
+            self.logger.error(f"❌ 获取会话历史失败: {e}")
+            return []
+
+    async def delete_session(self, session_id: str, user_id: Optional[str] = None) -> bool:
+        """删除某会话的全部消息；user_id 非空时强制归属过滤。"""
+        try:
+            async def _del():
+                if user_id:
+                    sql = "DELETE FROM chat_messages WHERE session_id = $1 AND user_id = $2"
+                    return await execute(sql, session_id, user_id)
+                sql = "DELETE FROM chat_messages WHERE session_id = $1"
+                return await execute(sql, session_id)
+
+            await self.error_handler.with_retry(_del, "删除会话")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ 删除会话失败: {e}")
+            return False
+
     # ==================== 上下文状态管理 ====================
     
     async def save_context_state(self, context: ContextState) -> bool:

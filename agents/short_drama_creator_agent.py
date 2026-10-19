@@ -468,7 +468,7 @@ class ShortDramaCreatorAgent(BaseJubenAgent):
     7. 🆕 ⚙️ 设定约束管理：在创作中应用已提取的设定
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化短剧创作Agent"""
         super().__init__("short_drama_creator_agent", model_provider)
 

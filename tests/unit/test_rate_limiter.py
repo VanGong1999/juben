@@ -17,7 +17,8 @@ class TestRateLimiter:
     def mock_redis(self):
         """Mock Redis client"""
         redis = AsyncMock()
-        redis.pipeline.return_value = redis
+        # pipeline() 在 redis-py 中是同步方法，返回同步的 pipeline 对象
+        redis.pipeline = MagicMock(return_value=redis)
         redis.execute.return_value = None
         redis.get.return_value = None
         redis.set.return_value = True

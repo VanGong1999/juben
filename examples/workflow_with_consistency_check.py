@@ -34,7 +34,7 @@ class CreativeWorkflowWithConsistencyCheck:
     5. 如果分数 >= 80，继续下一步
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化工作流"""
         self.creator_agent = None  # 这里应该是实际的创作 Agent
         self.consistency_agent = LogicConsistencyAgent(model_provider)

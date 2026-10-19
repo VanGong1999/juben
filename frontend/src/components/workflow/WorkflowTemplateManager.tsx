@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2, Copy, Eye, X } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 export interface WorkflowTemplate {
   id: string;
@@ -40,6 +41,7 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
   onSave,
   onDelete,
 }) => {
+  const { t, language } = useI18n();
   const [view, setView] = useState<'list' | 'create' | 'edit'>('list');
   const [selectedTemplate, setSelectedTemplate] = useState<WorkflowTemplate | null>(null);
   const [formData, setFormData] = useState({
@@ -85,7 +87,7 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
   };
 
   const handleDelete = async (templateId: string) => {
-    if (window.confirm('确定要删除这个模板吗？')) {
+    if (window.confirm(t('chatGraph.workflow.deleteTemplateConfirm'))) {
       await onDelete(templateId);
     }
   };
@@ -96,7 +98,7 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
         {/* 头部 */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {view === 'list' ? '工作流模板' : view === 'create' ? '创建模板' : '编辑模板'}
+            {view === 'list' ? t('chatGraph.workflow.templates') : view === 'create' ? t('chatGraph.workflow.createTemplate') : t('chatGraph.workflow.editTemplate')}
           </h2>
           <button
             onClick={() => {
@@ -121,15 +123,15 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  新建模板
+                  {t('chatGraph.workflow.newTemplate')}
                 </button>
               </div>
 
               {/* 模板列表 */}
               {templates.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
-                  <p>暂无模板</p>
-                  <p className="text-sm mt-2">点击"新建模板"创建第一个工作流模板</p>
+                  <p>{t('chatGraph.workflow.noTemplates')}</p>
+                  <p className="text-sm mt-2">{t('chatGraph.workflow.noTemplatesHint')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,14 +146,14 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
                             {template.name}
                           </h3>
                           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            {template.description || '暂无描述'}
+                            {template.description || t('project.noDescription')}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                        <span>{template.nodes.length} 个节点</span>
-                        <span>{new Date(template.updatedAt).toLocaleDateString()}</span>
+                        <span>{t('chatGraph.workflow.nodeCount', { count: template.nodes.length })}</span>
+                        <span>{new Date(template.updatedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -160,31 +162,31 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
                           className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                         >
                           <Eye className="w-3 h-3" />
-                          查看
+                          {t('workspace.view')}
                         </button>
                         <button
                           onClick={() => handleEdit(template)}
                           className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
                           <Edit className="w-3 h-3" />
-                          编辑
+                          {t('project.edit')}
                         </button>
                         <button
                           onClick={() => {
-                            const newTemplate = { ...template, id: '', name: `${template.name} (副本)` };
+                            const newTemplate = { ...template, id: '', name: `${template.name} ${t('chatGraph.workflow.copySuffix')}` };
                             onSave(newTemplate);
                           }}
                           className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
                           <Copy className="w-3 h-3" />
-                          复制
+                          {t('chatGraph.workflow.duplicate')}
                         </button>
                         <button
                           onClick={() => handleDelete(template.id)}
                           className="flex items-center gap-1 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
-                          删除
+                          {t('common.delete')}
                         </button>
                       </div>
                     </div>
@@ -198,25 +200,25 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  模板名称 *
+                  {t('chatGraph.workflow.templateName')}
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="输入模板名称"
+                  placeholder={t('chatGraph.workflow.templateNamePlaceholder')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  描述
+                  {t('ui.description')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="描述这个模板的用途..."
+                  placeholder={t('chatGraph.workflow.templateDescPlaceholder')}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 resize-none"
                 />
@@ -224,7 +226,7 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
 
               <div className="bg-gray-50 dark:bg-gray-900/30 rounded-lg p-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  💡 提示：创建模板后，您可以在工作流编辑器中添加和配置节点
+                  💡 {t('chatGraph.workflow.templateHint')}
                 </p>
               </div>
             </div>
@@ -241,7 +243,7 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
               }}
               className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
             >
-              返回
+              {t('studio.back')}
             </button>
           )}
           {view !== 'list' && (
@@ -253,14 +255,14 @@ export const WorkflowTemplateManager: React.FC<WorkflowTemplateManagerProps> = (
                 }}
                 className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={!formData.name.trim()}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                保存
+                {t('common.save')}
               </button>
             </div>
           )}

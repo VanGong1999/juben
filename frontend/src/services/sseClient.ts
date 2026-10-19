@@ -4,7 +4,7 @@
  */
 
 import api, { APIError } from './api';
-import type { ChatRequest, SSEvent } from '@/types';
+import type { ChatRequest, SSEEvent } from '@/types';
 
 interface SSEClientConfig {
   endpoint?: string;
@@ -24,7 +24,7 @@ interface SSEClientState {
   eventCache: Map<number, any>;
 }
 
-type SSEEventHandler = (event: SSEvent) => void;
+type SSEEventHandler = (event: SSEEvent) => void;
 type SSEErrorHandler = (error: Error) => void;
 type SSEStateChangeHandler = (state: SSEClientState) => void;
 
@@ -302,7 +302,7 @@ export class RobustSSEClient {
       }
 
       // 构造标准 SSE 事件
-      const sseEvent: SSEvent = {
+      const sseEvent: SSEEvent = {
         event: eventType,
         data: eventData,
         timestamp: eventData?.timestamp || event.timestamp || new Date().toISOString(),
@@ -446,7 +446,7 @@ export class RobustSSEClient {
   /**
    * 通知事件订阅者
    */
-  private _notifyEvent(event: SSEvent): void {
+  private _notifyEvent(event: SSEEvent): void {
     this.onEventHandlers.forEach(handler => {
       try {
         handler(event);

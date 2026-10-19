@@ -13,8 +13,10 @@ import { addProjectFile } from '@/services/projectService';
 import { transcribeAudio } from '@/services/asrService';
 import { clsx } from 'clsx';
 import { AGENTS_CONFIG } from '@/config/agents';
+import { useI18n } from '@/i18n';
 
 export default function InputArea() {
+  const { t } = useI18n();
   const { sendMessage, isStreaming, stopStreaming } = useChat();
   const { fontSize } = useSettingsStore();
   const { notes, loadNotes } = useWorkspaceStore();
@@ -242,7 +244,7 @@ export default function InputArea() {
     if (files.length > 0) {
       const projectId = localStorage.getItem('projectId') || '';
       if (!projectId) {
-        setUploadError('请先进入一个项目后再上传文件');
+        setUploadError(t('chatGraph.input.enterProjectFirst'));
         return;
       }
 
@@ -252,13 +254,13 @@ export default function InputArea() {
 
       for (const file of files) {
         if (!isLikelyTextFile(file)) {
-          errors.push(`${file.name} 暂不支持该格式`);
+          errors.push(t('chatGraph.input.formatUnsupported', { name: file.name }));
           continue;
         }
         try {
           const content = await file.text();
           if (!content.trim()) {
-            errors.push(`${file.name} 内容为空`);
+            errors.push(t('chatGraph.input.emptyFile', { name: file.name }));
             continue;
           }
           const result = await addProjectFile(projectId, {
@@ -271,11 +273,11 @@ export default function InputArea() {
           if (result.file?.id) {
             uploadedRefs.push(result.file.id);
           } else {
-            errors.push(`${file.name} 上传失败`);
+            errors.push(t('chatGraph.input.fileUploadFailed', { name: file.name }));
           }
         } catch (error) {
           console.error('上传文件失败:', error);
-          errors.push(`${file.name} 上传失败`);
+          errors.push(t('chatGraph.input.fileUploadFailed', { name: file.name }));
         }
       }
 
@@ -287,7 +289,7 @@ export default function InputArea() {
       if (uploadedRefs.length > 0) {
         referencesText = `\n\n参考文件：${uploadedRefs.map((id) => `@file[${id}]`).join(' ')}`;
       } else if (!input.trim()) {
-        setUploadError('文件上传失败，未发送消息');
+        setUploadError(t('chatGraph.input.uploadFailedNoSend'));
         return;
       }
     }
@@ -531,14 +533,14 @@ export default function InputArea() {
           setAsrError(null);
           setInput((prev) => (prev ? `${prev} ${result.text}` : result.text || ''));
         } else {
-          setAsrError(result.message || '语音转写失败');
+          setAsrError(result.message || t('chatGraph.input.asrFailed'));
         }
       };
       recorder.start();
       mediaRecorderRef.current = recorder;
       setAsrRecording(true);
     } catch (error) {
-      setAsrError('麦克风权限被拒绝或不可用');
+      setAsrError(t('chatGraph.input.micDenied'));
       setAsrRecording(false);
     }
   };
@@ -665,9 +667,9 @@ export default function InputArea() {
               }
             }}
             onKeyDown={handleKeyDown}
-            placeholder="输入消息... 输入@可引用Notes"
+            placeholder={t('chatGraph.input.placeholder')}
             disabled={isStreaming}
-            aria-label="消息输入框"
+            aria-label={t('chatGraph.input.ariaLabel')}
             aria-describedby="input-description"
             className={`w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl resize-none focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all input-focus-effect ${
               fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-base'
@@ -688,7 +690,7 @@ export default function InputArea() {
             <div
               ref={dropdownRef}
               role="listbox"
-              aria-label="引用笔记列表"
+              aria-label={t('chatGraph.input.noteListAria')}
               aria-activedescendant={selectedNoteIndex >= 0 ? `note-option-${selectedNoteIndex}` : undefined}
               className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-80 overflow-hidden z-[100] animate-fade-in"
               style={{ 
@@ -708,7 +710,7 @@ export default function InputArea() {
                         setAtSearchQuery(e.target.value);
                         setSelectedNoteIndex(0);
                       }}
-                      placeholder="搜索笔记..."
+                      placeholder={t('chatGraph.input.searchNotes')}
                       className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       autoFocus
                     />
@@ -725,7 +727,7 @@ export default function InputArea() {
                     const agentDisplayName = agentDisplayNameMap.get(note.action || '') || 
                                             note.metadata?.agent_name || 
                                             note.action?.replace(/_agent$/, '').replace(/_/g, ' ') ||
-                                            '未知Agent';
+                                            t('chatGraph.input.unknownAgent');
 
                     return (
                       <div
@@ -759,7 +761,7 @@ export default function InputArea() {
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 line-clamp-2">
-                            {note.title || note.context?.substring(0, 100) || '无标题'}
+                            {note.title || note.context?.substring(0, 100) || t('chatGraph.input.untitled')}
                           </p>
                         </div>
                       </div>
@@ -770,14 +772,14 @@ export default function InputArea() {
                     {notes.length === 0 ? (
                       <>
                         <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
-                        <p>暂无Notes可用</p>
-                        <p className="text-xs mt-1">与Agent对话后生成的内容将保存为Notes</p>
+                        <p>{t('chatGraph.input.noNotes')}</p>
+                        <p className="text-xs mt-1">{t('chatGraph.input.noNotesHint')}</p>
                       </>
                     ) : (
                       <>
                         <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p>未找到匹配的Notes</p>
-                        <p className="text-xs mt-1">尝试使用不同的关键词搜索</p>
+                        <p>{t('chatGraph.input.noMatchNotes')}</p>
+                        <p className="text-xs mt-1">{t('chatGraph.input.noMatchNotesHint')}</p>
                       </>
                     )}
                   </div>
@@ -791,7 +793,7 @@ export default function InputArea() {
         <button
           onClick={isStreaming ? stopStreaming : handleSend}
           disabled={(!input.trim() && files.length === 0 && !isStreaming) || isUploading}
-          aria-label={isStreaming ? "停止生成" : "发送消息"}
+          aria-label={isStreaming ? t('studio.header.stopGenerate') : t('chatGraph.input.send')}
           aria-pressed={isStreaming}
           className={`flex-shrink-0 p-3 rounded-xl transition-all hover-scale active-scale ${
             isStreaming
@@ -815,7 +817,7 @@ export default function InputArea() {
             className={`flex-shrink-0 p-2 rounded-lg transition-all hover-scale active-scale icon-bounce ${
               isRecording ? 'bg-red-50' : 'hover:bg-gray-100'
             }`}
-            title={isRecording ? '停止语音输入' : '语音输入'}
+            title={isRecording ? t('workspace.stopVoice') : t('workspace.voiceInput')}
           >
             <Mic className={`w-5 h-5 ${isRecording ? 'text-red-600' : 'text-gray-500'}`} />
           </button>
@@ -829,7 +831,7 @@ export default function InputArea() {
             className={`flex-shrink-0 p-2 rounded-lg transition-all hover-scale active-scale icon-bounce ${
               asrRecording ? 'bg-blue-50' : 'hover:bg-gray-100'
             }`}
-            title={asrRecording ? '停止录音并转写' : '录音转写'}
+            title={asrRecording ? t('chatGraph.input.stopAsr') : t('chatGraph.input.asr')}
           >
             <AudioLines className={`w-5 h-5 ${asrRecording ? 'text-blue-600' : 'text-gray-500'}`} />
           </button>
@@ -839,13 +841,13 @@ export default function InputArea() {
       {/* 提示文本 */}
       <div className="text-center mt-2">
         {isUploading && (
-          <p className="text-xs text-gray-500 mb-1">正在上传文件...</p>
+          <p className="text-xs text-gray-500 mb-1">{t('chatGraph.input.uploading')}</p>
         )}
         <p className="text-xs text-gray-400">
-          AI 生成的内容可能不准确，请核实重要信息
+          {t('chatGraph.input.disclaimer')}
         </p>
         {asrTranscribing && (
-          <p className="text-xs text-blue-500 mt-1">语音转写中...</p>
+          <p className="text-xs text-blue-500 mt-1">{t('chatGraph.input.asrTranscribing')}</p>
         )}
       </div>
     </div>

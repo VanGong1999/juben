@@ -4,6 +4,7 @@
  */
 
 import { ExternalLink, Calendar, Globe } from 'lucide-react';
+import { useI18n } from '@/i18n';
 import { WebSearchResult } from '@/services/baiduService';
 
 interface BaiduSearchResultProps {
@@ -12,6 +13,7 @@ interface BaiduSearchResultProps {
 }
 
 export default function BaiduSearchResult({ results, loading }: BaiduSearchResultProps) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="space-y-3">
@@ -30,7 +32,7 @@ export default function BaiduSearchResult({ results, loading }: BaiduSearchResul
     return (
       <div className="text-center py-8 text-gray-500">
         <Globe className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-        <p>未找到相关搜索结果</p>
+        <p>{t('dataViews.baidu.search.none')}</p>
       </div>
     );
   }

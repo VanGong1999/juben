@@ -144,11 +144,11 @@ def _safe_json_loads(text: str) -> Dict[str, Any]:
     if not text:
         return {}
     # 优先提取 ```json ... ```
-    fenced = re.search(r"```json\\s*(\\{.*?\\})\\s*```", text, flags=re.S)
+    fenced = re.search(r"```json\s*(\{.*?\})\s*```", text, flags=re.S)
     if fenced:
         text = fenced.group(1)
     # 尝试截取最外层 JSON
-    brace = re.search(r"(\\{.*\\})", text, flags=re.S)
+    brace = re.search(r"(\{.*\})", text, flags=re.S)
     if brace:
         text = brace.group(1)
     return json.loads(text)

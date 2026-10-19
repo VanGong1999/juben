@@ -97,7 +97,8 @@ def create_env_file():
 
 # 智谱AI配置（必需）
 ZHIPU_API_KEY=your_zhipu_api_key_here
-ZHIPU_MODEL=glm-4.5
+ZHIPU_MODEL=glm-4.7-flash
+DEFAULT_MODEL_PROVIDER=zhipu
 ZHIPU_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 ZHIPU_TEMPERATURE=0.7
 ZHIPU_MAX_TOKENS=4096

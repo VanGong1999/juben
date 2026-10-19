@@ -581,7 +581,19 @@ async def save_user_style_edit(
         artifact_id=artifact_id
     )
 
-    return await style_memory.save_fragment(fragment)
+    saved = await style_memory.save_fragment(fragment)
+
+    # 整合归一：同步落一条用户级语义事实（style_example），作为新语义层的权威持久化。
+    try:
+        from utils.agent_memory import get_agent_memory_service
+
+        get_agent_memory_service().record_user_style_example(
+            user_id, modified_text or original_text, source="style_edit"
+        )
+    except Exception as e:
+        logger.warning("同步 style_example 语义事实失败: %s", e)
+
+    return saved
 
 
 async def get_user_style_examples(

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Request
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 import logging
 from datetime import datetime
 
@@ -72,6 +72,7 @@ from config.settings import juben_settings
 from utils.logger import get_logger
 from utils.error_handler import get_error_handler, handle_error
 from utils.storage_manager import get_storage
+from utils.project_manager import ProjectManager
 from utils.agent_dispatch import build_agent_generator
 from .schemas import (
     BaseResponse, ErrorResponse, ChatRequest, ChatResponse, ResumeRequest, StreamEvent, EventType, StreamContentType, ContentTypeConfig,
@@ -135,7 +136,7 @@ AGENTS_LIST_CONFIG = [
         "description": "专业的短剧策划和创作建议助手，提供剧本结构、情节设计、人物塑造等全方位策划支持",
         "category": "planning",
         "icon": "📋",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/chat",
         "features": ["剧本策划", "情节设计建议", "结构优化", "创作指导"],
         "capabilities": ["分析剧本需求并提供专业策划建议", "设计合理的情节结构和故事节奏", "提供人物塑造和对话写作指导", "优化剧本的商业价值和观赏性"],
@@ -148,7 +149,7 @@ AGENTS_LIST_CONFIG = [
         "description": "专业短剧内容创作助手，帮助生成高质量剧本内容",
         "category": "creation",
         "icon": "✍️",
-        "model": "glm-4.7-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/creator/chat",
         "features": ["剧本创作", "场景描写", "对话生成", "情节展开"],
         "status": "active"
@@ -160,7 +161,7 @@ AGENTS_LIST_CONFIG = [
         "description": "专业的短剧质量评估助手，从多维度评估剧本质量并提供改进建议",
         "category": "evaluation",
         "icon": "📊",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/evaluation/chat",
         "features": ["质量评估", "多维度打分", "改进建议", "市场分析"],
         "status": "active"
@@ -172,7 +173,7 @@ AGENTS_LIST_CONFIG = [
         "description": "深度剧本分析评估，提供专业的质量诊断和优化方案",
         "category": "evaluation",
         "icon": "🎯",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/script/evaluation",
         "features": ["剧本诊断", "质量评分", "问题定位", "优化方案"],
         "status": "active"
@@ -184,7 +185,7 @@ AGENTS_LIST_CONFIG = [
         "description": "评估IP的商业价值和开发潜力",
         "category": "evaluation",
         "icon": "💎",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/ip/evaluation",
         "features": ["IP价值评估", "市场潜力分析", "商业化建议", "竞品对比"],
         "status": "beta"
@@ -196,7 +197,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析故事的核心五元素：人物、情节、环境、主题、风格",
         "category": "analysis",
         "icon": "🔍",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/story-analysis/analyze",
         "features": ["五元素分析", "结构梳理", "主题提炼", "风格识别"],
         "status": "active"
@@ -208,7 +209,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析已播剧集的数据和表现，提取成功经验",
         "category": "analysis",
         "icon": "📺",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/series-analysis/analyze",
         "features": ["剧集数据分析", "成功要素提取", "趋势总结", "经验归纳"],
         "status": "active"
@@ -220,7 +221,7 @@ AGENTS_LIST_CONFIG = [
         "description": "对剧本进行深度专业分析，挖掘潜在价值",
         "category": "analysis",
         "icon": "🔬",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/drama/analysis",
         "features": ["剧本结构分析", "人物关系梳理", "情节节奏分析", "价值挖掘"],
         "status": "active"
@@ -232,7 +233,7 @@ AGENTS_LIST_CONFIG = [
         "description": "识别和分析故事类型，提供类型化创作建议",
         "category": "analysis",
         "icon": "📚",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/story-type/analyze",
         "features": ["类型识别", "类型特征分析", "创作规范建议", "市场定位"],
         "status": "active"
@@ -244,7 +245,7 @@ AGENTS_LIST_CONFIG = [
         "description": "完整的大情节点与详细情节点生成工作流",
         "category": "workflow",
         "icon": "🔄",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/plot-points-workflow/execute",
         "features": ["大情节点生成", "详细情节点展开", "结构化输出", "可视化展示"],
         "status": "active"
@@ -256,7 +257,7 @@ AGENTS_LIST_CONFIG = [
         "description": "端到端的剧本创作工作流，从创意到成品",
         "category": "workflow",
         "icon": "🎬",
-        "model": "glm-4.7-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/drama-workflow/execute",
         "features": ["创意开发", "大纲生成", "剧本创作", "质量检验"],
         "status": "beta"
@@ -268,7 +269,7 @@ AGENTS_LIST_CONFIG = [
         "description": "为故事中的主要人物生成详细的人物小传",
         "category": "character",
         "icon": "👤",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/character/profile",
         "features": ["人物识别", "小传生成", "性格分析", "背景构建"],
         "status": "active"
@@ -280,7 +281,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析故事中人物之间的复杂关系网络",
         "category": "character",
         "icon": "👥",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/character/relationship",
         "features": ["关系识别", "关系类型分析", "关系网络构建", "关系演变追踪"],
         "status": "active"
@@ -292,7 +293,7 @@ AGENTS_LIST_CONFIG = [
         "description": "为长篇故事生成精炼的故事大纲",
         "category": "story",
         "icon": "📝",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/story/summary",
         "features": ["内容提取", "要点总结", "结构梳理", "精炼表达"],
         "status": "active"
@@ -304,7 +305,7 @@ AGENTS_LIST_CONFIG = [
         "description": "展开详细的情节点内容，丰富故事细节",
         "category": "story",
         "icon": "📍",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/plot-points/detailed",
         "features": ["情节点展开", "细节补充", "场景描写", "情节衔接"],
         "status": "active"
@@ -316,7 +317,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析和优化故事情节点的设计",
         "category": "story",
         "icon": "📌",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/plot-points/analyze",
         "features": ["情节点识别", "结构分析", "节奏评估", "优化建议"],
         "status": "active"
@@ -328,7 +329,7 @@ AGENTS_LIST_CONFIG = [
         "description": "生成故事结构可视化思维导图",
         "category": "story",
         "icon": "🧠",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/mind-map/generate",
         "features": ["结构提取", "导图生成", "可视化展示", "编辑导出"],
         "status": "active"
@@ -340,7 +341,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析并提取故事的主要情节点",
         "category": "story",
         "icon": "🎬",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/major-plot-points/chat",
         "features": ["大情节点提取", "情节点描述", "时间线构建", "结构优化"],
         "status": "active"
@@ -352,7 +353,7 @@ AGENTS_LIST_CONFIG = [
         "description": "实时搜索网络信息，获取最新资料",
         "category": "utility",
         "icon": "🌐",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/websearch/chat",
         "features": ["实时搜索", "信息聚合", "来源标注", "智能摘要"],
         "status": "active"
@@ -364,7 +365,7 @@ AGENTS_LIST_CONFIG = [
         "description": "查询剧本创作知识库，获取专业资料",
         "category": "utility",
         "icon": "📚",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/knowledge/chat",
         "features": ["知识检索", "相似度匹配", "专业资料", "桥段参考"],
         "status": "active"
@@ -376,7 +377,7 @@ AGENTS_LIST_CONFIG = [
         "description": "解析和引用外部文件内容",
         "category": "utility",
         "icon": "📄",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/file-reference/chat",
         "features": ["文件解析", "内容提取", "智能引用", "格式兼容"],
         "status": "active"
@@ -388,7 +389,7 @@ AGENTS_LIST_CONFIG = [
         "description": "生成标准化的剧本文档",
         "category": "utility",
         "icon": "📃",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/document/generate",
         "features": ["格式转换", "标准排版", "批量生成", "导出功能"],
         "status": "beta"
@@ -400,7 +401,7 @@ AGENTS_LIST_CONFIG = [
         "description": "格式化AI输出，确保符合规范",
         "category": "utility",
         "icon": "✨",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/output/format",
         "features": ["格式规范", "样式统一", "错误修正", "质量提升"],
         "status": "active"
@@ -412,7 +413,7 @@ AGENTS_LIST_CONFIG = [
         "description": "评估故事的整体质量和吸引力",
         "category": "evaluation",
         "icon": "⭐",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/story/evaluation",
         "features": ["质量打分", "吸引力分析", "改进建议", "对比评估"],
         "status": "active"
@@ -424,7 +425,7 @@ AGENTS_LIST_CONFIG = [
         "description": "评估故事大纲的完整性和可行性",
         "category": "evaluation",
         "icon": "📋",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/outline/evaluation",
         "features": ["完整性检查", "可行性评估", "结构调整", "补充建议"],
         "status": "active"
@@ -436,7 +437,7 @@ AGENTS_LIST_CONFIG = [
         "description": "评估小说是否适合改编为短剧",
         "category": "evaluation",
         "icon": "📖",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/novel/screening",
         "features": ["改编可行性", "IP价值评估", "改编建议", "版权分析"],
         "status": "active"
@@ -448,7 +449,7 @@ AGENTS_LIST_CONFIG = [
         "description": "智能分割长文本为合适的段落",
         "category": "utility",
         "icon": "✂️",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/text/split",
         "features": ["智能分割", "长度控制", "语义完整", "边界识别"],
         "status": "active"
@@ -460,7 +461,7 @@ AGENTS_LIST_CONFIG = [
         "description": "按要求截断文本并保持完整性",
         "category": "utility",
         "icon": "✂️",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/text/truncate",
         "features": ["长度截断", "完整性保证", "摘要保留", "边界优化"],
         "status": "active"
@@ -472,7 +473,7 @@ AGENTS_LIST_CONFIG = [
         "description": "集成多个Agent的结果",
         "category": "workflow",
         "icon": "🔗",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/result/integrate",
         "features": ["结果聚合", "格式统一", "去重合并", "优先级排序"],
         "status": "active"
@@ -484,7 +485,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析评分数据，提供解读",
         "category": "evaluation",
         "icon": "📈",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/score/analyze",
         "features": ["评分统计", "分布分析", "趋势解读", "对比分析"],
         "status": "active"
@@ -496,7 +497,7 @@ AGENTS_LIST_CONFIG = [
         "description": "评估文本处理的质量和效果",
         "category": "evaluation",
         "icon": "📝",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/text/evaluate",
         "features": ["质量评估", "效果分析", "问题识别", "改进建议"],
         "status": "active"
@@ -508,7 +509,7 @@ AGENTS_LIST_CONFIG = [
         "description": "分析评估结果，提供洞察",
         "category": "evaluation",
         "icon": "📊",
-        "model": "glm-4.1v-thinking-flash",
+        "model": "deepseek-v4-pro",
         "api_endpoint": "/juben/result/analyze",
         "features": ["结果分析", "数据洞察", "趋势发现", "建议生成"],
         "status": "active"
@@ -520,7 +521,7 @@ AGENTS_LIST_CONFIG = [
         "description": "从文本中提取剧集相关信息",
         "category": "utility",
         "icon": "📺",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/series/info",
         "features": ["信息提取", "数据整理", "格式规范", "批量处理"],
         "status": "active"
@@ -532,7 +533,7 @@ AGENTS_LIST_CONFIG = [
         "description": "智能识别和提取短剧名称",
         "category": "utility",
         "icon": "🏷️",
-        "model": "glm-4-flash",
+        "model": "deepseek-flash",
         "api_endpoint": "/juben/series/name",
         "features": ["名称识别", "别名提取", "规范化处理", "去重过滤"],
         "status": "active"
@@ -780,7 +781,9 @@ def get_series_analysis_agent() -> SeriesAnalysisAgent:
 # 请求模型
 class ChatRequest(BaseModel):
     """聊天请求模型"""
-    input: str
+    model_config = ConfigDict(protected_namespaces=())
+
+    input: str = Field(..., min_length=1, max_length=50000)
     user_id: Optional[str] = "default_user"
     session_id: Optional[str] = None
     project_id: Optional[str] = None
@@ -794,9 +797,11 @@ class ChatRequest(BaseModel):
 
 class StoryAnalysisRequest(BaseModel):
     """故事五元素分析请求模型"""
-    input: str
+    model_config = ConfigDict(protected_namespaces=())
+
+    input: str = Field(..., min_length=1)
     file: Optional[str] = None
-    chunk_size: Optional[int] = 10000
+    chunk_size: Optional[int] = Field(default=10000, ge=1)
     length_size: Optional[int] = 50000
     user_id: Optional[str] = "default_user"
     session_id: Optional[str] = None
@@ -1189,7 +1194,7 @@ async def get_message_info(message_id: str):
 
 
 @router.get("/models")
-async def get_models(provider: str = "zhipu"):
+async def get_models(provider: str = "deepseek"):
     """
     获取可用模型列表
 
@@ -4604,6 +4609,12 @@ async def test_alert():
 
 # ==================== 🆕 流式事件回放API ====================
 
+class HeartbeatRequest(BaseModel):
+    """心跳请求"""
+    user_id: str
+    session_id: str
+
+
 @router.post("/stream/heartbeat")
 async def stream_heartbeat(request: HeartbeatRequest):
     """
@@ -4697,12 +4708,6 @@ class StopRequest(BaseModel):
     reason: str = "user_request"  # user_request, error, timeout
     message: str = ""
     agent_name: Optional[str] = None
-
-
-class HeartbeatRequest(BaseModel):
-    """心跳请求"""
-    user_id: str
-    session_id: str
 
 
 @router.post("/stop/request")

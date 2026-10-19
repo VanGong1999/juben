@@ -1,6 +1,9 @@
 """
 智能上下文管理器 - 集成压缩、外部大脑和专家团队功能
- 架构的智能上下文管理系统
+
+⚠️ 已降级：短剧连载主路径请使用 utils.context_assembler.assemble_drama_context
+与 BaseJubenAgent 的 UnifiedMemory context_pack（enable_enhanced_context 默认 False）。
+本模块保留兼容，新功能勿再扩展。
 """
 import os
 import json
@@ -81,7 +84,7 @@ class ContextSession:
 class SmartContextManager:
     """智能上下文管理器"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """
         初始化智能上下文管理器
         

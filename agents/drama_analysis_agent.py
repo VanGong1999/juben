@@ -32,7 +32,7 @@ except ImportError:
 class DramaAnalysisAgent(BaseJubenAgent):
     """拉片分析智能体"""
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("drama_analysis", model_provider)
         self._load_drama_analysis_prompt()
 

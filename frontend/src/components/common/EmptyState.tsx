@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Database, Search, MousePointerClick, AlertCircle, MessageSquare, FolderOpen, FileText } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface EmptyStateProps {
   /** 图标组件 */
@@ -104,24 +105,26 @@ export function EmptyState({
  * 预设的空状态变体
  */
 export function EmptyStateNoData({ onAction }: { onAction?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').Database}
-      title="暂无数据"
-      description="还没有任何数据，开始创建吧"
-      actionText="创建数据"
+      icon={Database}
+      title={t('empty.noData')}
+      description={t('empty.noDataDesc')}
+      actionText={t('empty.createData')}
       onAction={onAction}
     />
   );
 }
 
 export function EmptyStateNoResults({ onClear }: { onClear?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').Search}
-      title="未找到结果"
-      description="尝试调整搜索关键词或筛选条件"
-      actionText="清除筛选"
+      icon={Search}
+      title={t('empty.noResults')}
+      description={t('empty.noResultsDesc')}
+      actionText={t('empty.clearFilter')}
       onAction={onClear}
       type="search"
     />
@@ -129,23 +132,25 @@ export function EmptyStateNoResults({ onClear }: { onClear?: () => void }) {
 }
 
 export function EmptyStateNoSelection() {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').MousePointerClick}
-      title="未选择任何项目"
-      description="从列表中选择一个项目查看详情"
+      icon={MousePointerClick}
+      title={t('empty.noSelection')}
+      description={t('empty.noSelectionDesc')}
       size="sm"
     />
   );
 }
 
 export function EmptyStateError({ onRetry }: { onRetry?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').AlertCircle}
-      title="出错了"
-      description="加载数据时出现问题，请稍后重试"
-      actionText="重试"
+      icon={AlertCircle}
+      title={t('empty.error')}
+      description={t('empty.errorDesc')}
+      actionText={t('empty.retry')}
       onAction={onRetry}
       type="error"
     />
@@ -153,36 +158,39 @@ export function EmptyStateError({ onRetry }: { onRetry?: () => void }) {
 }
 
 export function EmptyStateNoMessages({ onNewChat }: { onNewChat?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').MessageSquare}
-      title="开始新对话"
-      description="选择一个 Agent 并输入消息开始对话"
-      actionText="开始对话"
+      icon={MessageSquare}
+      title={t('empty.newChat')}
+      description={t('empty.newChatDesc')}
+      actionText={t('empty.startChat')}
       onAction={onNewChat}
     />
   );
 }
 
 export function EmptyStateNoProjects({ onCreate }: { onCreate?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').FolderOpen}
-      title="还没有项目"
-      description="创建你的第一个项目来开始工作"
-      actionText="创建项目"
+      icon={FolderOpen}
+      title={t('empty.noProjects')}
+      description={t('empty.noProjectsDesc')}
+      actionText={t('empty.createProject')}
       onAction={onCreate}
     />
   );
 }
 
 export function EmptyStateNoFiles({ onUpload }: { onUpload?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
-      icon={require('lucide-react').FileText}
-      title="文件夹为空"
-      description="上传文件开始协作"
-      actionText="上传文件"
+      icon={FileText}
+      title={t('empty.noFiles')}
+      description={t('empty.noFilesDesc')}
+      actionText={t('empty.uploadFile')}
       onAction={onUpload}
     />
   );

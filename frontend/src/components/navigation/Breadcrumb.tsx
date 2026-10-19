@@ -5,6 +5,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface BreadcrumbItem {
   label: string;
@@ -20,9 +21,10 @@ interface BreadcrumbProps {
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   items,
   separator = <ChevronRight className="w-4 h-4" />,
-  homePath = '/workspace',
+  homePath = '/',
 }) => {
   const location = useLocation();
+  const { t } = useI18n();
 
   // 默认根据路径生成面包屑
   const defaultItems: BreadcrumbItem[] = React.useMemo(() => {
@@ -36,19 +38,22 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
 
       // 路径映射到显示名称
       const labelMap: Record<string, string> = {
-        workspace: '工作区',
-        chat: '聊天',
-        baidu: '百度搜索',
-        tools: '工具演示',
-        projects: '项目管理',
-        ocr: 'OCR识别',
-        files: '文件系统',
-        graph: '图谱可视化',
-        workflow: '工作流监控',
-        statistics: '统计分析',
-        admin: '系统管理',
-        login: '登录',
-        register: '注册',
+        workspace: t('nav.studio'),
+        studio: t('nav.studio'),
+        experts: t('nav.experts'),
+        dramas: t('nav.works'),
+        chat: t('ui.breadcrumb.chat'),
+        baidu: t('studio.header.nav.baidu'),
+        tools: t('studio.header.nav.tools'),
+        projects: t('studio.header.nav.projects'),
+        ocr: t('ui.breadcrumb.ocr'),
+        files: t('studio.header.nav.files'),
+        graph: t('studio.header.nav.graph'),
+        workflow: t('ui.breadcrumb.workflow'),
+        statistics: t('studio.header.nav.statistics'),
+        admin: t('studio.header.nav.admin'),
+        login: t('ui.breadcrumb.login'),
+        register: t('ui.breadcrumb.register'),
       };
 
       const label = labelMap[segment] || segment;
@@ -60,7 +65,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
     });
 
     return breadcrumbs;
-  }, [location.pathname, items]);
+  }, [location.pathname, items, t]);
 
   if (defaultItems.length === 0) {
     return null;

@@ -1,0 +1,43 @@
+[
+  {
+    "review_id": "rev_2f5199ab4b",
+    "story_id": "demo_urban_comeback",
+    "status": "pending",
+    "source": "seed",
+    "created_at": "2026-10-17T14:05:46.176605+00:00",
+    "nodes_count": 1,
+    "plot_nodes_count": 1,
+    "relationships_count": 1,
+    "payload": {
+      "nodes": [
+        {
+          "name": "顾北",
+          "type": "Character",
+          "confidence": 0.42,
+          "story_id": "demo_urban_comeback",
+          "character_id": "char_gubei_candidate"
+        }
+      ],
+      "plot_nodes": [
+        {
+          "title": "天台对峙",
+          "confidence": 0.55,
+          "story_id": "demo_urban_comeback",
+          "plot_id": "plot_candidate_rooftop"
+        }
+      ],
+      "relationships": [
+        {
+          "source": "林晓",
+          "target": "顾北",
+          "type": "SOCIAL_BOND",
+          "confidence": 0.38
+        }
+      ],
+      "validation_issues": [
+        "人物「顾北」未在既有图谱出现",
+        "关系端点需人工确认"
+      ]
+    }
+  }
+]

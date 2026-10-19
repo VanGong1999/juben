@@ -37,7 +37,7 @@ class OutputFormatterAgent(BaseJubenAgent):
     基于coze工作流中的输出整理功能设计
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化输出整理智能体"""
         super().__init__("output_formatter", model_provider)
         

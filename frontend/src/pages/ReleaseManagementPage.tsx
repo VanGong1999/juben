@@ -24,6 +24,7 @@ import {
   Edit
 } from 'lucide-react';
 import api from '@/services/api';
+import { useI18n } from '@/i18n';
 
 interface ChecklistItem {
   id: string;
@@ -61,6 +62,7 @@ interface ROIResult {
 }
 
 export default function ReleaseManagementPage() {
+  const { t } = useI18n();
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const navigate = useNavigate();
 
@@ -227,9 +229,9 @@ export default function ReleaseManagementPage() {
                   <Rocket className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">发布管理</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{t('admin.release.title')}</h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    管理发布前的检查和准备工作
+                    {t('admin.release.subtitle')}
                   </p>
                 </div>
               </div>
@@ -244,7 +246,7 @@ export default function ReleaseManagementPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  检查清单
+                  {t('admin.release.tab.checklist')}
                 </button>
                 <button
                   onClick={() => setActiveTab('roi')}
@@ -254,7 +256,7 @@ export default function ReleaseManagementPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  ROI计算
+                  {t('admin.release.tab.roi')}
                 </button>
                 <button
                   onClick={() => setActiveTab('templates')}
@@ -264,7 +266,7 @@ export default function ReleaseManagementPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  模板管理
+                  {t('admin.release.tab.templates')}
                 </button>
               </div>
             </div>
@@ -279,7 +281,7 @@ export default function ReleaseManagementPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm text-gray-500">必需项目</span>
+                        <span className="text-sm text-gray-500">{t('admin.release.requiredItems')}</span>
                         <span className={`text-2xl font-bold ${
                           stats.required.completed === stats.required.total ? 'text-green-600' : 'text-orange-600'
                         }`}>
@@ -298,7 +300,7 @@ export default function ReleaseManagementPage() {
 
                     <div className="bg-white border border-gray-200 rounded-xl p-5">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm text-gray-500">可选项目</span>
+                        <span className="text-sm text-gray-500">{t('admin.release.optionalItems')}</span>
                         <span className="text-2xl font-bold text-gray-900">
                           {stats.optional.completed}/{stats.optional.total}
                         </span>
@@ -324,12 +326,12 @@ export default function ReleaseManagementPage() {
                         )}
                         <div>
                           <p className="font-semibold text-gray-900">
-                            {canRelease ? '可以发布' : '未准备就绪'}
+                            {canRelease ? t('admin.release.readyToRelease') : t('admin.release.notReady')}
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
                             {canRelease
-                              ? '所有必需检查项已完成'
-                              : `还有 ${stats.required.total - stats.required.completed} 个必需项待完成`
+                              ? t('admin.release.allRequiredDone')
+                              : t('admin.release.remainingRequired', { count: stats.required.total - stats.required.completed })
                             }
                           </p>
                         </div>
@@ -340,11 +342,11 @@ export default function ReleaseManagementPage() {
                   {/* 检查清单 */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-lg font-semibold text-gray-900">检查清单</h2>
+                      <h2 className="text-lg font-semibold text-gray-900">{t('admin.release.tab.checklist')}</h2>
 
                       <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
                         <Download className="w-4 h-4" />
-                        导出清单
+                        {t('admin.release.exportChecklist')}
                       </button>
                     </div>
 
@@ -391,7 +393,7 @@ export default function ReleaseManagementPage() {
 
                                     {item.required && (
                                       <span className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded-full flex-shrink-0 ml-2">
-                                        必需
+                                        {t('admin.release.required')}
                                       </span>
                                     )}
                                   </div>
@@ -424,13 +426,13 @@ export default function ReleaseManagementPage() {
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                       <Calculator className="w-5 h-5" />
-                      ROI计算器
+                      {t('admin.release.roiCalculator')}
                     </h2>
 
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          制作成本（元）
+                          {t('admin.release.productionCost')}
                         </label>
                         <input
                           type="number"
@@ -443,7 +445,7 @@ export default function ReleaseManagementPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          营销成本（元）
+                          {t('admin.release.marketingCost')}
                         </label>
                         <input
                           type="number"
@@ -456,7 +458,7 @@ export default function ReleaseManagementPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          预期观看人数
+                          {t('admin.release.expectedViewers')}
                         </label>
                         <input
                           type="number"
@@ -469,7 +471,7 @@ export default function ReleaseManagementPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          预期转化率（%）
+                          {t('admin.release.expectedConversion')}
                         </label>
                         <input
                           type="number"
@@ -481,7 +483,7 @@ export default function ReleaseManagementPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          人均收入（元）
+                          {t('admin.release.avgRevenue')}
                         </label>
                         <input
                           type="number"
@@ -495,7 +497,7 @@ export default function ReleaseManagementPage() {
                         onClick={calculateROI}
                         className="w-full px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
                       >
-                        计算ROI
+                        {t('admin.release.calculateRoi')}
                       </button>
                     </div>
                   </div>
@@ -503,18 +505,18 @@ export default function ReleaseManagementPage() {
                   {/* ROI结果 */}
                   {roiResult && (
                     <div className="bg-white border border-gray-200 rounded-xl p-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-6">计算结果</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-6">{t('admin.release.result')}</h2>
 
                       <div className="space-y-4">
                         <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-500 mb-1">总投资</p>
+                          <p className="text-sm text-gray-500 mb-1">{t('admin.release.totalInvestment')}</p>
                           <p className="text-2xl font-bold text-gray-900">
                             ¥{roiResult.total_investment.toLocaleString()}
                           </p>
                         </div>
 
                         <div className="p-4 bg-blue-50 rounded-lg">
-                          <p className="text-sm text-blue-600 mb-1">预期收入</p>
+                          <p className="text-sm text-blue-600 mb-1">{t('admin.release.expectedRevenue')}</p>
                           <p className="text-2xl font-bold text-blue-700">
                             ¥{roiResult.expected_revenue.toLocaleString()}
                           </p>
@@ -526,7 +528,7 @@ export default function ReleaseManagementPage() {
                           <p className={`text-sm mb-1 ${
                             roiResult.expected_profit >= 0 ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            预期利润
+                            {t('admin.release.expectedProfit')}
                           </p>
                           <p className={`text-2xl font-bold ${
                             roiResult.expected_profit >= 0 ? 'text-green-700' : 'text-red-700'
@@ -551,14 +553,14 @@ export default function ReleaseManagementPage() {
                         </div>
 
                         <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-500 mb-1">保本观看人数</p>
+                          <p className="text-sm text-gray-500 mb-1">{t('admin.release.breakEvenViewers')}</p>
                           <p className="text-2xl font-bold text-gray-900">
                             {Math.round(roiResult.break_even_viewers).toLocaleString()}
                           </p>
                         </div>
 
                         <div className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-500 mb-1">预计回本周期</p>
+                          <p className="text-sm text-gray-500 mb-1">{t('admin.release.paybackPeriod')}</p>
                           <p className="text-lg font-semibold text-gray-900">
                             {roiResult.payback_period}
                           </p>
@@ -572,11 +574,11 @@ export default function ReleaseManagementPage() {
               {activeTab === 'templates' && (
                 <div className="bg-white border border-gray-200 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-semibold text-gray-900">模板管理</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('admin.release.tab.templates')}</h2>
 
                     <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm">
                       <Plus className="w-4 h-4" />
-                      新建模板
+                      {t('admin.release.newTemplate')}
                     </button>
                   </div>
 
@@ -584,10 +586,10 @@ export default function ReleaseManagementPage() {
                     <div className="text-center py-12">
                       <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        还没有模板
+                        {t('admin.release.noTemplates')}
                       </h3>
                       <p className="text-gray-500">
-                        创建检查清单模板以供复用
+                        {t('admin.release.noTemplatesDesc')}
                       </p>
                     </div>
                   ) : (
@@ -601,7 +603,7 @@ export default function ReleaseManagementPage() {
                           <p className="text-sm text-gray-600 mb-4">{template.description}</p>
 
                           <div className="flex items-center justify-between text-sm text-gray-500">
-                            <span>{template.checklist_items.length} 个检查项</span>
+                            <span>{t('admin.release.itemCount', { count: template.checklist_items.length })}</span>
 
                             <div className="flex items-center gap-1">
                               <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">

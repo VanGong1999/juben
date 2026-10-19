@@ -27,7 +27,7 @@ class BatchRequest:
     request_id: str
     messages: List[Dict[str, str]]
     kwargs: Dict[str, Any] = field(default_factory=dict)
-    model_provider: str = "zhipu"
+    model_provider: str = "deepseek"
 
     def __hash__(self):
         """用于去重的哈希值"""
@@ -122,7 +122,7 @@ class LLMBatchProcessor:
     async def process(
         self,
         messages: List[Dict[str, str]],
-        model_provider: str = "zhipu",
+        model_provider: str = "deepseek",
         **kwargs
     ) -> str:
         """
@@ -416,7 +416,7 @@ async def _cleanup_task():
 
 
 # 装饰器
-def with_batch_processing(model_provider: str = "zhipu"):
+def with_batch_processing(model_provider: str = "deepseek"):
     """
     批处理装饰器
 
@@ -464,7 +464,7 @@ if __name__ == "__main__":
         for i in range(20):
             task = processor.process(
                 messages=[{"role": "user", "content": f"测试消息 {i+1}"}],
-                model_provider="zhipu"
+                model_provider="deepseek"
             )
             tasks.append(task)
 

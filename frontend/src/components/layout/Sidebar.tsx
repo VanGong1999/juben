@@ -9,9 +9,11 @@ import { getAgentCategories, AGENTS_CONFIG } from '@/config/agents';
 import type { Agent } from '@/types';
 import { X, Search, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useI18n } from '@/i18n';
 
 export default function Sidebar() {
   const { sidebarOpen, sidebarCollapsed, setSidebarOpen } = useUIStore();
+  const { t } = useI18n();
   const { agents: loadedAgents, activeAgent, setActiveAgent, searchQuery, setSearchQuery } = useAgentStore();
   const categories = getAgentCategories();
   const agents = loadedAgents.length > 0 ? loadedAgents : AGENTS_CONFIG;
@@ -105,7 +107,7 @@ export default function Sidebar() {
                 toggleSidebarCollapsed();
               }}
               className="p-1.5 rounded-lg hover:bg-gray-100 transition-all hover-scale"
-              title={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
+              title={sidebarCollapsed ? t('ui.expandSidebar') : t('ui.collapseSidebar')}
             >
               {sidebarCollapsed ? (
                 <ChevronRight className="w-4 h-4" />
@@ -130,7 +132,7 @@ export default function Sidebar() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="搜索 Agents..."
+                placeholder={t('ui.searchAgents')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-black input-focus-effect transition-all"
@@ -142,13 +144,13 @@ export default function Sidebar() {
                 onClick={expandAllCategories}
                 className="flex-1 text-xs px-2 py-1 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
               >
-                全部展开
+                {t('ui.expandAll')}
               </button>
               <button
                 onClick={collapseAllCategories}
                 className="flex-1 text-xs px-2 py-1 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
               >
-                全部折叠
+                {t('ui.collapseAll')}
               </button>
             </div>
           </div>
@@ -256,7 +258,7 @@ export default function Sidebar() {
                                       ))}
                                     </div>
                                     <div className="mt-2 text-xs text-gray-400">
-                                      模型: {agent.model}
+                                      {t('studio.header.agent.model')}: {agent.model}
                                     </div>
                                   </div>
                                 </div>
@@ -273,7 +275,7 @@ export default function Sidebar() {
               {/* 无搜索结果 */}
               {searchQuery && !hasSearchResults && (
                 <div className="text-center py-8 text-gray-400">
-                  <p className="text-sm">没有找到匹配的 Agents</p>
+                  <p className="text-sm">{t('ui.noMatchAgents')}</p>
                 </div>
               )}
             </div>
@@ -301,9 +303,9 @@ export default function Sidebar() {
         {/* 底部统计 */}
         {!sidebarCollapsed && (
           <div className="px-4 py-3 border-t border-gray-200 text-xs text-gray-500">
-            <p>共 {agents.length} 个 Agents</p>
+            <p>{t('ui.totalAgents', { count: agents.length })}</p>
             {searchQuery && hasSearchResults && (
-              <p className="mt-1">找到 {Object.values(filteredAgentsByCategory).flat().length} 个结果</p>
+              <p className="mt-1">{t('ui.foundResults', { count: Object.values(filteredAgentsByCategory).flat().length })}</p>
             )}
           </div>
         )}

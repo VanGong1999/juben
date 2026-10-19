@@ -1,18 +1,25 @@
 /**
- * 图谱审核中心页面
+ * 图谱审核中心 — AppShell 紧凑布局
+ * 处理抽取队列中的低置信度节点 / 情节 / 关系
  */
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import StatusBar from '@/components/layout/StatusBar';
-import MobileMenu from '@/components/common/MobileMenu';
-import SettingsModal from '@/components/modals/SettingsModal';
+import { Link, useNavigate } from 'react-router-dom';
+import AppShell from '@/components/layout/AppShell';
 import { useGraphStore } from '@/store/graphStore';
-import { useUIStore } from '@/store/uiStore';
-import { ClipboardCheck, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
+import {
+  ClipboardCheck,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  CheckCircle2,
+  Sparkles,
+  Network,
+  RefreshCw,
+} from 'lucide-react';
 import { graphService } from '@/services/graphService';
+import clsx from 'clsx';
+import { useI18n } from '@/i18n';
 
 const PAGE_SIZE = 20;
 
@@ -25,8 +32,8 @@ type ReviewSelection = {
 };
 
 export default function GraphReviewCenterPage() {
-  const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const {
     currentStoryId,
     setCurrentStoryId,
@@ -54,18 +61,28 @@ export default function GraphReviewCenterPage() {
   const [graphValidateResult, setGraphValidateResult] = useState<any | null>(null);
   const [characterConsistencyResult, setCharacterConsistencyResult] = useState<any | null>(null);
   const [projectId, setProjectId] = useState(localStorage.getItem('projectId') || '');
-  const [enableLlmCheck, setEnableLlmCheck] = useState(true);
+  const [enableLlmCheck, setEnableLlmCheck] = useState(false);
   const [validationLoading, setValidationLoading] = useState(false);
+  const [backend, setBackend] = useState<string>('');
 
   useEffect(() => {
     loadStories();
+    graphService
+      .listStories()
+      .then(() =>
+        fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/graph/backend`)
+          .then((r) => r.json())
+          .then((j) => setBackend(j?.data?.backend || ''))
+          .catch(() => setBackend(''))
+      )
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (!currentStoryId && stories.length > 0) {
       setCurrentStoryId(stories[0].story_id);
     }
-  }, [stories]);
+  }, [stories, currentStoryId, setCurrentStoryId]);
 
   useEffect(() => {
     const loadQueue = async () => {
@@ -85,16 +102,13 @@ export default function GraphReviewCenterPage() {
       }
     };
     loadQueue();
-  }, [currentStoryId, statusFilter, queueOffset, refreshTick]);
+  }, [currentStoryId, statusFilter, queueOffset, refreshTick, listReviewQueueEntries]);
 
   const toggleSelection = (key: keyof ReviewSelection, index: number) => {
     setSelection((prev) => {
       const set = new Set(prev[key]);
-      if (set.has(index)) {
-        set.delete(index);
-      } else {
-        set.add(index);
-      }
+      if (set.has(index)) set.delete(index);
+      else set.add(index);
       return { ...prev, [key]: Array.from(set) };
     });
   };
@@ -122,13 +136,11 @@ export default function GraphReviewCenterPage() {
       const srcName = (rel.source_name || rel.source || '').trim().toLowerCase();
       const tgtName = (rel.target_name || rel.target || '').trim().toLowerCase();
       if (srcName && !selectedNames.has(srcName) && nodeByName.has(srcName)) {
-        const node = nodeByName.get(srcName);
-        added.push(node);
+        added.push(nodeByName.get(srcName));
         selectedNames.add(srcName);
       }
       if (tgtName && !selectedNames.has(tgtName) && nodeByName.has(tgtName)) {
-        const node = nodeByName.get(tgtName);
-        added.push(node);
+        added.push(nodeByName.get(tgtName));
         selectedNames.add(tgtName);
       }
     });
@@ -160,10 +172,9 @@ export default function GraphReviewCenterPage() {
       .filter(Boolean)
       .map(normalizeRelationshipPayload);
 
-    const allCandidateNodes = payload.nodes || [];
-    const missingDeps = ensureRelationshipDependencies(selectedNodes, selectedRels, allCandidateNodes);
+    const missingDeps = ensureRelationshipDependencies(selectedNodes, selectedRels, payload.nodes || []);
     if (missingDeps.length > 0) {
-      setDependencyNotice(`已自动补齐 ${missingDeps.length} 个关系依赖节点`);
+      setDependencyNotice(t('toolbox.graph.toast.autoFill', { count: missingDeps.length }));
       missingDeps.forEach((node) => selectedNodes.push(node));
     }
 
@@ -203,6 +214,7 @@ export default function GraphReviewCenterPage() {
 
   const handleCharacterConsistency = async () => {
     if (!projectId) return;
+    localStorage.setItem('projectId', projectId);
     setValidationLoading(true);
     try {
       const res = await graphService.checkCharacterConsistency({
@@ -216,363 +228,361 @@ export default function GraphReviewCenterPage() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
-      <MobileMenu />
-      <Sidebar />
+    <AppShell
+      title={t('toolbox.graphReview.title')}
+      subtitle={t('toolbox.graphReview.subtitle')}
+      actions={
+        <div className="flex items-center gap-2">
+          {backend && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-pearl-soft text-ink-faint font-mono">
+              {backend}
+            </span>
+          )}
+          <Link
+            to="/toolbox/graph"
+            className="inline-flex items-center gap-1 text-[11px] text-atelier-teal hover:underline"
+          >
+            <Network className="w-3.5 h-3.5" />
+            {t('toolbox.graphReview.openGraph')}
+          </Link>
+        </div>
+      }
+    >
+      <div className="h-[calc(100vh-3.5rem)] flex flex-col min-h-0">
+        {/* 工具条 */}
+        <div className="flex-shrink-0 border-b border-pearl-line px-3 py-2 bg-white/70">
+          <div className="flex flex-wrap items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-atelier-teal shrink-0" />
+            <select
+              className="rounded-md border border-pearl-line bg-pearl-soft/80 px-2 py-1 text-[11px] max-w-[180px]"
+              value={currentStoryId || ''}
+              onChange={(e) => {
+                setCurrentStoryId(e.target.value);
+                setQueueOffset(0);
+                setSelectedReview(null);
+              }}
+            >
+              <option value="" disabled>
+                {t('toolbox.graphReview.selectStory')}
+              </option>
+              {stories.map((story: any) => (
+                <option key={story.story_id} value={story.story_id}>
+                  {story.name}
+                </option>
+              ))}
+            </select>
 
-      <div
-        className={`flex flex-col flex-1 transition-all duration-300 ${
-          !sidebarOpen ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-80'
-        }`}
-      >
-        <Header />
-        <StatusBar />
-
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="border-b border-gray-200 bg-white">
-            <div className="max-w-7xl mx-auto px-6 py-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
-                    <ClipboardCheck className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">审核中心</h1>
-                    <p className="text-sm text-gray-500 mt-1">统一处理抽取队列中的低置信度条目</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleGraphValidate}
-                    disabled={!currentStoryId || validationLoading}
-                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    图谱自动校验
-                  </button>
-                  <button
-                    onClick={handleCharacterConsistency}
-                    disabled={!projectId || validationLoading}
-                    className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-800 disabled:opacity-50"
-                  >
-                    人物一致性检测
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  value={currentStoryId || ''}
-                  onChange={(e) => {
-                    setCurrentStoryId(e.target.value);
+            <div className="flex items-center gap-0.5">
+              {(['pending', 'approved', 'rejected', 'all'] as ReviewStatus[]).map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={clsx(
+                    'px-2 py-0.5 text-[10px] rounded font-medium transition-colors',
+                    statusFilter === status
+                      ? 'bg-atelier-teal text-white'
+                      : 'bg-pearl-soft text-ink-muted hover:text-atelier-teal'
+                  )}
+                  onClick={() => {
+                    setStatusFilter(status);
                     setQueueOffset(0);
                     setSelectedReview(null);
                   }}
                 >
-                  <option value="" disabled>
-                    选择故事
-                  </option>
-                  {stories.map((story: any) => (
-                    <option key={story.story_id} value={story.story_id}>
-                      {story.name}
-                    </option>
-                  ))}
-                </select>
+                  {status === 'pending'
+                    ? t('toolbox.graphReview.status.pending')
+                    : status === 'approved'
+                      ? t('toolbox.graphReview.status.approved')
+                      : status === 'rejected'
+                        ? t('toolbox.graphReview.status.rejected')
+                        : t('toolbox.graphReview.status.all')}
+                </button>
+              ))}
+            </div>
 
-                <div className="flex items-center gap-2">
-                  {(['pending', 'approved', 'rejected', 'all'] as ReviewStatus[]).map((status) => (
-                    <button
-                      key={status}
-                      className={`px-3 py-1.5 text-xs rounded-full border ${
-                        statusFilter === status
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-white text-gray-500 border-gray-200'
-                      }`}
-                      onClick={() => {
-                        setStatusFilter(status);
-                        setQueueOffset(0);
-                        setSelectedReview(null);
-                      }}
-                    >
-                      {status === 'pending'
-                        ? '待审'
-                        : status === 'approved'
-                        ? '已审'
-                        : status === 'rejected'
-                        ? '已拒绝'
-                        : '全部'}
-                    </button>
-                  ))}
-                </div>
+            <button
+              type="button"
+              onClick={() => setRefreshTick((t) => t + 1)}
+              className="p-1 rounded border border-pearl-line text-ink-faint hover:text-atelier-teal"
+              title={t('toolbox.refresh')}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
 
-                <div className="ml-auto flex items-center gap-2 text-xs text-gray-500">
-                  <span>
-                    共 {queueTotal} 条 · 第 {currentPage} / {totalPages} 页
-                  </span>
-                  <button
-                    className="p-1 border border-gray-200 rounded"
-                    onClick={() => setQueueOffset(Math.max(0, queueOffset - PAGE_SIZE))}
-                    disabled={queueOffset === 0}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    className="p-1 border border-gray-200 rounded"
-                    onClick={() => setQueueOffset(Math.min(queueOffset + PAGE_SIZE, (totalPages - 1) * PAGE_SIZE))}
-                    disabled={queueOffset + PAGE_SIZE >= queueTotal}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-                <input
-                  type="text"
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  placeholder="项目ID（人物一致性检测）"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                />
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={enableLlmCheck}
-                    onChange={(e) => setEnableLlmCheck(e.target.checked)}
-                  />
-                  启用动机一致性（LLM）
-                </label>
-                <div className="text-xs text-gray-500 flex items-center">
-                  {validationLoading ? '检测中...' : '准备就绪'}
-                </div>
-              </div>
+            <div className="ml-auto flex items-center gap-1.5 text-[10px] text-ink-faint">
+              <span>
+                {t('toolbox.graphReview.queueCount', { count: queueTotal, page: currentPage, total: totalPages })}
+              </span>
+              <button
+                type="button"
+                className="p-0.5 border border-pearl-line rounded disabled:opacity-40"
+                onClick={() => setQueueOffset(Math.max(0, queueOffset - PAGE_SIZE))}
+                disabled={queueOffset === 0}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                className="p-0.5 border border-pearl-line rounded disabled:opacity-40"
+                onClick={() =>
+                  setQueueOffset(Math.min(queueOffset + PAGE_SIZE, (totalPages - 1) * PAGE_SIZE))
+                }
+                disabled={queueOffset + PAGE_SIZE >= queueTotal}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          <div className="flex flex-1 overflow-hidden">
-            <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
-              {queueLoading && (
-                <div className="p-4 text-sm text-gray-500">加载中...</div>
-              )}
-              {!queueLoading && !currentStoryId && (
-                <div className="p-4 text-sm text-gray-500">请先选择故事</div>
-              )}
-              {!queueLoading && queueItems.length === 0 && (
-                <div className="p-4 text-sm text-gray-500">暂无审核条目</div>
-              )}
-              <div className="divide-y divide-gray-200">
-                {queueItems.map((item) => (
-                  <button
-                    key={item.review_id}
-                    onClick={() => openReview(item)}
-                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 ${
-                      selectedReview?.review_id === item.review_id ? 'bg-emerald-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-gray-900">
-                        {item.review_id?.slice(0, 8)}
-                      </span>
-                      <span className="text-xs text-gray-500">{item.status}</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      节点 {item.nodes_count || 0} · 情节 {item.plot_nodes_count || 0} · 关系 {item.relationships_count || 0}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              <div className="p-6 border-b border-gray-200 bg-gray-50">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-xl p-4 bg-white">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-semibold text-gray-900">图谱冲突详情</span>
-                    </div>
-                    {!graphValidateResult ? (
-                      <div className="text-xs text-gray-500">暂无校验结果</div>
-                    ) : (graphValidateResult.issues || []).length === 0 ? (
-                      <div className="text-xs text-emerald-600 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> 未发现冲突
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {graphValidateResult.issues.map((issue: any, idx: number) => (
-                          <button
-                            key={`${issue.message || issue}-${idx}`}
-                            className="text-left text-xs text-gray-700 border border-gray-100 rounded-lg p-2 hover:bg-gray-50"
-                            onClick={() => {
-                              const focus = issue.source_id || issue.target_id || (issue.nodes && issue.nodes[0]);
-                              if (currentStoryId) {
-                                navigate(`/graph?story_id=${currentStoryId}${focus ? `&focus_node=${focus}` : ''}`);
-                              }
-                            }}
-                          >
-                            {issue.message || issue}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border border-gray-200 rounded-xl p-4 bg-white">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-indigo-500" />
-                      <span className="text-sm font-semibold text-gray-900">人物一致性详情</span>
-                    </div>
-                    {!characterConsistencyResult ? (
-                      <div className="text-xs text-gray-500">暂无检测结果</div>
-                    ) : (characterConsistencyResult.issues || []).length === 0 ? (
-                      <div className="text-xs text-emerald-600 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> 未发现明显问题
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {characterConsistencyResult.issues.map((issue: string, idx: number) => (
-                          <button
-                            key={`${issue}-${idx}`}
-                            className="text-left text-xs text-gray-700 border border-gray-100 rounded-lg p-2 hover:bg-gray-50"
-                            onClick={() => {
-                              if (currentStoryId) {
-                                navigate(`/graph?story_id=${currentStoryId}`);
-                              }
-                            }}
-                          >
-                            {issue}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {characterConsistencyResult?.llm_motivation && (
-                      <div className="mt-3 border-t border-gray-100 pt-2">
-                        <div className="text-xs text-gray-500">动机一致性（LLM）</div>
-                        <div className="text-xs text-gray-700 mt-1">
-                          {characterConsistencyResult.llm_motivation.summary || '无摘要'}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          评分: {characterConsistencyResult.llm_motivation.score ?? '-'}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              {!selectedReview && (
-                <div className="p-6 text-sm text-gray-500">请选择左侧审核条目查看详情</div>
-              )}
-              {selectedReview && (
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">审核详情</h3>
-                      <p className="text-xs text-gray-500 mt-1">审核ID：{selectedReview.review_id}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-600"
-                        onClick={handleReject}
-                      >
-                        拒绝
-                      </button>
-                      <button
-                        className="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white"
-                        onClick={handleApprove}
-                      >
-                        确认入库
-                      </button>
-                    </div>
-                  </div>
-
-                  {dependencyNotice && (
-                    <div className="text-xs text-amber-600">{dependencyNotice}</div>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-xs font-medium text-gray-500 mb-2">节点</div>
-                      <div className="space-y-2">
-                        {(selectedReview.payload?.nodes || []).map((item: any, idx: number) => (
-                          <label key={`node-${idx}`} className="flex items-start gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={selection.nodes.includes(idx)}
-                              onChange={() => toggleSelection('nodes', idx)}
-                            />
-                            <span>
-                              <span className="font-medium">{item.name}</span> ({item.type})
-                              {item.confidence !== undefined ? ` · 置信度 ${item.confidence}` : ''}
-                            </span>
-                          </label>
-                        ))}
-                        {(selectedReview.payload?.nodes || []).length === 0 && (
-                          <div className="text-xs text-gray-500">无节点</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-medium text-gray-500 mb-2">情节节点</div>
-                      <div className="space-y-2">
-                        {(selectedReview.payload?.plot_nodes || []).map((item: any, idx: number) => (
-                          <label key={`plot-${idx}`} className="flex items-start gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={selection.plot_nodes.includes(idx)}
-                              onChange={() => toggleSelection('plot_nodes', idx)}
-                            />
-                            <span>
-                              <span className="font-medium">{item.title}</span>
-                              {item.confidence !== undefined ? ` · 置信度 ${item.confidence}` : ''}
-                            </span>
-                          </label>
-                        ))}
-                        {(selectedReview.payload?.plot_nodes || []).length === 0 && (
-                          <div className="text-xs text-gray-500">无情节节点</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="text-xs font-medium text-gray-500 mb-2">关系</div>
-                      <div className="space-y-2">
-                        {(selectedReview.payload?.relationships || []).map((item: any, idx: number) => (
-                          <label key={`rel-${idx}`} className="flex items-start gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={selection.relationships.includes(idx)}
-                              onChange={() => toggleSelection('relationships', idx)}
-                            />
-                            <span>
-                              <span className="font-medium">
-                                {item.source} → {item.target}
-                              </span>{' '}
-                              ({item.type})
-                              {item.confidence !== undefined ? ` · 置信度 ${item.confidence}` : ''}
-                            </span>
-                          </label>
-                        ))}
-                        {(selectedReview.payload?.relationships || []).length === 0 && (
-                          <div className="text-xs text-gray-500">无关系</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {(selectedReview.payload?.validation_issues || []).length > 0 && (
-                    <div className="text-xs text-amber-600">
-                      校验提示：{selectedReview.payload.validation_issues.join('；')}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGraphValidate}
+              disabled={!currentStoryId || validationLoading}
+              className="px-2 py-1 text-[10px] rounded-md border border-pearl-line hover:border-atelier-teal disabled:opacity-50"
+            >
+              {t('toolbox.graphReview.graphValidate')}
+            </button>
+            <input
+              type="text"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder={t('toolbox.graphReview.projectIdPh')}
+              className="w-40 px-2 py-1 text-[10px] rounded-md border border-pearl-line bg-pearl-soft/60"
+            />
+            <label className="flex items-center gap-1 text-[10px] text-ink-muted">
+              <input
+                type="checkbox"
+                checked={enableLlmCheck}
+                onChange={(e) => setEnableLlmCheck(e.target.checked)}
+                className="rounded"
+              />
+              {t('toolbox.graphReview.aiMotivation')}
+            </label>
+            <button
+              type="button"
+              onClick={handleCharacterConsistency}
+              disabled={!projectId || validationLoading}
+              className="px-2 py-1 text-[10px] rounded-md bg-ink text-white disabled:opacity-50"
+            >
+              {t('toolbox.graphReview.characterConsistency')}
+            </button>
+            {validationLoading && <span className="text-[10px] text-ink-faint">{t('toolbox.graphReview.detecting')}</span>}
           </div>
         </div>
-      </div>
 
-      <SettingsModal />
-    </div>
+        {/* 三栏：队列 | 详情 | 校验结果 */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[220px_1fr_240px]">
+          {/* 队列 */}
+          <aside className="border-r border-pearl-line overflow-y-auto bg-white/40">
+            {queueLoading && <p className="p-3 text-[11px] text-ink-faint">{t('toolbox.graphReview.loading')}</p>}
+            {!queueLoading && !currentStoryId && (
+              <p className="p-3 text-[11px] text-ink-faint">{t('toolbox.graphReview.selectStoryFirst')}</p>
+            )}
+            {!queueLoading && currentStoryId && queueItems.length === 0 && (
+              <p className="p-3 text-[11px] text-ink-faint">{t('toolbox.graphReview.noQueue')}</p>
+            )}
+            <ul className="divide-y divide-pearl-line/80">
+              {queueItems.map((item) => (
+                <li key={item.review_id}>
+                  <button
+                    type="button"
+                    onClick={() => openReview(item)}
+                    className={clsx(
+                      'w-full text-left px-2.5 py-2 hover:bg-pearl-soft/80 transition-colors',
+                      selectedReview?.review_id === item.review_id && 'bg-atelier-teal-soft/50'
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <code className="text-[10px] font-mono text-ink truncate">
+                        {item.review_id?.slice(0, 10)}
+                      </code>
+                      <span className="text-[9px] text-ink-faint shrink-0">{item.status}</span>
+                    </div>
+                    <p className="text-[10px] text-ink-muted mt-0.5">
+                      {t('toolbox.graphReview.nodeLine', { nodes: item.nodes_count || 0, plots: item.plot_nodes_count || 0, relations: item.relationships_count || 0 })}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </aside>
+
+          {/* 详情 */}
+          <main className="overflow-y-auto min-w-0 bg-white/30">
+            {!selectedReview ? (
+              <div className="h-full flex items-center justify-center px-4 text-center">
+                <div>
+                  <ClipboardCheck className="w-8 h-8 text-ink-faint mx-auto mb-2 opacity-50" />
+                  <p className="text-[12px] text-ink-muted">{t('toolbox.graphReview.selectLeft')}</p>
+                  <p className="text-[10px] text-ink-faint mt-1">
+                    {t('toolbox.graphReview.sampleHint')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-ink">{t('toolbox.graphReview.detail')}</h3>
+                    <p className="text-[10px] text-ink-faint font-mono mt-0.5">
+                      {selectedReview.review_id}
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      className="px-2.5 py-1 text-[11px] rounded-md border border-pearl-line text-ink-muted"
+                      onClick={handleReject}
+                    >
+                      {t('toolbox.graphReview.reject')}
+                    </button>
+                    <button
+                      type="button"
+                      className="px-2.5 py-1 text-[11px] rounded-md bg-atelier-teal text-white"
+                      onClick={handleApprove}
+                    >
+                      {t('toolbox.graphReview.confirmCommit')}
+                    </button>
+                  </div>
+                </div>
+
+                {dependencyNotice && (
+                  <p className="text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded">
+                    {dependencyNotice}
+                  </p>
+                )}
+
+                <div className="grid sm:grid-cols-3 gap-2">
+                  {(
+                    [
+                      ['nodes', t('toolbox.graphReview.nodes'), 'name', 'type'],
+                      ['plot_nodes', t('toolbox.graphReview.plot'), 'title', ''],
+                      ['relationships', t('toolbox.graphReview.relations'), 'source', 'target'],
+                    ] as const
+                  ).map(([key, label, a, b]) => (
+                    <div
+                      key={key}
+                      className="rounded-lg border border-pearl-line bg-white/80 p-2 min-h-[120px]"
+                    >
+                      <div className="text-[9px] uppercase tracking-wider text-ink-faint mb-1.5">
+                        {label}
+                      </div>
+                      <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                        {(selectedReview.payload?.[key] || []).map((item: any, idx: number) => (
+                          <label
+                            key={`${key}-${idx}`}
+                            className="flex items-start gap-1.5 text-[11px] text-ink"
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-0.5"
+                              checked={(selection as any)[key].includes(idx)}
+                              onChange={() => toggleSelection(key as keyof ReviewSelection, idx)}
+                            />
+                            <span className="leading-snug">
+                              {key === 'relationships' ? (
+                                <>
+                                  <span className="font-medium">
+                                    {item.source} → {item.target}
+                                  </span>{' '}
+                                  <span className="text-ink-faint">({item.type})</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="font-medium">{item[a]}</span>
+                                  {b && item[b] ? (
+                                    <span className="text-ink-faint"> ({item[b]})</span>
+                                  ) : null}
+                                </>
+                              )}
+                              {item.confidence !== undefined && (
+                                <span className="text-ink-faint"> · {item.confidence}</span>
+                              )}
+                            </span>
+                          </label>
+                        ))}
+                        {(selectedReview.payload?.[key] || []).length === 0 && (
+                          <p className="text-[10px] text-ink-faint">{t('toolbox.graphReview.none')}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {(selectedReview.payload?.validation_issues || []).length > 0 && (
+                  <div className="text-[10px] text-amber-800 bg-amber-50/80 border border-amber-100 rounded-md px-2 py-1.5">
+                    {(selectedReview.payload.validation_issues as string[]).join('；')}
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+
+          {/* 校验侧栏 */}
+          <aside className="border-l border-pearl-line overflow-y-auto bg-pearl-soft/30 p-2.5 space-y-2.5 hidden lg:block">
+            <section className="rounded-lg border border-pearl-line bg-white/90 p-2.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[11px] font-semibold text-ink">{t('toolbox.graphReview.graphConflict')}</span>
+              </div>
+              {!graphValidateResult ? (
+                <p className="text-[10px] text-ink-faint">{t('toolbox.graphReview.runValidate')}</p>
+              ) : (graphValidateResult.issues || []).length === 0 ? (
+                <p className="text-[10px] text-emerald-700 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {t('toolbox.graphReview.noConflict')}
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {(graphValidateResult.issues || []).map((issue: any, idx: number) => (
+                    <li key={idx}>
+                      <button
+                        type="button"
+                        className="text-left text-[10px] text-ink-muted hover:text-atelier-teal w-full"
+                        onClick={() => {
+                          const focus =
+                            issue.source_id || issue.target_id || (issue.nodes && issue.nodes[0]);
+                          if (currentStoryId) {
+                            navigate(
+                              `/toolbox/graph?story_id=${currentStoryId}${
+                                focus ? `&focus_node=${focus}` : ''
+                              }`
+                            );
+                          }
+                        }}
+                      >
+                        {issue.message || String(issue)}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-pearl-line bg-white/90 p-2.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-atelier-teal" />
+                <span className="text-[11px] font-semibold text-ink">{t('toolbox.graphReview.characterConsistency')}</span>
+              </div>
+              {!characterConsistencyResult ? (
+                <p className="text-[10px] text-ink-faint">{t('toolbox.graphReview.enterProjectId')}</p>
+              ) : (characterConsistencyResult.issues || []).length === 0 ? (
+                <p className="text-[10px] text-emerald-700 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {t('toolbox.graphReview.noIssue')}
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {(characterConsistencyResult.issues || []).map((issue: string, idx: number) => (
+                    <li key={idx} className="text-[10px] text-ink-muted">
+                      {issue}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </aside>
+        </div>
+      </div>
+    </AppShell>
   );
 }

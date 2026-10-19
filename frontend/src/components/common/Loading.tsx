@@ -3,6 +3,8 @@
  * 提供多种加载动画效果
  */
 
+import { translate } from '@/i18n';
+
 interface LoadingProps {
   /** 加载类型 */
   type?: 'dots' | 'bars' | 'pulse' | 'spinner' | 'bounce' | 'shimmer';
@@ -194,7 +196,7 @@ export function InlineLoader({ size = 'sm' }: { size?: 'sm' | 'md' }) {
 /**
  * 按钮加载状态
  */
-export function ButtonLoader({ text = '加载中...' }: { text?: string }) {
+export function ButtonLoader({ text = translate('ui.loading') }: { text?: string }) {
   return (
     <div className="flex items-center gap-2">
       <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />

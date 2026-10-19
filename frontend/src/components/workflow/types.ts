@@ -28,6 +28,7 @@ export enum WorkflowNodeType {
 // ==================== 自定义节点数据 ====================
 
 export interface WorkflowNodeData {
+  [key: string]: unknown;
   id: string;
   label: string;
   description: string;

@@ -202,10 +202,11 @@ class WorkflowService {
     status: string;
     message: string;
   }> {
-    return api.post<{
+    const response = await api.post<{
       success: boolean;
       data: { execution_id: string; status: string; message: string };
     }>(`${this.basePath}/executions/${executionId}/retry`, {});
+    return response.data;
   }
 
   /**

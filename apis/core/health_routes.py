@@ -44,12 +44,10 @@ async def health_check():
         jwt_ok, jwt_msg = validate_jwt_config()
         services["jwt"] = "ok" if jwt_ok else "error"
 
-        # 数据库连接检查（简化版）
+        # 数据库连接检查
         try:
-            from utils.storage_manager import get_storage
-            storage = get_storage()
-            await storage.ping()
-            services["database"] = "ok"
+            from utils.database_client import test_connection
+            services["database"] = "ok" if await test_connection() else "error"
         except Exception:
             services["database"] = "error"
 

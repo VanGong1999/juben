@@ -13,7 +13,7 @@ from datetime import datetime
 import aiofiles
 import logging
 
-from apis.core.schemas import (
+from utils.project_types import (
     Project,
     ProjectFile,
     ProjectStatus,

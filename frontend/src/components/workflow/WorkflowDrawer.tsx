@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { X, Copy, Download, ChevronDown, ChevronUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import { NodeStatus, NodeDetails } from './types';
+import { useI18n } from '@/i18n';
 
 interface WorkflowDrawerProps {
   isOpen: boolean;
@@ -15,7 +16,17 @@ interface WorkflowDrawerProps {
 }
 
 // 状态标签组件
+const STATUS_LABEL_KEYS: Record<NodeStatus, string> = {
+  [NodeStatus.IDLE]: 'chatGraph.workflow.status.idle',
+  [NodeStatus.WAITING]: 'chatGraph.workflow.status.waiting',
+  [NodeStatus.PROCESSING]: 'chatGraph.workflow.status.processing',
+  [NodeStatus.SUCCESS]: 'chatGraph.workflow.status.success',
+  [NodeStatus.FAILED]: 'chatGraph.workflow.status.failed',
+  [NodeStatus.SKIPPED]: 'chatGraph.workflow.status.skipped',
+};
+
 const StatusBadge: React.FC<{ status: NodeStatus }> = ({ status }) => {
+  const { t } = useI18n();
   const styles = {
     [NodeStatus.IDLE]: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
     [NodeStatus.WAITING]: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
@@ -27,7 +38,7 @@ const StatusBadge: React.FC<{ status: NodeStatus }> = ({ status }) => {
 
   return (
     <span className={clsx('px-2 py-1 rounded-md text-xs font-medium', styles[status])}>
-      {status}
+      {t(STATUS_LABEL_KEYS[status])}
     </span>
   );
 };
@@ -60,6 +71,7 @@ const CollapsibleSection: React.FC<{
 
 // JSON 代码显示组件
 const CodeBlock: React.FC<{ code: any; language?: string }> = ({ code, language = 'json' }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -79,7 +91,7 @@ const CodeBlock: React.FC<{ code: any; language?: string }> = ({ code, language 
       <button
         onClick={handleCopy}
         className="absolute top-2 right-2 p-2 bg-gray-700 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-        title="复制"
+        title={t('studio.copy')}
       >
         {copied ? (
           <Check className="w-4 h-4 text-green-400" />
@@ -107,6 +119,7 @@ export const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
   onClose,
   details
 }) => {
+  const { t } = useI18n();
   if (!isOpen || !details) return null;
 
   return (
@@ -127,7 +140,7 @@ export const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
                 {details.label}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                节点 ID: {details.nodeId}
+                {t('chatGraph.workflow.nodeId')} {details.nodeId}
               </p>
             </div>
             <button
@@ -148,21 +161,21 @@ export const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         <div className="px-6 py-4 space-y-4">
           {/* 执行信息 */}
           {(details.duration !== undefined || details.error) && (
-            <CollapsibleSection title="执行信息">
+            <CollapsibleSection title={t('chatGraph.workflow.execInfo')}>
               <dl className="space-y-2 text-sm">
                 {details.duration !== undefined && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-500 dark:text-gray-400">执行时长:</dt>
+                    <dt className="text-gray-500 dark:text-gray-400">{t('chatGraph.workflow.duration')}</dt>
                     <dd className="text-gray-900 dark:text-white font-medium">
                       {details.duration > 1000
-                        ? `${(details.duration / 1000).toFixed(2)}秒`
-                        : `${details.duration}毫秒`}
+                        ? t('chatGraph.workflow.seconds', { n: (details.duration / 1000).toFixed(2) })
+                        : t('chatGraph.workflow.milliseconds', { n: details.duration })}
                     </dd>
                   </div>
                 )}
                 {details.error && (
                   <div className="flex flex-col gap-1">
-                    <dt className="text-gray-500 dark:text-gray-400">错误信息:</dt>
+                    <dt className="text-gray-500 dark:text-gray-400">{t('chatGraph.workflow.errorInfo')}</dt>
                     <dd className="text-red-600 dark:text-red-400 font-medium">
                       {details.error}
                     </dd>
@@ -174,28 +187,28 @@ export const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
 
           {/* 输入数据 */}
           {details.input && (
-            <CollapsibleSection title="输入数据">
+            <CollapsibleSection title={t('chatGraph.workflow.inputData')}>
               <CodeBlock code={details.input} />
             </CollapsibleSection>
           )}
 
           {/* 输出数据 */}
           {details.output && (
-            <CollapsibleSection title="输出数据">
+            <CollapsibleSection title={t('chatGraph.workflow.outputData')}>
               <CodeBlock code={details.output} />
             </CollapsibleSection>
           )}
 
           {/* 中间变量 */}
           {details.intermediateVariables && Object.keys(details.intermediateVariables).length > 0 && (
-            <CollapsibleSection title="中间变量">
+            <CollapsibleSection title={t('chatGraph.workflow.intermediateVars')}>
               <CodeBlock code={details.intermediateVariables} />
             </CollapsibleSection>
           )}
 
           {/* 执行日志 */}
           {details.logs && details.logs.length > 0 && (
-            <CollapsibleSection title="执行日志" defaultOpen={false}>
+            <CollapsibleSection title={t('chatGraph.workflow.execLogs')} defaultOpen={false}>
               <div className="space-y-1">
                 {details.logs.map((log, index) => (
                   <div
@@ -214,10 +227,10 @@ export const WorkflowDrawer: React.FC<WorkflowDrawerProps> = ({
         <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex gap-3">
             <button className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-              导出详情
+              {t('chatGraph.workflow.exportDetail')}
             </button>
             <button className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors">
-              查看日志
+              {t('chatGraph.workflow.viewLogs')}
             </button>
           </div>
         </div>

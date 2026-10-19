@@ -25,6 +25,7 @@ import {
   Loader2
 } from 'lucide-react';
 import api from '@/services/api';
+import { useI18n } from '@/i18n';
 
 type TestStatus = 'idle' | 'running' | 'completed' | 'error';
 type IssueSeverity = 'critical' | 'warning' | 'info';
@@ -46,6 +47,7 @@ interface TestResult {
 }
 
 export default function QualityControlPage() {
+  const { t } = useI18n();
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const navigate = useNavigate();
 
@@ -57,7 +59,7 @@ export default function QualityControlPage() {
   // 运行稳定性测试
   const runStabilityTest = async () => {
     if (!testContent.trim()) {
-      alert('请输入测试内容');
+      alert(t('admin.quality.inputRequired'));
       return;
     }
 
@@ -75,7 +77,7 @@ export default function QualityControlPage() {
           status: result.data?.score >= 80 ? 'pass' : result.data?.score >= 60 ? 'warning' : 'fail',
           score: result.data?.score || 0,
           issues: result.data?.issues || [],
-          summary: result.data?.summary || '测试完成'
+          summary: result.data?.summary || t('admin.quality.testDone')
         }
       }));
       setTestStatus(prev => ({ ...prev, stability: 'completed' }));
@@ -88,7 +90,7 @@ export default function QualityControlPage() {
   // 运行图验证
   const runGraphValidation = async () => {
     if (!testContent.trim()) {
-      alert('请输入测试内容');
+      alert(t('admin.quality.inputRequired'));
       return;
     }
 
@@ -105,7 +107,7 @@ export default function QualityControlPage() {
           status: result.data?.valid ? 'pass' : 'fail',
           score: result.data?.validity_score || 0,
           issues: result.data?.issues || [],
-          summary: result.data?.summary || '验证完成'
+          summary: result.data?.summary || t('admin.quality.validationDone')
         }
       }));
       setTestStatus(prev => ({ ...prev, graph: 'completed' }));
@@ -118,7 +120,7 @@ export default function QualityControlPage() {
   // 运行角色一致性检查
   const runCharacterConsistency = async () => {
     if (!testContent.trim()) {
-      alert('请输入测试内容');
+      alert(t('admin.quality.inputRequired'));
       return;
     }
 
@@ -135,7 +137,7 @@ export default function QualityControlPage() {
           status: result.data?.consistency_score >= 80 ? 'pass' : result.data?.consistency_score >= 60 ? 'warning' : 'fail',
           score: result.data?.consistency_score || 0,
           issues: result.data?.inconsistencies || [],
-          summary: result.data?.summary || '检查完成'
+          summary: result.data?.summary || t('admin.quality.checkDone')
         }
       }));
       setTestStatus(prev => ({ ...prev, character: 'completed' }));
@@ -148,7 +150,7 @@ export default function QualityControlPage() {
   // 运行所有测试
   const runAllTests = async () => {
     if (!testContent.trim()) {
-      alert('请输入测试内容');
+      alert(t('admin.quality.inputRequired'));
       return;
     }
 
@@ -199,22 +201,22 @@ export default function QualityControlPage() {
   const tests = [
     {
       id: 'stability',
-      name: '稳定性测试',
-      description: '检测剧情逻辑稳定性和连贯性',
+      name: t('admin.quality.stabilityTest'),
+      description: t('admin.quality.stabilityDesc'),
       icon: <Activity className="w-6 h-6" />,
       run: runStabilityTest
     },
     {
       id: 'graph',
-      name: '图验证',
-      description: '验证角色关系图和情节结构的正确性',
+      name: t('admin.quality.graphValidation'),
+      description: t('admin.quality.graphDesc'),
       icon: <Network className="w-6 h-6" />,
       run: runGraphValidation
     },
     {
       id: 'character',
-      name: '角色一致性',
-      description: '检查角色行为和性格的一致性',
+      name: t('admin.quality.characterConsistency'),
+      description: t('admin.quality.characterDesc'),
       icon: <Users className="w-6 h-6" />,
       run: runCharacterConsistency
     }
@@ -242,9 +244,9 @@ export default function QualityControlPage() {
                   <Shield className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">质量控制</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{t('admin.quality.title')}</h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    检测剧本质量问题和一致性问题
+                    {t('admin.quality.subtitle')}
                   </p>
                 </div>
               </div>
@@ -256,17 +258,17 @@ export default function QualityControlPage() {
             <div className="max-w-7xl mx-auto">
               {/* 输入区域 */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">测试内容</h2>
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('admin.quality.testContent')}</h2>
                 <textarea
                   value={testContent}
                   onChange={(e) => setTestContent(e.target.value)}
-                  placeholder="输入要测试的剧本内容、角色关系图数据或情节描述..."
+                  placeholder={t('admin.quality.testPlaceholder')}
                   className="w-full h-48 p-4 border border-gray-200 rounded-lg focus:outline-none focus:border-black resize-none font-mono text-sm"
                 />
 
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-gray-500">
-                    {testContent.length} 字符
+                    {t('admin.quality.chars', { count: testContent.length })}
                   </p>
 
                   <div className="flex items-center gap-3">
@@ -274,7 +276,7 @@ export default function QualityControlPage() {
                       onClick={() => setTestContent('')}
                       className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                     >
-                      清空
+                      {t('admin.quality.clear')}
                     </button>
                     <button
                       onClick={runAllTests}
@@ -282,7 +284,7 @@ export default function QualityControlPage() {
                       className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                     >
                       <Play className="w-4 h-4" />
-                      <span>运行全部测试</span>
+                      <span>{t('admin.quality.runAll')}</span>
                     </button>
                   </div>
                 </div>
@@ -314,7 +316,7 @@ export default function QualityControlPage() {
                       disabled={!testContent.trim() || testStatus[test.id] === 'running'}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors text-sm"
                     >
-                      {testStatus[test.id] === 'running' ? '运行中...' : '运行测试'}
+                      {testStatus[test.id] === 'running' ? t('admin.quality.running') : t('admin.quality.runTest')}
                     </button>
 
                     {testResults[test.id] && (
@@ -331,8 +333,8 @@ export default function QualityControlPage() {
                             testResults[test.id].score >= 60 ? 'bg-orange-100 text-orange-700' :
                             'bg-red-100 text-red-700'
                           }`}>
-                            {testResults[test.id].score >= 80 ? '通过' :
-                             testResults[test.id].score >= 60 ? '警告' : '未通过'}
+                            {testResults[test.id].score >= 80 ? t('admin.quality.pass') :
+                             testResults[test.id].score >= 60 ? t('admin.quality.warning') : t('admin.quality.fail')}
                           </span>
                         </div>
                       </div>
@@ -344,7 +346,7 @@ export default function QualityControlPage() {
               {/* 测试结果详情 */}
               {Object.keys(testResults).length > 0 && (
                 <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-gray-900">测试结果详情</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('admin.quality.resultDetail')}</h2>
 
                   {Object.entries(testResults).map(([testId, result]) => (
                     <div key={testId} className="bg-white border border-gray-200 rounded-xl p-6">
@@ -365,7 +367,7 @@ export default function QualityControlPage() {
                       {result.issues.length > 0 ? (
                         <div className="space-y-3">
                           <h4 className="text-sm font-medium text-gray-700">
-                            发现 {result.issues.length} 个问题
+                            {t('admin.quality.issuesFound', { count: result.issues.length })}
                           </h4>
 
                           {result.issues.map((issue, idx) => (
@@ -382,13 +384,13 @@ export default function QualityControlPage() {
 
                               {issue.location && (
                                 <p className="text-sm mb-2">
-                                  <span className="font-medium">位置:</span> {issue.location}
+                                  <span className="font-medium">{t('admin.quality.location')}</span> {issue.location}
                                 </p>
                               )}
 
                               {issue.suggestion && (
                                 <p className="text-sm">
-                                  <span className="font-medium">建议:</span> {issue.suggestion}
+                                  <span className="font-medium">{t('admin.quality.suggestion')}</span> {issue.suggestion}
                                 </p>
                               )}
                             </div>
@@ -397,7 +399,7 @@ export default function QualityControlPage() {
                       ) : (
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <p className="text-sm text-green-700">
-                            未发现问题，内容质量良好！
+                            {t('admin.quality.noIssue')}
                           </p>
                         </div>
                       )}

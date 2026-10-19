@@ -1,6 +1,12 @@
 """
 智能上下文压缩系统
- 架构的上下文压缩机制，实现"AI为自己写会议纪要"的功能
+架构的上下文压缩机制，实现"AI为自己写会议纪要"的功能
+
+⚠️ 新路径请优先使用 utils.agent_infra.cache_compaction（prompt-cache 友好）：
+  - 保留 recent tail，摘要落在 dynamic 区
+  - self-compact：延伸已缓存请求写摘要（Pi）
+  - cache-ttl pruning（OpenClaw）
+本模块保留兼容。
 """
 import os
 import json
@@ -70,7 +76,7 @@ class ContextSummary:
 class ContextCompactor:
     """智能上下文压缩器"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """
         初始化上下文压缩器
         

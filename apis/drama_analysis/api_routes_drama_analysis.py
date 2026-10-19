@@ -7,13 +7,9 @@ from typing import Optional, Dict, Any, List
 import asyncio
 from datetime import datetime
 
-from agents.drama_workflow_agent import DramaWorkflowAgent
-from agents.drama_analysis_agent import DramaAnalysisAgent
-from agents.text_truncator_agent import TextTruncatorAgent
-from agents.text_splitter_agent import TextSplitterAgent
-from agents.result_integrator_agent import ResultIntegratorAgent
 from utils.logger import JubenLogger
 from utils.agent_dispatch import build_agent_generator
+from utils.agent_runtime import load_agent
 
 router = APIRouter(prefix="/drama-analysis", tags=["情节点戏剧功能分析"])
 logger = JubenLogger("drama_analysis_api")
@@ -63,7 +59,7 @@ async def drama_analysis_workflow(request: DramaAnalysisRequest):
     4. 结果整合
     """
     try:
-        agent = DramaWorkflowAgent()
+        agent = load_agent("drama_workflow")
         
         request_data = {
             "text": request.text,
@@ -97,7 +93,7 @@ async def drama_analysis(request: DramaAnalysisRequest):
     单个文本的情节点分析
     """
     try:
-        agent = DramaAnalysisAgent()
+        agent = load_agent("drama_analysis")
         
         request_data = {
             "text": request.text,
@@ -131,7 +127,7 @@ async def text_truncator(request: TextTruncatorRequest):
     文本截断工具
     """
     try:
-        agent = TextTruncatorAgent()
+        agent = load_agent("text_truncator")
         
         request_data = {
             "text": request.text,
@@ -166,7 +162,7 @@ async def text_splitter(request: TextSplitterRequest):
     文本分割工具
     """
     try:
-        agent = TextSplitterAgent()
+        agent = load_agent("text_splitter")
         
         request_data = {
             "text": request.text,
@@ -201,7 +197,7 @@ async def result_integrator(request: ResultIntegratorRequest):
     结果整合工具
     """
     try:
-        agent = ResultIntegratorAgent()
+        agent = load_agent("result_integrator")
         
         request_data = {
             "results": request.results,

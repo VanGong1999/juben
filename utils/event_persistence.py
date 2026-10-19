@@ -249,7 +249,7 @@ class EventPersistenceManager:
 
             # 使用PostgreSQL删除
             rows = await fetch_all(
-                f\"DELETE FROM {self.table_name} WHERE created_at < $1 RETURNING id\",
+                f"DELETE FROM {self.table_name} WHERE created_at < $1 RETURNING id",
                 cutoff_date.isoformat(),
             )
             return len(rows)

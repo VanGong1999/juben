@@ -1,197 +1,138 @@
 /**
- * 登录页面
+ * 登录 — Atelier Cinema
  */
 
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useNotificationStore } from '@/store/notificationStore';
-import { Lock, User, Eye, EyeOff } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Film } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuthStore();
   const { success, error } = useNotificationStore();
-
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-  });
-
+  const { t } = useI18n();
+  const [formData, setFormData] = useState({ username: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.username || !formData.password) {
-      error('输入错误', '请填写用户名和密码');
+      error(t('login.toast.inputError'), t('login.toast.fillCredentials'));
       return;
     }
-
     setIsLoading(true);
-
     try {
       await login(formData.username, formData.password);
-      success('登录成功', '欢迎回来！');
-      navigate('/workspace');
+      success(t('login.toast.success'), t('login.toast.welcomeBack'));
+      navigate('/');
     } catch (err) {
-      error('登录失败', err instanceof Error ? err.message : '请检查用户名和密码');
+      error(t('login.toast.failed'), err instanceof Error ? err.message : t('login.toast.checkCredentials'));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        {/* Logo和标题 */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-black rounded-2xl mb-4">
-            <span className="text-2xl font-bold text-white">剧</span>
+    <div className="min-h-screen bg-pearl flex">
+      <div className="hidden lg:flex flex-1 flex-col justify-between p-14 relative overflow-hidden">
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(0deg,#14181F 0,#14181F 1px,transparent 1px,transparent 56px),repeating-linear-gradient(90deg,#14181F 0,#14181F 1px,transparent 1px,transparent 56px)',
+          }}
+        />
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-atelier-teal to-atelier-teal-mid flex items-center justify-center shadow-atelier-lg">
+            <Film className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            欢迎回来
+          <div>
+            <div className="font-display text-2xl font-semibold text-ink">AI影视</div>
+            <div className="text-[10px] text-ink-faint tracking-[0.2em] uppercase">Creation Atelier</div>
+          </div>
+        </div>
+        <div className="relative z-10 max-w-md">
+          <p className="atelier-chip mb-4">{t('login.heroChip')}</p>
+          <h1 className="font-display text-5xl font-semibold text-ink leading-[1.12]">
+            {t('login.heroTitle1')}
+            <br />
+            <span className="italic text-atelier-teal">{t('login.heroTitle2')}</span>
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            登录到短剧策划助手
+          <p className="mt-5 text-ink-muted leading-relaxed">
+            {t('login.heroDesc')}
           </p>
         </div>
+        <p className="relative z-10 text-xs text-ink-faint">Powered by GLM-4.7-Flash</p>
+      </div>
 
-        {/* 登录表单 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 用户名输入 */}
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                用户名
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="username"
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="输入用户名"
-                  autoComplete="username"
-                  disabled={isLoading}
-                />
-              </div>
+      <div className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="lg:hidden text-center mb-8">
+            <div className="inline-flex w-14 h-14 rounded-2xl bg-atelier-teal items-center justify-center mb-3 shadow-atelier">
+              <Film className="w-7 h-7 text-white" />
             </div>
-
-            {/* 密码输入 */}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                密码
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors"
-                  placeholder="输入密码"
-                  autoComplete="current-password"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* 记住我 & 忘记密码 */}
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-gray-600 dark:text-gray-400">
-                  记住我
-                </span>
-              </label>
-              <Link
-                to="/forgot-password"
-                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                忘记密码？
-              </Link>
-            </div>
-
-            {/* 登录按钮 */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isLoading ? '登录中...' : '登录'}
-            </button>
-          </form>
-
-          {/* 分割线 */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
-                  或
-                </span>
-              </div>
-            </div>
+            <h1 className="font-display text-3xl font-semibold text-ink">AI影视创作</h1>
           </div>
 
-          {/* 注册链接 */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              还没有账号？{' '}
-              <Link
-                to="/register"
-                className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                立即注册
+          <div className="surface-panel p-8 animate-fade-in">
+            <h2 className="font-display text-2xl font-semibold text-ink mb-1">{t('login.welcomeBack')}</h2>
+            <p className="text-sm text-ink-muted mb-7">{t('login.subtitle')}</p>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-ink mb-2">
+                  {t('login.username')}
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-faint" />
+                  <input
+                    id="username"
+                    type="text"
+                    className="input pl-10"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    placeholder={t('login.usernamePlaceholder')}
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-ink mb-2">
+                  {t('login.password')}
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-faint" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="input pl-10 pr-10"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    placeholder={t('login.passwordPlaceholder')}
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-faint"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary w-full py-2.5" disabled={isLoading}>
+                {isLoading ? t('login.loading') : t('login.submit')}
+              </button>
+            </form>
+            <p className="mt-6 text-center text-sm text-ink-muted">
+              {t('login.noAccount')}{' '}
+              <Link to="/register" className="text-atelier-teal font-semibold hover:underline">
+                {t('login.register')}
               </Link>
             </p>
-          </div>
-
-          {/* 演示账号提示 */}
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-            <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2">
-              演示账号
-            </p>
-            <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-              <p>管理员: admin / admin123</p>
-              <p>普通用户: user / user123</p>
-            </div>
           </div>
         </div>
       </div>

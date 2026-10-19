@@ -13,11 +13,13 @@ import MobileMenu from '@/components/common/MobileMenu';
 import SettingsModal from '@/components/modals/SettingsModal';
 import { ToolExecutionDisplay } from '@/components/tools';
 import toolService, { ToolExecuteResult } from '@/services/toolService';
+import { useI18n } from '@/i18n';
 
 type ToolType = 'search' | 'baike';
 
 export default function ToolsDemoPage() {
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
+  const { t } = useI18n();
   const [activeTool, setActiveTool] = useState<ToolType>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,18 +50,18 @@ export default function ToolsDemoPage() {
   const tools = [
     {
       id: 'search' as ToolType,
-      name: '网页搜索工具',
+      nameKey: 'toolbox.toolsDemo.search.name',
       icon: Search,
-      description: '搜索互联网并返回相关网页结果',
-      placeholder: '输入关键词搜索...',
+      descriptionKey: 'toolbox.toolsDemo.search.desc',
+      placeholderKey: 'toolbox.toolsDemo.search.placeholder',
       example: '去有风的地方'
     },
     {
       id: 'baike' as ToolType,
-      name: '百度百科工具',
+      nameKey: 'toolbox.toolsDemo.baike.name',
       icon: BookOpen,
-      description: '搜索百度百科，获取词条详细解释',
-      placeholder: '输入词条名称...',
+      descriptionKey: 'toolbox.toolsDemo.baike.desc',
+      placeholderKey: 'toolbox.toolsDemo.baike.placeholder',
       example: '刘德华'
     }
   ];
@@ -106,11 +108,11 @@ export default function ToolsDemoPage() {
 
     } catch (error) {
       console.error('工具执行失败:', error);
-      setErrorMessage('执行失败，请稍后重试');
+      setErrorMessage(t('toolbox.toolsDemo.execFailed'));
       setResults({
         success: false,
         tool_name: activeTool === 'search' ? 'search_url' : 'baike_search',
-        error: '执行失败，请稍后重试'
+        error: t('toolbox.toolsDemo.execFailed')
       });
     } finally {
       setLoading(false);
@@ -151,7 +153,7 @@ export default function ToolsDemoPage() {
 
     } catch (error) {
       console.error('快速搜索失败:', error);
-      setErrorMessage('快速搜索失败');
+      setErrorMessage(t('toolbox.toolsDemo.quickFailed'));
     } finally {
       setLoading(false);
     }
@@ -187,9 +189,9 @@ export default function ToolsDemoPage() {
                 <Wrench className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">工具调用演示</h1>
+                <h1 className="text-xl font-bold text-gray-900">{t('toolbox.toolsDemo.title')}</h1>
                 <p className="text-xs text-gray-500 mt-1">
-                  展示 Agent 如何调用外部工具获取信息
+                  {t('toolbox.toolsDemo.subtitle')}
                 </p>
               </div>
             </div>
@@ -215,7 +217,7 @@ export default function ToolsDemoPage() {
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    {tool.name}
+                    {t(tool.nameKey)}
                   </button>
                 );
               })}
@@ -232,15 +234,15 @@ export default function ToolsDemoPage() {
                 {/* 工具说明 */}
                 <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <h3 className="text-sm font-medium text-gray-900 mb-2">
-                    {tools.find(t => t.id === activeTool)?.name}
+                    {t(tools.find(tool => tool.id === activeTool)?.nameKey || '')}
                   </h3>
                   <p className="text-xs text-gray-600 mb-3">
-                    {tools.find(t => t.id === activeTool)?.description}
+                    {t(tools.find(tool => tool.id === activeTool)?.descriptionKey || '')}
                   </p>
 
                   {/* 示例 */}
                   <div className="space-y-2">
-                    <div className="text-xs text-gray-500">试试这些示例：</div>
+                    <div className="text-xs text-gray-500">{t('toolbox.toolsDemo.example')}</div>
                     {tools.map((tool) => (
                       <button
                         key={tool.id}
@@ -262,7 +264,7 @@ export default function ToolsDemoPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleExecute()}
-                    placeholder={tools.find(t => t.id === activeTool)?.placeholder}
+                    placeholder={t(tools.find(tool => tool.id === activeTool)?.placeholderKey || '')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent text-sm"
                     disabled={loading}
                   />
@@ -274,12 +276,12 @@ export default function ToolsDemoPage() {
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        执行中...
+                        {t('toolbox.toolsDemo.executing')}
                       </>
                     ) : (
                       <>
                         <Wrench className="w-4 h-4" />
-                        执行工具
+                        {t('toolbox.toolsDemo.execute')}
                       </>
                     )}
                   </button>
@@ -290,7 +292,7 @@ export default function ToolsDemoPage() {
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
                       <History className="w-3 h-3" />
-                      <span>执行历史</span>
+                      <span>{t('toolbox.toolsDemo.history')}</span>
                     </div>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {history.map((item, index) => (
@@ -341,9 +343,9 @@ export default function ToolsDemoPage() {
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                       <Wrench className="w-8 h-8 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">工具调用演示</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">{t('toolbox.toolsDemo.title')}</h3>
                     <p className="text-sm text-gray-500 max-w-md">
-                      在左侧选择工具并输入关键词，查看 Agent 如何调用外部工具获取信息
+                      {t('toolbox.toolsDemo.emptyDesc')}
                     </p>
                   </div>
                 )}

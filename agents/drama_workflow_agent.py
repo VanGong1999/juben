@@ -63,7 +63,7 @@ class DramaWorkflowAgent(BaseJubenAgent):
     4. 支持并行处理和结果整合
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化情节点工作流智能体"""
         super().__init__("drama_workflow", model_provider)
         

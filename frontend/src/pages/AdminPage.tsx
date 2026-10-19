@@ -34,6 +34,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { Loading } from '@/components/common';
 import { getAgents } from '@/services/agentService';
 import { api } from '@/services/api';
+import { useI18n } from '@/i18n';
 
 type AdminTab = 'users' | 'agents' | 'permissions' | 'settings' | 'logs' | 'system';
 
@@ -80,6 +81,7 @@ interface AgentConfig {
 
 export const AdminPage: React.FC = () => {
   const { user: currentUser } = useAuthStore();
+  const { t } = useI18n();
   const { success, error } = useNotificationStore();
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
   const [isLoading, setIsLoading] = useState(false);
@@ -165,19 +167,19 @@ export const AdminPage: React.FC = () => {
   // 删除用户
   const handleDeleteUser = (userId: string) => {
     if (userId === currentUser?.id) {
-      error('操作失败', '不能删除当前登录用户');
+      error(t('admin.adminPage.toast.opFailed'), t('admin.adminPage.toast.cannotDeleteSelf'));
       return;
     }
 
-    if (window.confirm('确定要删除此用户吗？')) {
+    if (window.confirm(t('admin.adminPage.toast.deleteConfirm'))) {
       setUsers(users.filter((u) => u.id !== userId));
-      success('删除成功', '用户已删除');
+      success(t('admin.adminPage.toast.deleted'), t('admin.adminPage.toast.userDeleted'));
     }
   };
 
   const handleAddUser = () => {
     if (!newUserForm.username.trim() || !newUserForm.email.trim() || !newUserForm.displayName.trim()) {
-      error('创建失败', '请填写完整信息');
+      error(t('admin.adminPage.toast.createFailed'), t('admin.adminPage.toast.fillAll'));
       return;
     }
     const user: SystemUser = {
@@ -194,7 +196,7 @@ export const AdminPage: React.FC = () => {
     setUsers((prev) => [user, ...prev]);
     setShowAddUser(false);
     setNewUserForm({ username: '', email: '', displayName: '', role: 'user' });
-    success('创建成功', '用户已添加');
+    success(t('admin.adminPage.toast.created'), t('admin.adminPage.toast.userAdded'));
   };
 
   // 更改用户角色
@@ -202,7 +204,7 @@ export const AdminPage: React.FC = () => {
     setUsers(
       users.map((u) => (u.id === userId ? { ...u, role: newRole as any } : u))
     );
-    success('更新成功', '用户角色已更新');
+    success(t('admin.adminPage.toast.updated'), t('admin.adminPage.toast.roleUpdated'));
   };
 
   // 刷新系统状态
@@ -226,16 +228,16 @@ export const AdminPage: React.FC = () => {
       });
     }
     setIsLoading(false);
-    success('刷新成功', '系统状态已更新');
+    success(t('admin.adminPage.toast.refreshed'), t('admin.adminPage.toast.statusUpdated'));
   };
 
   const tabs = [
-    { id: 'users' as AdminTab, label: '用户管理', icon: Users },
-    { id: 'agents' as AdminTab, label: 'Agent管理', icon: Bot },
-    { id: 'permissions' as AdminTab, label: '权限管理', icon: Shield },
-    { id: 'settings' as AdminTab, label: '系统配置', icon: Settings },
-    { id: 'logs' as AdminTab, label: '系统日志', icon: FileText },
-    { id: 'system' as AdminTab, label: '系统监控', icon: Activity },
+    { id: 'users' as AdminTab, label: t('admin.adminPage.tab.users'), icon: Users },
+    { id: 'agents' as AdminTab, label: t('admin.adminPage.tab.agents'), icon: Bot },
+    { id: 'permissions' as AdminTab, label: t('admin.adminPage.tab.permissions'), icon: Shield },
+    { id: 'settings' as AdminTab, label: t('admin.adminPage.tab.settings'), icon: Settings },
+    { id: 'logs' as AdminTab, label: t('admin.adminPage.tab.logs'), icon: FileText },
+    { id: 'system' as AdminTab, label: t('admin.adminPage.tab.system'), icon: Activity },
   ];
 
   return (
@@ -247,10 +249,10 @@ export const AdminPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  系统管理
+                  {t('admin.adminPage.title')}
                 </h1>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  管理用户、权限和系统配置
+                  {t('admin.adminPage.subtitle')}
                 </p>
               </div>
               <button
@@ -261,7 +263,7 @@ export const AdminPage: React.FC = () => {
                 <RefreshCw
                   className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
                 />
-                刷新
+                {t('admin.refresh')}
               </button>
             </div>
           </div>
@@ -300,7 +302,7 @@ export const AdminPage: React.FC = () => {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="搜索用户..."
+                  placeholder={t('admin.adminPage.searchUsers')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -311,7 +313,7 @@ export const AdminPage: React.FC = () => {
                 className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                添加用户
+                {t('admin.adminPage.addUser')}
               </button>
             </div>
 
@@ -321,19 +323,19 @@ export const AdminPage: React.FC = () => {
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      用户
+                      {t('admin.adminPage.user')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      角色
+                      {t('admin.adminPage.role')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      状态
+                      {t('admin.status')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      最后登录
+                      {t('admin.adminPage.lastLogin')}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      操作
+                      {t('admin.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -366,9 +368,9 @@ export const AdminPage: React.FC = () => {
                           disabled={user.id === currentUser?.id}
                           className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 dark:bg-gray-700 dark:text-white"
                         >
-                          <option value="admin">管理员</option>
-                          <option value="user">用户</option>
-                          <option value="guest">访客</option>
+                          <option value="admin">{t('admin.adminPage.roleAdmin')}</option>
+                          <option value="user">{t('admin.adminPage.roleUser')}</option>
+                          <option value="guest">{t('admin.adminPage.roleGuest')}</option>
                         </select>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -379,7 +381,7 @@ export const AdminPage: React.FC = () => {
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           }`}
                         >
-                          {user.status === 'active' ? '活跃' : '停用'}
+                          {user.status === 'active' ? t('admin.adminPage.active') : t('admin.adminPage.inactive')}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -409,7 +411,7 @@ export const AdminPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">总 Agent 数</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.adminPage.totalAgents')}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {agents.length}
                     </p>
@@ -421,7 +423,7 @@ export const AdminPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">活跃 Agent</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.adminPage.activeAgents')}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {agents.filter((a) => a.status === 'active').length}
                     </p>
@@ -433,7 +435,7 @@ export const AdminPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Beta 版本</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.adminPage.beta')}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {agents.filter((a) => a.status === 'beta').length}
                     </p>
@@ -445,7 +447,7 @@ export const AdminPage: React.FC = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">平均成功率</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.adminPage.avgSuccessRate')}</p>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                       {(agents.reduce((sum, a) => sum + a.successRate, 0) / agents.length).toFixed(1)}%
                     </p>
@@ -459,11 +461,11 @@ export const AdminPage: React.FC = () => {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Agent 配置列表
+                  {t('admin.adminPage.agentList')}
                 </h2>
                 <button className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm">
                   <Plus className="w-4 h-4" />
-                  添加 Agent
+                  {t('admin.adminPage.addAgent')}
                 </button>
               </div>
 
@@ -475,25 +477,25 @@ export const AdminPage: React.FC = () => {
                         Agent
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        分类
+                        {t('admin.category')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        状态
+                        {t('admin.status')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        模型
+                        {t('admin.model')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        调用次数
+                        {t('admin.adminPage.calls')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        成功率
+                        {t('admin.adminPage.successRate')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        响应时间
+                        {t('admin.adminPage.responseTime')}
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
-                        操作
+                        {t('admin.actions')}
                       </th>
                     </tr>
                   </thead>
@@ -528,7 +530,7 @@ export const AdminPage: React.FC = () => {
                                 : 'bg-gray-100 text-gray-800'
                             }`}
                           >
-                            {agent.status === 'active' ? '活跃' : agent.status === 'beta' ? '测试' : '停用'}
+                            {agent.status === 'active' ? t('admin.adminPage.active') : agent.status === 'beta' ? t('admin.adminPage.testing') : t('admin.adminPage.inactive')}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
@@ -563,19 +565,19 @@ export const AdminPage: React.FC = () => {
                           <div className="flex items-center justify-end gap-1">
                             <button
                               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title="配置"
+                              title={t('admin.adminPage.configure')}
                             >
                               <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                             </button>
                             <button
                               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title="编辑"
+                              title={t('admin.adminPage.edit')}
                             >
                               <Edit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                             </button>
                             <button
                               className="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                              title="删除"
+                              title={t('common.delete')}
                             >
                               <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
                             </button>
@@ -593,10 +595,10 @@ export const AdminPage: React.FC = () => {
         {activeTab === 'permissions' && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              权限管理
+              {t('admin.adminPage.tab.permissions')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400">
-              在这里管理系统权限和访问控制
+              {t('admin.adminPage.permissionsDesc')}
             </p>
           </div>
         )}
@@ -605,12 +607,12 @@ export const AdminPage: React.FC = () => {
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                系统配置
+                {t('admin.adminPage.tab.settings')}
               </h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    系统名称
+                    {t('admin.adminPage.systemName')}
                   </label>
                   <input
                     type="text"
@@ -620,7 +622,7 @@ export const AdminPage: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    最大并发用户数
+                    {t('admin.adminPage.maxConcurrentUsers')}
                   </label>
                   <input
                     type="number"
@@ -637,7 +639,7 @@ export const AdminPage: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                系统日志
+                {t('admin.adminPage.systemLogs')}
               </h2>
             </div>
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -675,7 +677,7 @@ export const AdminPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    今日独立用户
+                    {t('admin.adminPage.todayUsers')}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                     {systemStats.todayUsers}
@@ -688,7 +690,7 @@ export const AdminPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    今日访问次数
+                    {t('admin.adminPage.todayAccess')}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                     {systemStats.todayAccess}
@@ -701,7 +703,7 @@ export const AdminPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    今日 Token
+                    {t('admin.adminPage.todayTokens')}
                   </p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                     {systemStats.todayTokens}
@@ -718,7 +720,7 @@ export const AdminPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">添加用户</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.adminPage.addUser')}</h3>
               <button
                 onClick={() => setShowAddUser(false)}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -729,21 +731,21 @@ export const AdminPage: React.FC = () => {
             <div className="space-y-3">
               <input
                 type="text"
-                placeholder="用户名"
+                placeholder={t('admin.adminPage.username')}
                 value={newUserForm.username}
                 onChange={(e) => setNewUserForm({ ...newUserForm, username: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
               />
               <input
                 type="email"
-                placeholder="邮箱"
+                placeholder={t('admin.adminPage.email')}
                 value={newUserForm.email}
                 onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
               />
               <input
                 type="text"
-                placeholder="显示名称"
+                placeholder={t('admin.adminPage.displayName')}
                 value={newUserForm.displayName}
                 onChange={(e) => setNewUserForm({ ...newUserForm, displayName: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
@@ -763,13 +765,13 @@ export const AdminPage: React.FC = () => {
                 onClick={() => setShowAddUser(false)}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg"
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleAddUser}
                 className="px-4 py-2 bg-black text-white rounded-lg"
               >
-                保存
+                {t('common.save')}
               </button>
             </div>
           </div>

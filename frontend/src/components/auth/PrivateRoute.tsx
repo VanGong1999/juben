@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Loading } from '@/components/common';
+import { useI18n } from '@/i18n';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({
 }) => {
   const { isAuthenticated, isLoading, checkAuth, isAdmin, hasPermission } =
     useAuthStore();
+  const { t } = useI18n();
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
 
@@ -75,7 +77,7 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return (
       <Navigate
         to="/unauthorized"
-        state={{ message: '需要管理员权限' }}
+        state={{ message: t('unauthorized.adminRequired') }}
         replace
       />
     );
@@ -86,7 +88,7 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return (
       <Navigate
         to="/unauthorized"
-        state={{ message: '缺少所需权限' }}
+        state={{ message: t('unauthorized.permissionRequired') }}
         replace
       />
     );
@@ -114,7 +116,7 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({
   }
 
   if (isAuthenticated) {
-    const redirectTo = (location.state as any)?.from?.pathname || '/workspace';
+    const redirectTo = (location.state as any)?.from?.pathname || '/';
     return <Navigate to={redirectTo} replace />;
   }
 

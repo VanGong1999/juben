@@ -356,11 +356,11 @@ class L3DatabaseCache:
         try:
             serialized = pickle.dumps(value)
             await execute(
-                f\"\"\"
+                f"""
                 INSERT INTO {self.table} (key, value, updated_at)
                 VALUES ($1, $2, NOW())
                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
-                \"\"\",
+                """,
                 key,
                 serialized,
             )
@@ -375,7 +375,7 @@ class L3DatabaseCache:
             return False
 
         try:
-            row = await fetch_one(f\"DELETE FROM {self.table} WHERE key = $1 RETURNING key\", key)
+            row = await fetch_one(f"DELETE FROM {self.table} WHERE key = $1 RETURNING key", key)
             return bool(row)
 
         except Exception as e:

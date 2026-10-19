@@ -22,6 +22,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { getAgents } from '@/services/agentService';
 import { getEvolutionStatus, getABTestStatus, promoteVersion } from '@/services/evolutionService';
 import type { Agent } from '@/types';
+import { useI18n } from '@/i18n';
 
 interface ABTestSummary {
   agent_name: string;
@@ -31,6 +32,7 @@ interface ABTestSummary {
 }
 
 const ABTestPage: React.FC = () => {
+  const { t, language } = useI18n();
   const { success, error } = useNotificationStore();
   const [activeTab, setActiveTab] = useState<'tests' | 'create' | 'results'>('tests');
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -62,9 +64,9 @@ const ABTestPage: React.FC = () => {
       const response = await getEvolutionStatus();
       const abTests = (response.data?.active_ab_tests || []) as ABTestSummary[];
       setTests(abTests);
-      setLastUpdated(new Date().toLocaleString('zh-CN'));
+      setLastUpdated(new Date().toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US'));
     } catch (err: any) {
-      error('加载失败', err?.message || '无法加载 A/B 测试');
+      error(t('admin.abTest.toast.loadFailed'), err?.message || t('admin.abTest.toast.loadTestsFailed'));
       setTests([]);
     } finally {
       setIsLoading(false);
@@ -88,7 +90,7 @@ const ABTestPage: React.FC = () => {
         }
       } catch (err: any) {
         setDetail(null);
-        error('加载失败', err?.message || '无法加载 A/B 测试详情');
+        error(t('admin.abTest.toast.loadFailed'), err?.message || t('admin.abTest.toast.loadDetailFailed'));
       } finally {
         setIsDetailLoading(false);
       }
@@ -110,36 +112,36 @@ const ABTestPage: React.FC = () => {
 
   const handlePromote = async (agentName: string, versionId?: string) => {
     if (!versionId) {
-      error('晋升失败', '未找到可晋升的版本');
+      error(t('admin.abTest.toast.promoteFailed'), t('admin.abTest.toast.noVersion'));
       return;
     }
     try {
       await promoteVersion(agentName, versionId);
-      success('晋升成功', '已将新版本设为活跃版本');
+      success(t('admin.abTest.toast.promoted'), t('admin.abTest.toast.promotedDesc'));
       loadTests();
       if (selectedAgent === agentName) {
         const res = await getABTestStatus(agentName);
         setDetail(res.data as ABTestSummary);
       }
     } catch (err: any) {
-      error('晋升失败', err?.message || '无法晋升版本');
+      error(t('admin.abTest.toast.promoteFailed'), err?.message || t('admin.abTest.toast.promoteError'));
     }
   };
 
   const renderStatusBadge = (comparison?: any) => {
-    if (!comparison) return <span className="text-xs text-gray-500">暂无数据</span>;
+    if (!comparison) return <span className="text-xs text-gray-500">{t('admin.abTest.noData')}</span>;
     if (comparison?.significant_improvement) {
       return (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">
           <Trophy className="w-3 h-3" />
-          显著提升
+          {t('admin.abTest.significant')}
         </span>
       );
     }
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">
         <Clock className="w-3 h-3" />
-        等待更多数据
+        {t('admin.abTest.waitingData')}
       </span>
     );
   };
@@ -163,8 +165,8 @@ const ABTestPage: React.FC = () => {
                     <GitCompare className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">A/B 测试管理</h1>
-                    <p className="text-sm text-gray-500 mt-1">配置和管理 Agent 的 A/B 测试</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('admin.abTest.title')}</h1>
+                    <p className="text-sm text-gray-500 mt-1">{t('admin.abTest.subtitle')}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -173,14 +175,14 @@ const ABTestPage: React.FC = () => {
                     className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
                   >
                     <RefreshCw className={isLoading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-                    刷新
+                    {t('admin.refresh')}
                   </button>
                   <button
                     onClick={() => setActiveTab('create')}
                     className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all"
                   >
                     <Plus className="w-4 h-4" />
-                    配置指引
+                    {t('admin.abTest.configGuide')}
                   </button>
                 </div>
               </div>
@@ -191,9 +193,9 @@ const ABTestPage: React.FC = () => {
             {/* Tabs */}
             <div className="flex gap-2 mb-6">
               {[
-                { key: 'tests', label: '进行中的测试' },
-                { key: 'results', label: '测试结果' },
-                { key: 'create', label: '配置说明' },
+                { key: 'tests', label: t('admin.abTest.tab.tests') },
+                { key: 'results', label: t('admin.abTest.tab.results') },
+                { key: 'create', label: t('admin.abTest.tab.create') },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -214,7 +216,7 @@ const ABTestPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">活跃测试</p>
+                        <p className="text-sm text-gray-500">{t('admin.abTest.activeTests')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{totalTests}</p>
                       </div>
                       <GitCompare className="w-8 h-8 text-blue-500" />
@@ -223,7 +225,7 @@ const ABTestPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">累计请求</p>
+                        <p className="text-sm text-gray-500">{t('admin.abTest.totalRequests')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{totalTraffic}</p>
                       </div>
                       <Users className="w-8 h-8 text-green-500" />
@@ -232,7 +234,7 @@ const ABTestPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">平均评分提升</p>
+                        <p className="text-sm text-gray-500">{t('admin.abTest.avgLift')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">
                           {avgLift >= 0 ? '+' : ''}{avgLift.toFixed(2)}
                         </p>
@@ -243,7 +245,7 @@ const ABTestPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">最近更新</p>
+                        <p className="text-sm text-gray-500">{t('admin.abTest.lastUpdated')}</p>
                         <p className="text-sm font-medium text-gray-900 mt-2">{lastUpdated || '—'}</p>
                       </div>
                       <Clock className="w-8 h-8 text-gray-400" />
@@ -254,12 +256,12 @@ const ABTestPage: React.FC = () => {
                 {/* 测试列表 */}
                 <div className="bg-white rounded-lg shadow">
                   <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-900">测试列表</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('admin.abTest.testList')}</h2>
                   </div>
                   <div className="divide-y divide-gray-100">
                     {tests.length === 0 ? (
                       <div className="p-8 text-center text-sm text-gray-500">
-                        暂无进行中的 A/B 测试。请先在进化系统中产生候选版本。
+                        {t('admin.abTest.noTests')}
                       </div>
                     ) : (
                       tests.map((test) => {
@@ -276,9 +278,9 @@ const ABTestPage: React.FC = () => {
                                 {renderStatusBadge(comparison?.comparison)}
                               </div>
                               <div className="mt-2 text-xs text-gray-500 space-x-4">
-                                <span>实验流量: {config.traffic_percentage ?? 0}%</span>
-                                <span>请求数: {traffic.total_requests ?? 0}</span>
-                                <span>评分提升: {(comparison?.comparison?.rating_diff ?? 0).toFixed(2)}</span>
+                                <span>{t('admin.abTest.traffic', { rate: config.traffic_percentage ?? 0 })}</span>
+                                <span>{t('admin.abTest.requests', { count: traffic.total_requests ?? 0 })}</span>
+                                <span>{t('admin.abTest.ratingLift', { lift: (comparison?.comparison?.rating_diff ?? 0).toFixed(2) })}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -289,14 +291,14 @@ const ABTestPage: React.FC = () => {
                                 }}
                                 className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded"
                               >
-                                查看详情
+                                {t('admin.abTest.viewDetail')}
                               </button>
                               {comparison?.comparison?.significant_improvement && config.treatment_version_id && (
                                 <button
                                   onClick={() => handlePromote(test.agent_name, config.treatment_version_id)}
                                   className="px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700"
                                 >
-                                  晋升版本
+                                  {t('admin.abTest.promoteVersion')}
                                 </button>
                               )}
                             </div>
@@ -313,8 +315,8 @@ const ABTestPage: React.FC = () => {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">测试结果详情</h2>
-                    <p className="text-sm text-gray-500">选择 Agent 查看 A/B 对比数据</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('admin.abTest.resultDetail')}</h2>
+                    <p className="text-sm text-gray-500">{t('admin.abTest.resultDetailDesc')}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <select
@@ -332,66 +334,66 @@ const ABTestPage: React.FC = () => {
                       onClick={() => selectedAgent && getABTestStatus(selectedAgent).then((res) => setDetail(res.data))}
                       className="px-3 py-1.5 text-xs bg-gray-100 rounded hover:bg-gray-200"
                     >
-                      刷新详情
+                      {t('admin.abTest.refreshDetail')}
                     </button>
                   </div>
                 </div>
 
                 {isDetailLoading ? (
-                  <div className="text-sm text-gray-500">加载中...</div>
+                  <div className="text-sm text-gray-500">{t('admin.loading')}</div>
                 ) : !detail?.config ? (
-                  <div className="text-sm text-gray-500">当前 Agent 暂无 A/B 测试配置。</div>
+                  <div className="text-sm text-gray-500">{t('admin.abTest.noConfig')}</div>
                 ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="border rounded-lg p-4">
-                          <h3 className="text-sm font-semibold text-gray-900">对照组</h3>
-                          <p className="text-xs text-gray-500 mt-1">版本: {detail?.performance_comparison?.control?.version || '—'}</p>
+                          <h3 className="text-sm font-semibold text-gray-900">{t('admin.abTest.controlGroup')}</h3>
+                          <p className="text-xs text-gray-500 mt-1">{t('admin.abTest.versionLabel', { version: detail?.performance_comparison?.control?.version || '—' })}</p>
                           <div className="mt-3 text-xs text-gray-600 space-y-1">
-                            <div>平均评分: {detail?.performance_comparison?.control?.avg_rating ?? 0}</div>
-                            <div>反馈数: {detail?.performance_comparison?.control?.total_feedbacks ?? 0}</div>
-                            <div>编辑率: {detail?.performance_comparison?.control?.edit_ratio_avg ?? 0}</div>
+                            <div>{t('admin.abTest.avgRatingLabel', { score: detail?.performance_comparison?.control?.avg_rating ?? 0 })}</div>
+                            <div>{t('admin.abTest.feedbackLabel', { count: detail?.performance_comparison?.control?.total_feedbacks ?? 0 })}</div>
+                            <div>{t('admin.abTest.editRatioLabel', { ratio: detail?.performance_comparison?.control?.edit_ratio_avg ?? 0 })}</div>
                           </div>
                         </div>
                         <div className="border rounded-lg p-4">
-                          <h3 className="text-sm font-semibold text-gray-900">实验组</h3>
-                          <p className="text-xs text-gray-500 mt-1">版本: {detail?.performance_comparison?.treatment?.version || '—'}</p>
+                          <h3 className="text-sm font-semibold text-gray-900">{t('admin.abTest.treatmentGroup')}</h3>
+                          <p className="text-xs text-gray-500 mt-1">{t('admin.abTest.versionLabel', { version: detail?.performance_comparison?.treatment?.version || '—' })}</p>
                           <div className="mt-3 text-xs text-gray-600 space-y-1">
-                            <div>平均评分: {detail?.performance_comparison?.treatment?.avg_rating ?? 0}</div>
-                            <div>反馈数: {detail?.performance_comparison?.treatment?.total_feedbacks ?? 0}</div>
-                            <div>编辑率: {detail?.performance_comparison?.treatment?.edit_ratio_avg ?? 0}</div>
+                            <div>{t('admin.abTest.avgRatingLabel', { score: detail?.performance_comparison?.treatment?.avg_rating ?? 0 })}</div>
+                            <div>{t('admin.abTest.feedbackLabel', { count: detail?.performance_comparison?.treatment?.total_feedbacks ?? 0 })}</div>
+                            <div>{t('admin.abTest.editRatioLabel', { ratio: detail?.performance_comparison?.treatment?.edit_ratio_avg ?? 0 })}</div>
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-6 border rounded-lg p-4">
-                        <h3 className="text-sm font-semibold text-gray-900">对比结论</h3>
+                        <h3 className="text-sm font-semibold text-gray-900">{t('admin.abTest.conclusion')}</h3>
                         <div className="mt-3 text-xs text-gray-600 space-y-1">
-                          <div>评分差异: {detail?.performance_comparison?.comparison?.rating_diff ?? 0}</div>
-                          <div>编辑率差异: {detail?.performance_comparison?.comparison?.edit_ratio_diff ?? 0}</div>
+                          <div>{t('admin.abTest.ratingDiff', { diff: detail?.performance_comparison?.comparison?.rating_diff ?? 0 })}</div>
+                          <div>{t('admin.abTest.editRatioDiff', { diff: detail?.performance_comparison?.comparison?.edit_ratio_diff ?? 0 })}</div>
                           <div>
-                            显著提升: {detail?.performance_comparison?.comparison?.significant_improvement ? '是' : '否'}
+                            {t('admin.abTest.significantImprovement', { value: detail?.performance_comparison?.comparison?.significant_improvement ? t('admin.abTest.yes') : t('admin.abTest.no') })}
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="border rounded-lg p-4">
-                      <h3 className="text-sm font-semibold text-gray-900">流量配置</h3>
+                      <h3 className="text-sm font-semibold text-gray-900">{t('admin.abTest.trafficConfig')}</h3>
                       <div className="mt-3 text-xs text-gray-600 space-y-2">
-                        <div>实验流量: {detail?.config?.traffic_percentage ?? 0}%</div>
-                        <div>对照版本: {detail?.config?.control_version_id || '—'}</div>
-                        <div>实验版本: {detail?.config?.treatment_version_id || '—'}</div>
-                        <div>请求总数: {detail?.traffic_stats?.total_requests ?? 0}</div>
-                        <div>实验占比: {((detail?.traffic_stats?.treatment_ratio ?? 0) * 100).toFixed(1)}%</div>
+                        <div>{t('admin.abTest.traffic', { rate: detail?.config?.traffic_percentage ?? 0 })}</div>
+                        <div>{t('admin.abTest.controlVersion', { version: detail?.config?.control_version_id || '—' })}</div>
+                        <div>{t('admin.abTest.treatmentVersion', { version: detail?.config?.treatment_version_id || '—' })}</div>
+                        <div>{t('admin.abTest.totalRequest', { count: detail?.traffic_stats?.total_requests ?? 0 })}</div>
+                        <div>{t('admin.abTest.treatmentRatio', { ratio: ((detail?.traffic_stats?.treatment_ratio ?? 0) * 100).toFixed(1) })}</div>
                       </div>
                       {detail?.performance_comparison?.comparison?.significant_improvement && detail?.config?.treatment_version_id && (
                         <button
                           onClick={() => handlePromote(selectedAgent, detail?.config?.treatment_version_id)}
                           className="mt-4 w-full px-3 py-2 text-xs bg-green-600 text-white rounded hover:bg-green-700"
                         >
-                          晋升实验版本
+                          {t('admin.abTest.promoteTreatment')}
                         </button>
                       )}
                     </div>
@@ -402,23 +404,23 @@ const ABTestPage: React.FC = () => {
 
             {activeTab === 'create' && (
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold text-gray-900">A/B 测试配置说明</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('admin.abTest.configTitle')}</h2>
                 <p className="text-sm text-gray-500 mt-2">
-                  当前 A/B 测试由进化系统自动配置。请先在进化系统中生成候选版本，再由系统写入测试配置。
+                  {t('admin.abTest.configDesc')}
                 </p>
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="border rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-900">启动流程</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('admin.abTest.startupFlow')}</h3>
                     <ol className="mt-3 text-xs text-gray-600 space-y-1 list-decimal list-inside">
-                      <li>在反馈系统中积累足够的样本与评分</li>
-                      <li>进入进化系统，触发候选版本生成</li>
-                      <li>系统自动配置 A/B 测试并开始分流</li>
+                      <li>{t('admin.abTest.step1')}</li>
+                      <li>{t('admin.abTest.step2')}</li>
+                      <li>{t('admin.abTest.step3')}</li>
                     </ol>
                   </div>
                   <div className="border rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-900">常见问题</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('admin.abTest.faq')}</h3>
                     <p className="mt-3 text-xs text-gray-600">
-                      若未看到测试列表，请检查 Redis 配置是否开启，或是否已产生候选版本。
+                      {t('admin.abTest.faqDesc')}
                     </p>
                   </div>
                 </div>

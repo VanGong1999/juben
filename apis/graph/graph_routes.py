@@ -154,6 +154,8 @@ class GraphReviewSubmitRequest(BaseModel):
     story_id: str = Field(..., description="故事ID")
     nodes: List[Dict[str, Any]] = Field(default_factory=list, description="人工确认节点")
     plot_nodes: List[Dict[str, Any]] = Field(default_factory=list, description="人工确认情节节点")
+    relationships: List[Dict[str, Any]] = Field(default_factory=list, description="人工确认关系")
+    review_id: Optional[str] = Field(default=None, description="审核队列ID（可选）")
 
 
 class GraphReviewQueueCreateRequest(BaseModel):
@@ -203,8 +205,8 @@ class GraphQueryRequest(BaseModel):
 # ============ 依赖注入 ============
 
 
-async def get_graph_db() -> GraphDBManager:
-    """获取图数据库实例"""
+async def get_graph_db():
+    """获取图谱实例（Neo4j 优先，失败自动 FileGraphStore）。"""
     try:
         from config.graph_config import graph_settings
 
@@ -217,8 +219,21 @@ async def get_graph_db() -> GraphDBManager:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"图数据库连接失败: {str(e)}",
+            detail=f"图谱后端不可用: {str(e)}",
         )
+
+
+@router.get("/backend")
+async def graph_backend_info():
+    """当前图谱后端：neo4j | file"""
+    from utils.graph_manager import get_graph_backend
+
+    await get_graph_db()
+    return BaseResponse(
+        success=True,
+        message="ok",
+        data={"backend": get_graph_backend()},
+    )
 
 
 # ============ 节点操作路由 ============
@@ -1176,65 +1191,3 @@ async def health_check(
             message=f"健康检查失败: {str(e)}",
             data=None,
         )
-class StoryCreateRequest(BaseModel):
-    story_id: str = Field(..., description="故事ID")
-    name: str = Field(..., description="故事名称")
-    description: Optional[str] = Field(default="", description="故事描述")
-    genre: Optional[str] = Field(default=None, description="题材")
-    tags: List[str] = Field(default_factory=list, description="标签")
-    status: str = Field(default="active", description="状态")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
-
-
-class GenericNodeCreateRequest(BaseModel):
-    node_id: str = Field(..., description="节点ID")
-    story_id: str = Field(..., description="故事ID")
-    name: str = Field(..., description="名称")
-    description: Optional[str] = Field(default="", description="描述")
-    category: Optional[str] = Field(default=None, description="分类")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
-
-
-class RelationshipCreateRequest(BaseModel):
-    story_id: str = Field(..., description="故事ID")
-    source_id: str = Field(..., description="源节点ID")
-    target_id: str = Field(..., description="目标节点ID")
-    relation_type: str = Field(..., description="关系类型")
-    properties: Dict[str, Any] = Field(default_factory=dict, description="关系属性")
-
-
-class GraphExtractRequest(BaseModel):
-    story_id: str = Field(..., description="故事ID")
-    content: str = Field(..., description="剧本文本内容")
-    chunk_size: int = Field(default=4000, ge=500, le=12000, description="分块大小")
-    overlap: int = Field(default=200, ge=0, le=2000, description="分块重叠")
-    provider: Optional[str] = Field(default=None, description="模型提供商")
-    model: Optional[str] = Field(default=None, description="模型名称")
-    dry_run: bool = Field(default=False, description="仅抽取不落库")
-
-
-class GraphReviewSubmitRequest(BaseModel):
-    story_id: str = Field(..., description="故事ID")
-    nodes: List[Dict[str, Any]] = Field(default_factory=list, description="人工确认节点")
-    plot_nodes: List[Dict[str, Any]] = Field(default_factory=list, description="人工确认情节节点")
-    relationships: List[Dict[str, Any]] = Field(default_factory=list, description="人工确认关系")
-    review_id: Optional[str] = Field(default=None, description="审核队列ID（可选）")
-
-
-class GraphReviewQueueCreateRequest(BaseModel):
-    story_id: str = Field(..., description="故事ID")
-    payload: Dict[str, Any] = Field(..., description="审核内容载荷")
-    source: Optional[str] = Field(default=None, description="来源标识")
-
-
-class GraphReviewQueueListRequest(BaseModel):
-    story_id: str = Field(..., description="故事ID")
-    status: Optional[str] = Field(default=None, description="状态过滤: pending/approved/rejected")
-    limit: int = Field(default=20, ge=1, le=200, description="分页大小")
-    offset: int = Field(default=0, ge=0, description="分页偏移")
-
-
-class GraphReviewQueueUpdateRequest(BaseModel):
-    review_id: str = Field(..., description="审核队列ID")
-    status: str = Field(..., description="新状态: pending/approved/rejected")
-    result: Optional[Dict[str, Any]] = Field(default=None, description="审核结果（可选）")

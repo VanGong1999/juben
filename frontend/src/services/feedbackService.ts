@@ -23,6 +23,7 @@ export interface FeedbackItem {
 
 export interface FeedbackStatistics {
   total_feedbacks: number;
+  gold_samples?: number;
   avg_rating: number;
   by_agent: Array<{
     agent_name: string;

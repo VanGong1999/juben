@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { useI18n } from '@/i18n';
 import {
   ChevronUp,
   ChevronDown,
@@ -48,9 +49,10 @@ export function DataTable<T extends Record<string, any>>({
   searchable = true,
   selectable = false,
   onSelectChange,
-  emptyMessage = '暂无数据',
+  emptyMessage,
   className = '',
 }: DataTableProps<T>) {
+  const { t } = useI18n();
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -186,7 +188,7 @@ export function DataTable<T extends Record<string, any>>({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="搜索..."
+              placeholder={t('studio.header.search')}
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -242,7 +244,7 @@ export function DataTable<T extends Record<string, any>>({
                   }
                   className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t('empty.noData')}
                 </td>
               </tr>
             ) : (
@@ -284,9 +286,11 @@ export function DataTable<T extends Record<string, any>>({
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            显示 {(currentPage - 1) * pageSize + 1} 到{' '}
-            {Math.min(currentPage * pageSize, processedData.length)} 条，共{' '}
-            {processedData.length} 条
+            {t('ui.pagination', {
+              from: (currentPage - 1) * pageSize + 1,
+              to: Math.min(currentPage * pageSize, processedData.length),
+              total: processedData.length,
+            })}
           </div>
           <div className="flex items-center gap-2">
             <button

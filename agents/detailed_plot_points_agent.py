@@ -37,7 +37,7 @@ class DetailedPlotPointsAgent(BaseJubenAgent):
     基于coze工作流中的详细情节点分析功能设计
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化详细情节点智能体"""
         super().__init__("detailed_plot_points", model_provider)
         

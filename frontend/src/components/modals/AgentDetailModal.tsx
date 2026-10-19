@@ -6,11 +6,13 @@ import { useUIStore } from '@/store/uiStore';
 import { useAgentStore } from '@/store/agentStore';
 import { X, Copy, Check, Sparkles, Zap } from 'lucide-react';
 import { useState } from 'react';
+import { useI18n } from '@/i18n';
 
 export default function AgentDetailModal() {
   const { agentDetailModalOpen, setAgentDetailModalOpen, selectedAgentId } = useUIStore();
   const { agents, setActiveAgent } = useAgentStore();
   const [copied, setCopied] = useState(false);
+  const { t } = useI18n();
 
   const agent = agents.find((a) => a.id === selectedAgentId);
 
@@ -54,13 +56,13 @@ export default function AgentDetailModal() {
           <div className="p-6 space-y-6">
             {/* 描述 */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">描述</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">{t('ui.description')}</h3>
               <p className="text-gray-700">{agent.description}</p>
             </div>
 
             {/* 特性 */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">功能特性</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('studio.header.agent.features')}</h3>
               <div className="flex flex-wrap gap-2">
                 {agent.features.map((feature, index) => (
                   <span
@@ -75,7 +77,7 @@ export default function AgentDetailModal() {
 
             {/* 能力 */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">核心能力</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('ui.coreCapabilities')}</h3>
               <ul className="space-y-2">
                 {agent.capabilities.map((capability, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
@@ -89,11 +91,11 @@ export default function AgentDetailModal() {
             {/* 配置 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-xs text-gray-500 mb-1">使用模型</div>
+                <div className="text-xs text-gray-500 mb-1">{t('ui.model')}</div>
                 <div className="font-medium text-gray-900">{agent.model}</div>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="text-xs text-gray-500 mb-1">状态</div>
+                <div className="text-xs text-gray-500 mb-1">{t('ui.status')}</div>
                 <div className="flex items-center gap-2">
                   <div
                     className={`w-2 h-2 rounded-full ${
@@ -108,7 +110,7 @@ export default function AgentDetailModal() {
             {/* 示例 */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900">输入示例</h3>
+                <h3 className="text-sm font-semibold text-gray-900">{t('ui.inputExample')}</h3>
                 <button
                   onClick={handleCopyExample}
                   className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
@@ -116,12 +118,12 @@ export default function AgentDetailModal() {
                   {copied ? (
                     <>
                       <Check className="w-3.5 h-3.5" />
-                      已复制
+                      {t('ui.copied')}
                     </>
                   ) : (
                     <>
                       <Copy className="w-3.5 h-3.5" />
-                      复制
+                      {t('studio.copy')}
                     </>
                   )}
                 </button>
@@ -133,7 +135,7 @@ export default function AgentDetailModal() {
 
             {/* 输出示例 */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">输出示例</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('ui.outputExample')}</h3>
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="text-sm text-gray-700">{agent.outputExample}</p>
               </div>
@@ -150,13 +152,13 @@ export default function AgentDetailModal() {
               className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
             >
               <Zap className="w-4 h-4" />
-              使用此 Agent
+              {t('ui.useAgent')}
             </button>
             <button
               onClick={() => setAgentDetailModalOpen(false)}
               className="px-6 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              关闭
+              {t('project.close')}
             </button>
           </div>
         </div>

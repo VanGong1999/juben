@@ -2,7 +2,7 @@
  * 全局错误处理器
  */
 
-import { AxiosError } from 'axios';
+import { APIError } from '@/services/api';
 import { useNotificationStore } from '@/store/notificationStore';
 
 /**
@@ -49,14 +49,13 @@ export interface ErrorDetails {
  * 解析错误信息
  */
 export const parseError = (error: unknown): ErrorDetails => {
-  // 网络错误
-  if (error instanceof AxiosError) {
-    const status = error.response?.status;
-    const data = error.response?.data as any;
+  // API 错误（自定义 APIError，来自 fetch 客户端）
+  if (error instanceof APIError) {
+    const status = error.status;
 
     if (status === 401) {
       return {
-        message: data?.message || '认证失败，请重新登录',
+        message: error.message || '认证失败，请重新登录',
         type: ErrorType.AUTHENTICATION,
         code: '401',
       };
@@ -64,7 +63,7 @@ export const parseError = (error: unknown): ErrorDetails => {
 
     if (status === 403) {
       return {
-        message: data?.message || '没有权限执行此操作',
+        message: error.message || '没有权限执行此操作',
         type: ErrorType.AUTHORIZATION,
         code: '403',
       };
@@ -72,7 +71,7 @@ export const parseError = (error: unknown): ErrorDetails => {
 
     if (status === 404) {
       return {
-        message: data?.message || '请求的资源不存在',
+        message: error.message || '请求的资源不存在',
         type: ErrorType.NOT_FOUND,
         code: '404',
       };
@@ -80,33 +79,32 @@ export const parseError = (error: unknown): ErrorDetails => {
 
     if (status === 422) {
       return {
-        message: data?.message || '请求数据验证失败',
+        message: error.message || '请求数据验证失败',
         type: ErrorType.VALIDATION,
         code: '422',
-        details: data?.errors,
       };
     }
 
     if (status && status >= 500) {
       return {
-        message: data?.message || '服务器错误，请稍后重试',
+        message: error.message || '服务器错误，请稍后重试',
         type: ErrorType.SERVER,
         code: String(status),
       };
     }
 
-    if (error.code === 'ERR_NETWORK') {
-      return {
-        message: '网络连接失败，请检查网络设置',
-        type: ErrorType.NETWORK,
-        code: error.code,
-      };
-    }
-
     return {
-      message: data?.message || error.message || '请求失败',
+      message: error.message || '请求失败',
       type: ErrorType.API,
-      code: data?.code || String(status),
+      code: String(status),
+    };
+  }
+
+  // 网络错误（fetch 连接失败抛出 TypeError）
+  if (error instanceof TypeError) {
+    return {
+      message: '网络连接失败，请检查网络设置',
+      type: ErrorType.NETWORK,
     };
   }
 

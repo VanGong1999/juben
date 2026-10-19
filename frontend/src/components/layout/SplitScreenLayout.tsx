@@ -12,6 +12,7 @@
 import { ReactNode, useState } from 'react';
 import { clsx } from 'clsx';
 import { ChevronLeft, PanelLeftClose, PanelRightClose } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface SplitScreenLayoutProps {
   /** 左侧工作区内容 */
@@ -40,6 +41,7 @@ export default function SplitScreenLayout({
   className = '',
 }: SplitScreenLayoutProps) {
   const [view, setView] = useState<'both' | 'workspace' | 'chat'>(defaultView);
+  const { t } = useI18n();
 
   const toggleView = () => {
     if (view === 'both') {
@@ -78,9 +80,9 @@ export default function SplitScreenLayout({
                 ? 'bg-black text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             )}
-            aria-label="显示工作区"
+            aria-label={t('ui.showWorkspace')}
           >
-            工作区
+            {t('studio.header.nav.workspace')}
           </button>
           <button
             onClick={() => setView('chat')}
@@ -90,9 +92,9 @@ export default function SplitScreenLayout({
                 ? 'bg-black text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             )}
-            aria-label="显示聊天"
+            aria-label={t('ui.showChat')}
           >
-            对话
+            {t('studio.layout.chat')}
           </button>
         </div>
       )}
@@ -109,11 +111,10 @@ export default function SplitScreenLayout({
               // 中屏: 50%
               'md:w-[50%]',
               // 小屏: 全宽
-              'w-full',
-              view === 'chat' && 'hidden lg:block'
+              'w-full'
             )}
             role="region"
-            aria-label="工作区"
+            aria-label={t('studio.header.nav.workspace')}
           >
             {workspace}
 
@@ -122,10 +123,10 @@ export default function SplitScreenLayout({
               <button
                 onClick={() => setView('chat')}
                 className="hidden lg:flex absolute top-4 right-4 items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-xs"
-                aria-label="折叠工作区"
+                aria-label={t('ui.collapseWorkspace')}
               >
                 <PanelLeftClose className="w-3 h-3" />
-                折叠
+                {t('studio.collapse')}
               </button>
             )}
           </aside>
@@ -141,11 +142,10 @@ export default function SplitScreenLayout({
               // 中屏: 50%
               'md:w-[50%]',
               // 小屏: 全宽
-              'w-full',
-              view === 'workspace' && 'hidden lg:block'
+              'w-full'
             )}
             role="region"
-            aria-label="对话区域"
+            aria-label={t('ui.chatRegion')}
           >
             {chat}
 
@@ -154,10 +154,10 @@ export default function SplitScreenLayout({
               <button
                 onClick={() => setView('both')}
                 className="hidden lg:flex absolute top-4 left-4 items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-xs"
-                aria-label="展开工作区"
+                aria-label={t('ui.expandWorkspace')}
               >
                 <ChevronLeft className="w-3 h-3" />
-                展开工作区
+                {t('ui.expandWorkspace')}
               </button>
             )}
 
@@ -166,10 +166,10 @@ export default function SplitScreenLayout({
               <button
                 onClick={() => setView('workspace')}
                 className="hidden lg:flex absolute top-4 left-4 items-center gap-1 px-2 py-1 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 text-xs"
-                aria-label="折叠聊天"
+                aria-label={t('ui.collapseChat')}
               >
                 <PanelRightClose className="w-3 h-3" />
-                折叠
+                {t('studio.collapse')}
               </button>
             )}
           </main>

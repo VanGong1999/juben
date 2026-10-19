@@ -82,11 +82,27 @@ class JubenReferenceResolver:
             # 文件引用: @file[id] 或 @file[name] 或 @file[name, query]
             'file': re.compile(r'@file\[([^\]]+)\]', re.IGNORECASE),
 
+            # 创作台作品引用（薄指针展开）:
+            # @drama[episode:1] @drama[characters] @drama[outline] @drama[world]
+            'drama': re.compile(
+                r'@drama\[\s*(episode\s*:\s*\d+|characters|outline|world|artifact\s*:\s*[^\]]+)\s*\]',
+                re.IGNORECASE,
+            ),
+
             # 用户引用: @user[内容]
             'user': re.compile(r'@user\[([^\]]+)\]', re.IGNORECASE),
 
             # 时间引用: @time[格式]
             'time': re.compile(r'@time\[([^\]]+)\]', re.IGNORECASE),
+        }
+
+        # 单集/设定展开上限（字），避免一次拖入多文件撑爆上下文
+        self.DRAMA_REF_MAX_CHARS = {
+            "episode": 16000,
+            "characters": 8000,
+            "outline": 8000,
+            "world": 6000,
+            "artifact": 8000,
         }
 
         # Agent名称到action的映射（用于Note名称引用）
@@ -191,6 +207,11 @@ class JubenReferenceResolver:
                 user_id,
                 session_id,
                 project_id=project_id
+            )
+            # 创作台 @drama[...]：优先于通用 note，展开为作品文件正文
+            resolved_text = await self._resolve_drama_references(
+                resolved_text,
+                project_id=project_id,
             )
             resolved_text = await self._resolve_user_references(resolved_text, user_id)
             resolved_text = await self._resolve_time_references(resolved_text)
@@ -986,6 +1007,100 @@ class JubenReferenceResolver:
             preview += f"\n\n... (共 {total_lines} 行, {total_chars} 字符)"
 
         return f"[📄 {file_identifier}]\n{preview}"
+
+    async def _resolve_drama_references(
+        self,
+        text: str,
+        project_id: Optional[str] = None,
+    ) -> str:
+        """展开创作台 @drama[...] 引用为作品文件正文。
+
+        支持：
+        - @drama[episode:1]
+        - @drama[characters] / @drama[outline] / @drama[world]
+        - @drama[artifact:id]
+        """
+        if not text or not project_id:
+            return text
+
+        pattern = self.reference_patterns.get("drama")
+        if not pattern:
+            return text
+        matches = list(pattern.finditer(text))
+        if not matches:
+            return text
+
+        try:
+            from utils.drama_manager import get_drama_manager
+            from utils.drama_version_store import get_drama_version_store
+
+            mgr = get_drama_manager()
+            store = get_drama_version_store()
+        except Exception as e:
+            self.logger.warning(f"drama 引用解析依赖不可用: {e}")
+            return text
+
+        resolved = text
+        for match in reversed(matches):
+            raw = (match.group(1) or "").strip()
+            replacement = await self._expand_single_drama_ref(
+                raw, project_id, mgr, store
+            )
+            resolved = resolved[: match.start()] + replacement + resolved[match.end() :]
+            self._reference_trace.append(
+                {
+                    "type": "drama",
+                    "raw": raw,
+                    "project_id": project_id,
+                    "expanded_chars": len(replacement),
+                }
+            )
+        return resolved
+
+    async def _expand_single_drama_ref(
+        self,
+        raw: str,
+        drama_id: str,
+        mgr: Any,
+        store: Any,
+    ) -> str:
+        key = raw.lower().replace(" ", "")
+        try:
+            if key.startswith("episode:"):
+                n = int(key.split(":", 1)[1])
+                part = await store.read_part(drama_id, "episode", episode_number=n)
+                body = (part.get("content") or "").strip()
+                limit = self.DRAMA_REF_MAX_CHARS["episode"]
+                if not body:
+                    return f"【@drama[episode:{n}]】（该集尚未写入正文）"
+                clipped = body if len(body) <= limit else body[: limit - 12] + "…[截断]"
+                return f"【作品引用 · 第{n}集正文】\n{clipped}"
+
+            if key in ("characters", "outline", "world"):
+                part = await store.read_part(drama_id, key)
+                body = (part.get("content") or "").strip()
+                limit = self.DRAMA_REF_MAX_CHARS.get(key, 8000)
+                label = {"characters": "人物小传", "outline": "故事大纲", "world": "世界观"}[key]
+                if not body:
+                    return f"【@drama[{key}]】（{label}尚未写入）"
+                clipped = body if len(body) <= limit else body[: limit - 12] + "…[截断]"
+                return f"【作品引用 · {label}】\n{clipped}"
+
+            if key.startswith("artifact:"):
+                art_id = raw.split(":", 1)[1].strip()
+                art = await mgr.get_artifact(drama_id, art_id)
+                if not art:
+                    return f"【@drama[artifact:{art_id}]】（产物不存在）"
+                body = (art.get("content") or "").strip()
+                limit = self.DRAMA_REF_MAX_CHARS["artifact"]
+                clipped = body if len(body) <= limit else body[: limit - 12] + "…[截断]"
+                title = art.get("title") or art_id
+                return f"【作品引用 · 产物 {title}】\n{clipped}"
+
+            return f"【@drama[{raw}]】（无法解析的引用格式）"
+        except Exception as e:
+            self.logger.warning(f"展开 @drama[{raw}] 失败: {e}")
+            return f"【@drama[{raw}]】（读取失败：{e}）"
 
     async def _resolve_user_references(self, text: str, user_id: str) -> str:
         """解析用户引用"""

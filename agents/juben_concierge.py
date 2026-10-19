@@ -12,16 +12,17 @@ Juben Concierge - 竖屏短剧策划接待员
 import asyncio
 import json
 import re
+from collections import OrderedDict
 from typing import AsyncGenerator, Dict, Any, List, Optional, Union, Tuple
 from datetime import datetime
 import uuid
 
 from .base_juben_agent import BaseJubenAgent
 from .juben_orchestrator import JubenOrchestrator
-from ..utils.logger import JubenLogger
-from ..utils.intent_recognition import IntentRecognizer
-from ..utils.url_extractor import URLExtractor
-from ..utils.multimodal_processor import MultimodalProcessor
+from utils.logger import JubenLogger
+from utils.intent_recognition import IntentRecognizer
+from utils.url_extractor import URLExtractor
+from utils.multimodal_processor import get_multimodal_processor
 
 
 class AgentInitializationError(Exception):
@@ -41,7 +42,7 @@ class JubenConcierge(BaseJubenAgent):
     5. 🤝 用户体验：提供友好的交互和实时反馈
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化接待员"""
         super().__init__("juben_concierge", model_provider)
 
@@ -59,7 +60,7 @@ class JubenConcierge(BaseJubenAgent):
             self.url_extractor = None
 
         try:
-            self.multimodal_processor = MultimodalProcessor()
+            self.multimodal_processor = get_multimodal_processor()
         except Exception as e:
             self.logger.warning(f"MultimodalProcessor 初始化失败: {e}")
             self.multimodal_processor = None

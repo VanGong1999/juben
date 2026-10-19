@@ -5,12 +5,14 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Brain } from 'lucide-react';
 import type { Thought } from '@/types';
+import { useI18n } from '@/i18n';
 
 interface ThoughtChainProps {
   thoughts: Thought[];
 }
 
 export default function ThoughtChain({ thoughts }: ThoughtChainProps) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -25,8 +27,8 @@ export default function ThoughtChain({ thoughts }: ThoughtChainProps) {
           <ChevronRight className="w-4 h-4 text-gray-500" />
         )}
         <Brain className="w-4 h-4 text-gray-600" />
-        <span className="font-medium text-gray-700">思考过程</span>
-        <span className="text-xs text-gray-400">({thoughts.length} 步)</span>
+        <span className="font-medium text-gray-700">{t('chatGraph.thoughtChain.title')}</span>
+        <span className="text-xs text-gray-400">{t('chatGraph.thoughtChain.steps', { count: thoughts.length })}</span>
       </button>
 
       {expanded && (

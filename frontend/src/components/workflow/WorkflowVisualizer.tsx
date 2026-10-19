@@ -31,11 +31,12 @@ import {
   NodeDetails,
 } from './types';
 import { API_BASE_URL } from '@/services/api';
+import { useI18n, type TFunction } from '@/i18n';
 
 // ==================== 节点类型注册 ====================
 
 const nodeTypes: NodeTypes = {
-  workflow: WorkflowNode,
+  workflow: WorkflowNode as React.ComponentType<any>,
 };
 
 // ==================== 工作流拓扑定义 ====================
@@ -48,7 +49,7 @@ interface WorkflowVisualizerProps {
 }
 
 // 初始节点定义
-const createInitialNodes = (): Node<WorkflowNodeData>[] => [
+const createInitialNodes = (t: TFunction): Node<WorkflowNodeData>[] => [
   // 输入验证节点
   {
     id: 'input_validation',
@@ -56,8 +57,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 250, y: 0 },
     data: {
       id: 'input_validation',
-      label: '输入验证',
-      description: '验证请求参数完整性',
+      label: t('chatGraph.workflow.node.inputValidation'),
+      description: t('chatGraph.workflow.node.inputValidationDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.INPUT,
       icon: 'input',
@@ -70,8 +71,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 250, y: 150 },
     data: {
       id: 'text_preprocessing',
-      label: '文本预处理',
-      description: '文本截断与分块处理',
+      label: t('chatGraph.workflow.node.textPreprocessing'),
+      description: t('chatGraph.workflow.node.textPreprocessingDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.PREPROCESSING,
       icon: 'preprocessing',
@@ -84,8 +85,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 50, y: 300 },
     data: {
       id: 'story_outline',
-      label: '故事大纲',
-      description: '生成故事核心大纲',
+      label: t('chatGraph.workflow.node.storyOutline'),
+      description: t('chatGraph.workflow.node.storyOutlineDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.PARALLEL,
       icon: 'parallel',
@@ -98,8 +99,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 250, y: 300 },
     data: {
       id: 'character_profiles',
-      label: '人物小传',
-      description: '生成主要人物档案',
+      label: t('chatGraph.workflow.node.characterProfiles'),
+      description: t('chatGraph.workflow.node.characterProfilesDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.PARALLEL,
       icon: 'parallel',
@@ -112,8 +113,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 450, y: 300 },
     data: {
       id: 'major_plot_points',
-      label: '大情节点',
-      description: '生成关键情节节点',
+      label: t('chatGraph.workflow.node.majorPlotPoints'),
+      description: t('chatGraph.workflow.node.majorPlotPointsDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.PARALLEL,
       icon: 'parallel',
@@ -126,8 +127,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 650, y: 300 },
     data: {
       id: 'detailed_plot_points',
-      label: '详细情节点',
-      description: '展开详细情节描述',
+      label: t('chatGraph.workflow.node.detailedPlotPoints'),
+      description: t('chatGraph.workflow.node.detailedPlotPointsDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.PARALLEL,
       icon: 'parallel',
@@ -140,8 +141,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 50, y: 450 },
     data: {
       id: 'mind_map',
-      label: '思维导图',
-      description: '生成可视化思维导图',
+      label: t('chatGraph.workflow.node.mindMap'),
+      description: t('chatGraph.workflow.node.mindMapDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.PARALLEL,
       icon: 'parallel',
@@ -154,8 +155,8 @@ const createInitialNodes = (): Node<WorkflowNodeData>[] => [
     position: { x: 350, y: 450 },
     data: {
       id: 'result_formatting',
-      label: '结果格式化',
-      description: '整合并格式化输出',
+      label: t('chatGraph.workflow.node.resultFormatting'),
+      description: t('chatGraph.workflow.node.resultFormattingDesc'),
       status: NodeStatus.IDLE,
       nodeType: WorkflowNodeType.OUTPUT,
       icon: 'output',
@@ -265,7 +266,8 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
   externalEvents,
   className = '',
 }) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState<WorkflowNodeData>(createInitialNodes());
+  const { t } = useI18n();
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>>(createInitialNodes(t));
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node<WorkflowNodeData> | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -375,7 +377,7 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
     if (!externalEvents || externalEvents.length === 0) {
       lastExternalIndexRef.current = 0;
       if (externalEvents) {
-        setNodes(createInitialNodes());
+        setNodes(createInitialNodes(t));
         setEdges(initialEdges);
       }
       return;
@@ -438,27 +440,27 @@ export const WorkflowVisualizer: React.FC<WorkflowVisualizerProps> = ({
       {/* 状态统计栏 */}
       <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg px-4 py-2 flex gap-6 text-sm">
         <div className="flex items-center gap-2">
-          <span className="text-gray-500">进度:</span>
+          <span className="text-gray-500">{t('chatGraph.workflow.progress')}</span>
           <span className="font-semibold text-blue-600">{stats.progress}%</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500"></span>
-          <span className="text-gray-600 dark:text-gray-300">完成: {stats.completed}</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('chatGraph.workflow.completed')} {stats.completed}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-          <span className="text-gray-600 dark:text-gray-300">进行中: {stats.processing}</span>
+          <span className="text-gray-600 dark:text-gray-300">{t('chatGraph.workflow.processing')} {stats.processing}</span>
         </div>
         {stats.failed > 0 && (
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-500"></span>
-            <span className="text-gray-600 dark:text-gray-300">失败: {stats.failed}</span>
+            <span className="text-gray-600 dark:text-gray-300">{t('chatGraph.workflow.failed')} {stats.failed}</span>
           </div>
         )}
       </div>
 
       {/* React Flow 画布 */}
-      <ReactFlow
+      <ReactFlow<Node<WorkflowNodeData>>
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}

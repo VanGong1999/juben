@@ -15,10 +15,17 @@ class StartupValidationError(Exception):
     pass
 
 
+def _is_development() -> bool:
+    return os.getenv("APP_ENV", "development").lower() in ("development", "dev", "local")
+
+
 def validate_jwt_config() -> Tuple[bool, str]:
     """验证 JWT 配置"""
     jwt_secret = os.getenv("JWT_SECRET_KEY", "")
-    default_secret = "your-secret-key-change-this-in-production-min-32-chars"
+    default_secrets = {
+        "your-secret-key-change-this-in-production-min-32-chars",
+        "REPLACE_WITH_RANDOM_STRING_MIN_32_CHARS",
+    }
 
     # 检查是否为空
     if not jwt_secret:
@@ -28,33 +35,31 @@ def validate_jwt_config() -> Tuple[bool, str]:
     if len(jwt_secret) < 32:
         return False, f"JWT_SECRET_KEY 长度不足: {len(jwt_secret)} < 32"
 
-    # 检查是否为默认值
-    if jwt_secret == default_secret:
-        return False, "JWT_SECRET_KEY 使用默认值，存在安全风险"
-
-    # 检查是否包含足够的熵（避免简单密码）
-    if jwt_secret in ["secret", "password", "123456", "admin"]:
-        return False, "JWT_SECRET_KEY 过于简单，容易被破解"
+    # 生产环境禁止默认/弱密钥；开发环境仅警告通过
+    if jwt_secret in default_secrets or jwt_secret in ["secret", "password", "123456", "admin"]:
+        if _is_development():
+            return True, "开发环境使用占位 JWT_SECRET_KEY（生产环境必须更换）"
+        return False, "JWT_SECRET_KEY 使用默认值或过弱，存在安全风险"
 
     return True, "OK"
 
 
 def validate_database_config() -> Tuple[bool, str]:
     """验证数据库配置"""
-    required_vars = []
+    # 支持 DATABASE_URL，或由 POSTGRES_* 组装连接信息
+    if os.getenv("DATABASE_URL"):
+        return True, "OK"
 
-    # PostgreSQL 配置
-    if not os.getenv("DATABASE_URL"):
-        required_vars.append("DATABASE_URL")
+    postgres_host = os.getenv("POSTGRES_HOST")
+    postgres_db = os.getenv("POSTGRES_DB")
+    postgres_user = os.getenv("POSTGRES_USER")
+    if postgres_host and postgres_db and postgres_user:
+        return True, "OK (POSTGRES_* )"
 
-    # Redis 配置（可选但推荐）
-    # if not os.getenv("REDIS_URL"):
-    #     required_vars.append("REDIS_URL")
+    if _is_development():
+        return True, "开发环境未配置数据库，将按需延迟连接"
 
-    if required_vars:
-        return False, f"缺少必需的数据库配置: {', '.join(required_vars)}"
-
-    return True, "OK"
+    return False, "缺少必需的数据库配置: DATABASE_URL 或 POSTGRES_HOST/DB/USER"
 
 
 def validate_admin_config() -> Tuple[bool, str]:
@@ -63,16 +68,23 @@ def validate_admin_config() -> Tuple[bool, str]:
     admin_password = os.getenv("ADMIN_PASSWORD")
 
     if not admin_username:
+        if _is_development():
+            return True, "开发环境未设置 ADMIN_USERNAME，将使用默认值"
         return False, "ADMIN_USERNAME 环境变量未设置"
 
     if not admin_password:
+        if _is_development():
+            return True, "开发环境未设置 ADMIN_PASSWORD，将使用默认值"
         return False, "ADMIN_PASSWORD 环境变量未设置"
 
     if len(admin_password) < 8:
         return False, "ADMIN_PASSWORD 长度不足 8 位"
 
     # 检查默认密码
-    if admin_password in ["admin123", "password", "12345678"]:
+    weak_passwords = {"admin123", "password", "12345678", "REPLACE_WITH_STRONG_PASSWORD"}
+    if admin_password in weak_passwords:
+        if _is_development():
+            return True, "开发环境使用占位管理员密码（生产环境必须更换）"
         return False, "ADMIN_PASSWORD 使用默认值，存在安全风险"
 
     return True, "OK"
@@ -80,10 +92,22 @@ def validate_admin_config() -> Tuple[bool, str]:
 
 def validate_api_config() -> Tuple[bool, str]:
     """验证 API 配置"""
-    # 检查智谱 AI 配置
-    zhipu_key = os.getenv("ZHIPUAI_API_KEY")
+    # 与项目其余代码统一使用 ZHIPU_API_KEY，同时兼容旧名 ZHIPUAI_API_KEY
+    zhipu_key = os.getenv("ZHIPU_API_KEY") or os.getenv("ZHIPUAI_API_KEY")
     if not zhipu_key:
-        return False, "ZHIPUAI_API_KEY 环境变量未设置"
+        if _is_development():
+            return True, "开发环境未设置智谱 API Key，LLM 调用将失败直到配置密钥"
+        return False, "ZHIPU_API_KEY 环境变量未设置"
+
+    placeholder_keys = {
+        "your_zhipu_api_key_here",
+        "your-zhipuai-api-key-here",
+        "your_api_key_here",
+    }
+    if zhipu_key in placeholder_keys:
+        if _is_development():
+            return True, "开发环境使用占位智谱 API Key"
+        return False, "ZHIPU_API_KEY 仍为占位值，请配置真实密钥"
 
     return True, "OK"
 
@@ -175,10 +199,10 @@ def get_startup_checklist() -> str:
 
 必需的环境变量：
   • JWT_SECRET_KEY (>=32 字符，非默认值)
-  • DATABASE_URL
+  • DATABASE_URL 或 POSTGRES_HOST/DB/USER
   • ADMIN_USERNAME
   • ADMIN_PASSWORD (>=8 字符，非默认值)
-  • ZHIPUAI_API_KEY
+  • ZHIPU_API_KEY（兼容 ZHIPUAI_API_KEY）
 
 可选的环境变量：
   • REDIS_URL (推荐，用于缓存和会话)
@@ -190,7 +214,7 @@ def get_startup_checklist() -> str:
   DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
   ADMIN_USERNAME=admin
   ADMIN_PASSWORD=secure_password_here
-  ZHIPUAI_API_KEY=your_zhipu_api_key
+  ZHIPU_API_KEY=your_zhipu_api_key
   ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
   APP_ENV=production
 """

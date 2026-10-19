@@ -31,6 +31,8 @@ export interface MessageMetadata {
   // System and tool events
   systemEvents?: SystemEvent[];
   toolEvents?: ToolEvent[];
+  /** 工作室对话：Cursor 风格过程时间线 */
+  processSteps?: ProcessStepMeta[];
   contentType?: StreamContentType | string;
   contentBlocks?: Array<{
     contentType: StreamContentType | string;
@@ -48,6 +50,9 @@ export interface MessageMetadata {
 
   // Billing information
   billing?: string;
+
+  // Mind map structured data
+  mindMapData?: any;
 
   // Other metadata
   originalContent?: string;
@@ -76,6 +81,22 @@ export interface Thought {
   step: number;
   content: string;
   timestamp: string;
+  type?: string;
+  toolName?: string;
+  status?: 'running' | 'completed' | 'error' | 'done';
+}
+
+/** Cursor 风格工作过程步骤（存于 message.metadata.processSteps） */
+export interface ProcessStepMeta {
+  id: string;
+  kind: string;
+  title: string;
+  detail?: string;
+  status?: 'running' | 'done' | 'error';
+  toolName?: string;
+  agentId?: string;
+  timestamp?: string;
+  children?: ProcessStepMeta[];
 }
 
 export interface Reference {
@@ -98,7 +119,8 @@ export type AgentCategory =
   | 'workflow'
   | 'utility'
   | 'character'
-  | 'story';
+  | 'story'
+  | 'orchestration';
 
 export interface Agent {
   id: string;
@@ -114,6 +136,7 @@ export interface Agent {
   inputExample: string;
   outputExample: string;
   status: 'active' | 'beta' | 'experimental';
+  productLine?: 'short_drama' | 'general' | 'shared';
 }
 
 // ==================== API 相关类型 ====================
@@ -125,6 +148,10 @@ export interface ChatRequest {
   project_id?: string;
   model_provider?: string;
   model?: string;
+  /** 用户自备 Key，仅请求体传递，不落服务端库 */
+  api_key?: string;
+  /** OpenAI 兼容 Base URL */
+  base_url?: string;
   enable_web_search?: boolean;
   enable_knowledge_base?: boolean;
   agent_id?: string;
@@ -192,7 +219,13 @@ export type SSEEventType =
   | 'complete'         // 完成（同done）
   | 'thought'          // 思考过程（前端自定义）
   | 'progress'         // 🆕 进度更新
-  | 'metadata';        // 元数据
+  | 'metadata'         // 元数据
+  | 'thinking'         // 思考
+  | 'heartbeat'        // 心跳
+  | 'agent_decision'   // 编排：路由决策
+  | 'subagent'         // 编排：子专家
+  | 'handoff'          // 编排：交接
+  | 'composition';     // 编排：组合
 
 // 🆕 流式内容类型枚举（与后端保持一致）- juben剧本创作专用
 export type StreamContentType =
@@ -278,6 +311,9 @@ export interface EventMetadata {
   total_steps?: number;
   processing_time?: number;
   error_code?: string;
+  active_agent?: string;
+  to_agent?: string;
+  route_source?: string;
 }
 
 // 🆕 增强版SSE事件（支持新格式）
@@ -315,8 +351,11 @@ export interface SSEEvent {
     tool_name?: string;
     content_type?: StreamContentType;
     agent_source?: string;
+    raw?: any;
   };
   timestamp: string;
+  sequence?: number;
+  messageId?: string;
 }
 
 // ==================== 模型相关类型 ====================

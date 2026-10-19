@@ -22,13 +22,15 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
+  Bot,
 } from 'lucide-react';
+import { useI18n, translate } from '@/i18n';
 
 interface ThoughtStep {
   step: number;
   content: string;
   timestamp: string;
-  type?: 'system' | 'tool' | 'reasoning' | 'error' | 'info';
+  type?: 'system' | 'tool' | 'reasoning' | 'error' | 'info' | 'subagent' | 'handoff';
   status?: 'running' | 'completed' | 'error';
   toolName?: string;
 }
@@ -46,12 +48,19 @@ const typeConfig = {
   reasoning: { icon: Brain, color: 'text-green-600', bgColor: 'bg-green-50' },
   error: { icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-50' },
   info: { icon: Info, color: 'text-gray-600', bgColor: 'bg-gray-50' },
+  subagent: { icon: Bot, color: 'text-teal-600', bgColor: 'bg-teal-50' },
+  handoff: { icon: Bot, color: 'text-amber-600', bgColor: 'bg-amber-50' },
 };
 
 const toolIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   websearch: Search,
+  web_search: Search,
+  knowledge_query: Search,
   knowledge: Database,
   file_reference: FileText,
+  spawn_subagent: Bot,
+  transfer_to: Bot,
+  compose_agents: Bot,
 };
 
 export default function ThoughtChainView({
@@ -60,6 +69,7 @@ export default function ThoughtChainView({
   onToggle,
   isStreaming = false,
 }: ThoughtChainViewProps) {
+  const { t } = useI18n();
   const [localExpanded, setLocalExpanded] = useState(expanded);
   const isExpanded = onToggle ? expanded : localExpanded;
 
@@ -84,12 +94,12 @@ export default function ThoughtChainView({
       >
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-gray-600" />
-          <span className="text-sm font-medium text-gray-700">思考过程</span>
+          <span className="text-sm font-medium text-gray-700">{t('chatGraph.thoughtChain.title')}</span>
           {isStreaming && (
             <Loader2 className="w-3 h-3 animate-spin text-gray-400" />
           )}
           <span className="text-xs text-gray-500">
-            ({steps.length} {steps.length === 1 ? '步' : '步'})
+            {t('chatGraph.thoughtChain.steps', { count: steps.length })}
           </span>
         </div>
         {isExpanded ? (
@@ -105,7 +115,7 @@ export default function ThoughtChainView({
           {steps.length === 0 && isStreaming && (
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>正在思考中...</span>
+              <span>{t('chatGraph.thoughtChain.thinking')}</span>
             </div>
           )}
 
@@ -137,15 +147,15 @@ export default function ThoughtChainView({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-gray-600">
-                      步骤 {step.step}
+                      {t('chatGraph.thoughtChain.step', { n: step.step })}
                     </span>
                     {step.type && (
                       <span className={`text-xs px-1.5 py-0.5 rounded ${config.bgColor} ${config.color}`}>
-                        {step.type === 'system' && '系统'}
-                        {step.type === 'tool' && '工具'}
-                        {step.type === 'reasoning' && '推理'}
-                        {step.type === 'error' && '错误'}
-                        {step.type === 'info' && '信息'}
+                        {step.type === 'system' && t('chatGraph.thoughtChain.type.system')}
+                        {step.type === 'tool' && t('chatGraph.thoughtChain.type.tool')}
+                        {step.type === 'reasoning' && t('chatGraph.thoughtChain.type.reasoning')}
+                        {step.type === 'error' && t('chatGraph.thoughtChain.type.error')}
+                        {step.type === 'info' && t('chatGraph.thoughtChain.type.info')}
                       </span>
                     )}
                     {step.status === 'running' && (
@@ -165,7 +175,7 @@ export default function ThoughtChainView({
 
                   {step.toolName && (
                     <div className="mt-1 text-xs text-gray-500">
-                      工具: {step.toolName}
+                      {t('chatGraph.thoughtChain.toolLabel', { name: step.toolName })}
                     </div>
                   )}
                 </div>
@@ -203,7 +213,9 @@ export function convertEventsToThoughtSteps(
     if (event.event === 'tool_start') {
       steps.push({
         step: stepNumber++,
-        content: `开始调用 ${event.data?.tool_name || '工具'}`,
+        content: translate('chatGraph.thoughtChain.startTool', undefined, {
+          tool: event.data?.tool_name || translate('chatGraph.thoughtChain.type.tool'),
+        }),
         timestamp: event.timestamp,
         type: 'tool',
         status: 'running',
@@ -214,7 +226,7 @@ export function convertEventsToThoughtSteps(
     if (event.event === 'tool_processing') {
       steps.push({
         step: stepNumber++,
-        content: event.data?.message || '正在处理...',
+        content: event.data?.message || translate('chatGraph.thoughtChain.processing'),
         timestamp: event.timestamp,
         type: 'tool',
         status: 'running',
@@ -225,7 +237,9 @@ export function convertEventsToThoughtSteps(
     if (event.event === 'tool_complete') {
       steps.push({
         step: stepNumber++,
-        content: `${event.data?.tool_name || '工具'} 调用完成`,
+        content: translate('chatGraph.thoughtChain.toolDone', undefined, {
+          tool: event.data?.tool_name || translate('chatGraph.thoughtChain.type.tool'),
+        }),
         timestamp: event.timestamp,
         type: 'tool',
         status: 'completed',
@@ -237,7 +251,7 @@ export function convertEventsToThoughtSteps(
     if (event.event === 'error') {
       steps.push({
         step: stepNumber++,
-        content: event.data?.error || event.data?.content || '发生错误',
+        content: event.data?.error || event.data?.content || translate('chatGraph.thoughtChain.errorOccurred'),
         timestamp: event.timestamp,
         type: 'error',
         status: 'error',
@@ -248,7 +262,7 @@ export function convertEventsToThoughtSteps(
     if (event.event === 'billing') {
       steps.push({
         step: stepNumber++,
-        content: event.data?.content || '计费信息',
+        content: event.data?.content || translate('chatGraph.thoughtChain.billing'),
         timestamp: event.timestamp,
         type: 'info',
         status: 'completed',

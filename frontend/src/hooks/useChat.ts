@@ -19,6 +19,7 @@ import { streamMessage, analyzeIntent } from '@/services/chatService';
 import { retryWithBackoff, globalRetryManager, RetryResult } from '@/services/retryService';
 import type { Message, ChatRequest } from '@/types';
 import { parseMindMap, toMarkdownTree } from '@/utils/mindMap';
+import { getLlmRequestOverrides } from '@/utils/llmRequest';
 
 export function useChat() {
   const {
@@ -86,17 +87,28 @@ export function useChat() {
       setStreamingMessageId(aiMessageId);
       setIsStreaming(true);
 
-      // 构建请求
+      // 构建请求：auto / juben_conductor 不传 agent_id，由后端 Conductor 编排
+      const llm = getLlmRequestOverrides();
+      const resolvedAgentId = agentId || activeAgent;
+      const isAutoMode =
+        !resolvedAgentId ||
+        resolvedAgentId === 'auto' ||
+        resolvedAgentId === 'juben_conductor';
       const request: ChatRequest = {
         input: content,
-        user_id: 'default-user',
+        user_id: localStorage.getItem('userId') || 'default-user',
         session_id: currentSession || undefined,
-        project_id: localStorage.getItem('projectId') || undefined,
-        model_provider: modelProvider,
-        model: model, // 使用设置中的模型
+        project_id:
+          localStorage.getItem('dramaId') ||
+          localStorage.getItem('projectId') ||
+          undefined,
+        model_provider: llm.model_provider || modelProvider,
+        model: llm.model || model,
+        api_key: llm.api_key,
+        base_url: llm.base_url,
         enable_web_search: enableWebSearch,
         enable_knowledge_base: enableKnowledgeBase,
-        agent_id: agentId || activeAgent,
+        ...(isAutoMode ? {} : { agent_id: resolvedAgentId }),
       };
       currentRequestRef.current = request;
 
@@ -114,9 +126,12 @@ export function useChat() {
           async () => {
             console.log('[useChat] Starting retryWithBackoff, retryCount:', retryCount);
 
-            // 分析意图（可选）
-            // 只有在用户没有明确指定agent时，才根据意图分析自动切换agent
-            const shouldAutoSwitchAgent = !agentId && retryCount === 0;
+            // 自动编排模式由后端 Conductor 决策；仅在用户已选具体专家且未指定时才做前端意图切换
+            const shouldAutoSwitchAgent =
+              !agentId &&
+              retryCount === 0 &&
+              activeAgent !== 'auto' &&
+              activeAgent !== 'juben_conductor';
             if (shouldAutoSwitchAgent) {
               console.log('[useChat] Calling analyzeIntent...');
               const intentResult = await analyzeIntent(content);
@@ -166,6 +181,43 @@ export function useChat() {
                       updateMessageMetadata(aiMessageId, () => ({
                         toolEvents: [{ event: event.event, data: event.data, timestamp: event.timestamp }]
                       }));
+                    }
+
+                    // 编排事件：路由 / 子专家 / 交接
+                    if (
+                      event.event === 'agent_decision' ||
+                      event.event === 'subagent' ||
+                      event.event === 'handoff' ||
+                      event.event === 'composition'
+                    ) {
+                      const meta = event.data?.metadata || {};
+                      updateMessageMetadata(aiMessageId, (current) => ({
+                        orchestrationEvents: [
+                          ...((current as any)?.orchestrationEvents || []),
+                          {
+                            event: event.event,
+                            data: event.data,
+                            timestamp: event.timestamp,
+                          },
+                        ],
+                        activeAgent:
+                          meta.active_agent ||
+                          meta.to_agent ||
+                          (current as any)?.activeAgent,
+                      }));
+                      if (event.event === 'handoff' && meta.to_agent) {
+                        const to = String(meta.to_agent);
+                        if (to === 'juben_conductor' || to === 'auto') {
+                          setActiveAgent('auto');
+                        } else {
+                          setActiveAgent(to);
+                        }
+                      }
+                      if (event.event === 'agent_decision' && meta.active_agent) {
+                        // 仅展示，不强制切 UI（除非来自 session handoff 路由）
+                        const src = meta.route_source || event.data?.content;
+                        // content 可能是 JSON 字符串
+                      }
                     }
 
                     // 处理错误事件

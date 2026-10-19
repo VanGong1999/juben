@@ -41,7 +41,7 @@ class TextTruncatorAgent(BaseJubenAgent):
     3. 支持单次和批处理模式
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化文本截断智能体"""
         super().__init__("text_truncator", model_provider)
 

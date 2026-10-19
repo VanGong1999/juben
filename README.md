@@ -748,10 +748,9 @@ projects/
 
 #### 10.1 启动方式
 
-- ✅ 一键启动脚本（start.sh / start.bat）
-- ✅ 前后端分离启动
-- ✅ Docker Compose 部署
-- ✅ 手动部署支持
+- ✅ 一键启动：`bash scripts/start_dev.sh`（自动拉起 PostgreSQL/Redis/Neo4j/Milvus + 前后端）
+- ✅ 手动启动后端：`venv/bin/python main.py`（端口 8000）
+- ✅ 手动启动前端：`cd frontend && pnpm dev`（端口 5173）
 
 #### 10.2 环境配置
 
@@ -1390,9 +1389,9 @@ juben/
 │
 ├── requirements.txt         # Python 依赖
 ├── .env.example           # 环境变量示例
-├── start.sh              # Linux/Mac 启动脚本
-├── start.bat             # Windows 启动脚本
-├── docker-compose.yml    # Docker Compose 配置
+├── scripts/start_dev.sh   # 唯一启动入口（外部依赖 + 前后端）
+├── docker-compose.yml     # Neo4j 图数据库
+├── docker-compose.milvus.yml  # Milvus 向量数据库
 └── README.md             # 项目说明文档
 ```
 
@@ -1607,37 +1606,28 @@ npm install
 
 #### 6. 启动服务
 
-**方式一：使用启动脚本**
+**唯一启动入口（自动拉起外部依赖 + 前后端）：**
 
-Linux/Mac:
 ```bash
-chmod +x start.sh
-./start.sh
+bash scripts/start_dev.sh
 ```
 
-Windows:
+该脚本会自动：
+1. 启动外部依赖：PostgreSQL/Redis（homebrew）、Neo4j/Milvus（docker compose）
+2. 启动后端：http://localhost:8000
+3. 启动前端：http://localhost:5173
+
+**手动启动（可选）：**
+
+后端:
 ```bash
-start.bat
+venv/bin/python main.py
 ```
 
-**方式二：手动启动**
-
-启动后端:
+前端:
 ```bash
-# 在项目根目录
-python -m uvicorn apis.main:app --reload --port 8000
-```
-
-启动前端:
-```bash
-# 在 frontend 目录
-npm run dev
-```
-
-**方式三：使用 Docker Compose**
-
-```bash
-docker-compose up -d
+cd frontend
+pnpm dev
 ```
 
 #### 7. 访问应用
@@ -2061,7 +2051,7 @@ def _resolve_agent_import(agent_id: Optional[str]) -> tuple[str, str]:
 
 ```bash
 # 启动服务
-./start.sh
+bash scripts/start_dev.sh
 
 # 发送测试请求
 curl -X POST http://localhost:8000/juben/chat \
@@ -2289,17 +2279,15 @@ SELECT * FROM notes WHERE user_id = 'user123';
 
 ### 部署指南
 
-#### Docker 部署
+#### 本地开发部署
 
 ```bash
-# 构建镜像
-docker-compose build
+# 一键启动（自动拉起外部依赖 + 前后端）
+bash scripts/start_dev.sh
 
-# 启动服务
-docker-compose up -d
-
-# 查看日志
-docker-compose logs -f
+# 或手动启动
+venv/bin/python main.py          # 后端 http://localhost:8000
+cd frontend && pnpm dev          # 前端 http://localhost:5173
 ```
 
 #### 生产环境配置

@@ -7,7 +7,7 @@ import json
 import yaml
 import os
 from typing import Dict, Any, List, Optional, Union, Callable, Type, TypeVar
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 from enum import Enum
 import threading
@@ -415,21 +415,21 @@ class SmartConfig:
     def _infer_config_type(self, value: Any) -> ConfigType:
         """推断配置类型"""
         try:
-            if isinstance(value, str):
+            if isinstance(value, bool):
+                return ConfigType.BOOLEAN
+            elif isinstance(value, str):
                 return ConfigType.STRING
             elif isinstance(value, int):
                 return ConfigType.INTEGER
             elif isinstance(value, float):
                 return ConfigType.FLOAT
-            elif isinstance(value, bool):
-                return ConfigType.BOOLEAN
             elif isinstance(value, list):
                 return ConfigType.LIST
             elif isinstance(value, dict):
                 return ConfigType.DICT
             else:
                 return ConfigType.STRING
-                
+
         except Exception as e:
             self.logger.error(f"❌ 推断配置类型失败: {e}")
             return ConfigType.STRING
@@ -505,8 +505,14 @@ class SmartConfig:
                 del self.cache[key]
                 del self.cache_ttl[key]
             
-            # 触发更新回调
-            asyncio.create_task(self._trigger_update_callbacks(key, value))
+            # 触发更新回调（如有运行中的事件循环）
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop is not None:
+                loop.create_task(self._trigger_update_callbacks(key, value))
             
             self.logger.info(f"✅ 配置已设置: {key} = {value}")
             return True

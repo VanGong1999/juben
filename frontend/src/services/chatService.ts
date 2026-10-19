@@ -4,9 +4,10 @@
  */
 
 import api, { APIError } from './api';
-import type { ChatRequest, Message, SSEvent, Thought } from '@/types';
+import type { ChatRequest, Message, SSEEvent, Thought } from '@/types';
 import { getAgentById } from '@/config/agents';
 import { createSSEClient, type RobustSSEClient } from './sseClient';
+import { getLlmRequestOverrides } from '@/utils/llmRequest';
 
 /**
  * 发送聊天消息（非流式）
@@ -46,7 +47,7 @@ export async function sendMessage(request: ChatRequest): Promise<Message> {
 export function streamMessage(
   request: ChatRequest,
   onChunk: (chunk: string) => void,
-  onEvent: (event: SSEvent) => void,
+  onEvent: (event: SSEEvent) => void,
   onComplete: () => void,
   onError: (error: Error) => void
 ): () => void {
@@ -138,6 +139,27 @@ export function streamMessage(
           });
         }
 
+        // 多智能体编排事件
+        if (
+          eventType === 'agent_decision' ||
+          eventType === 'subagent' ||
+          eventType === 'handoff' ||
+          eventType === 'composition'
+        ) {
+          onEvent({
+            event: eventType,
+            data: {
+              content: typeof eventData === 'object' ? eventData?.content : eventData,
+              metadata: {
+                ...(typeof eventData === 'object' ? eventData?.metadata || {} : {}),
+                ...(data.metadata || {}),
+              },
+              raw: eventData,
+            },
+            timestamp: data.timestamp || new Date().toISOString(),
+          });
+        }
+
         // 检查是否完成
         if (
           eventType === 'done' ||
@@ -160,69 +182,250 @@ export function streamMessage(
   return closeConnection;
 }
 
+export type AgentStreamEvent = {
+  event: string;
+  data: any;
+  timestamp: string;
+};
+
 /**
- * 发送聊天消息（流式）- 简化版供 chatStore 使用
+ * 发送聊天消息（流式）— 等 SSE 真正结束才 resolve
+ * 区分：正文 chunk / 思考 / 系统 / 工具 / 编排事件
  */
 export async function sendMessageToAgent(
   content: string,
   agentId: string,
   onChunk: (chunk: string, isThought: boolean) => void,
-  onThought?: (thought: Thought) => void
+  onThought?: (thought: Thought) => void,
+  onEvent?: (event: AgentStreamEvent) => void,
+  sessionId?: string
 ): Promise<void> {
   const endpoint = '/juben/chat';
+  const isAuto =
+    !agentId || agentId === 'auto' || agentId === 'juben_conductor';
 
   const request: ChatRequest = {
     input: content,
-    agent_id: agentId,
-    project_id: localStorage.getItem('projectId') || undefined,
+    user_id: localStorage.getItem('userId') || 'default_user',
+    session_id: sessionId || undefined,
+    project_id:
+      localStorage.getItem('dramaId') ||
+      localStorage.getItem('projectId') ||
+      undefined,
+    ...getLlmRequestOverrides(),
+    ...(isAuto ? {} : { agent_id: agentId }),
   };
 
   let thoughtStep = 0;
 
-  await api.connectSSE(
-    endpoint,
-    request,
-    (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const eventType = data.type || data.event_type || data.event;
-        if (eventType === 'heartbeat') {
-          return;
-        }
-        const eventData = data.data || {};
+  const CONTENT_EVENTS = new Set([
+    'llm_chunk',
+    'message',
+    'data',
+    'content',
+    'token',
+    'delta',
+  ]);
+  const PROCESS_EVENTS = new Set([
+    'system',
+    'progress',
+    'thinking',
+    'thought',
+    'tool',
+    'tool_start',
+    'tool_complete',
+    'tool_processing',
+    'tool_result',
+    'tool_call',
+    'tool_return',
+    'agent_decision',
+    'subagent',
+    'subagent_start',
+    'subagent_end',
+    'handoff',
+    'composition',
+    'composition_progress',
+    'error',
+    'billing',
+  ]);
 
-        const contentValue = eventData?.content || eventData || data.message || '';
-        const contentType = eventData?.content_type || eventData?.type || data.content_type;
-
-        const isThought =
-          eventType === 'thinking' ||
-          eventType === 'thought' ||
-          contentType === 'thought' ||
-          contentType === 'plan_step';
-
-        if (typeof contentValue === 'string' && contentValue) {
-          onChunk(contentValue, isThought);
-          if (isThought && onThought) {
-            thoughtStep += 1;
-            onThought({
-              step: thoughtStep,
-              content: contentValue,
-              timestamp: data.timestamp || new Date().toISOString(),
-            });
-          }
-        }
-      } catch (error) {
-        console.error('[sendMessageToAgent] Error parsing SSE:', error);
-      }
-    },
-    (error) => {
-      console.error('[sendMessageToAgent] SSE error:', error);
-      throw error;
-    },
-    () => {
-      return;
+  const isProgressPayload = (eventType: string, eventData: any): boolean => {
+    const meta = (eventData && typeof eventData === 'object' && eventData.metadata) || {};
+    const stage = String(meta.stage || '');
+    // 最终报告 / 错误结果不是进度
+    if (
+      ['complete', 'error', 'done', 'final'].includes(stage) ||
+      /_(complete|error|done|result)$/.test(eventType) ||
+      eventType === 'analysis_complete' ||
+      eventType === 'analysis_error'
+    ) {
+      return false;
     }
+    const text =
+      typeof eventData === 'string'
+        ? eventData
+        : String(eventData?.content || eventData?.message || '');
+    if (!text || text.length >= 160 || text.trimStart().startsWith('#')) return false;
+    const t = text.trim();
+    const shortProgress =
+      t.endsWith('...') ||
+      t.endsWith('…') ||
+      t.startsWith('正在') ||
+      t.startsWith('开始');
+    return (
+      shortProgress ||
+      /^(identifying_|analyzing_|enriching_|building_|generating_|formatting_)/.test(eventType) ||
+      eventType === 'analysis_start' ||
+      eventType === 'analysis_progress'
+    );
+  };
+
+  await new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const fail = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    api.connectSSE(
+      endpoint,
+      request,
+      (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const eventType = String(data.event || data.event_type || data.type || '');
+          if (!eventType || eventType === 'heartbeat') return;
+          if (eventType === 'done' || eventType === 'complete' || eventType === 'end') {
+            finish();
+            return;
+          }
+
+          const eventData = data.data ?? {};
+          const timestamp = data.timestamp || new Date().toISOString();
+          const contentType = eventData?.content_type || eventData?.type || data.content_type;
+
+          // 过程事件：绝不混入正文（含自定义进度事件 / 带 stage 的短句）
+          const isProcess =
+            PROCESS_EVENTS.has(eventType) ||
+            eventType.startsWith('tool_') ||
+            contentType === 'thought' ||
+            contentType === 'plan_step' ||
+            isProgressPayload(eventType, eventData);
+
+          if (isProcess) {
+            // 统一成 system，方便时间线竖排展示
+            const processEvent = isProgressPayload(eventType, eventData)
+              ? eventType === 'system' || eventType === 'progress'
+                ? eventType
+                : 'system'
+              : eventType;
+            onEvent?.({
+              event: processEvent,
+              data:
+                typeof eventData === 'string'
+                  ? { content: eventData }
+                  : eventData,
+              timestamp,
+            });
+
+            const text =
+              typeof eventData === 'string'
+                ? eventData
+                : String(
+                    eventData?.content ||
+                      eventData?.message ||
+                      eventData?.summary ||
+                      eventData?.error ||
+                      ''
+                  );
+            const isThought =
+              eventType === 'thinking' ||
+              eventType === 'thought' ||
+              contentType === 'thought' ||
+              contentType === 'plan_step';
+
+            // 只有真正的「思考/推理」才进思考链；system 进度提示只进过程时间线（onEvent），
+            // 避免进度提示被当成思考、并重复出现在时间线里。
+            if (isThought && text && onThought) {
+              thoughtStep += 1;
+              onThought({
+                step: thoughtStep,
+                content: text,
+                timestamp,
+              });
+            }
+            return;
+          }
+
+          // 正文流
+          if (CONTENT_EVENTS.has(eventType) || (!eventType && typeof eventData === 'string')) {
+            const chunk =
+              typeof eventData === 'string'
+                ? eventData
+                : typeof eventData?.content === 'string'
+                  ? eventData.content
+                  : typeof data.message === 'string'
+                    ? data.message
+                    : '';
+            if (chunk) onChunk(chunk, false);
+            return;
+          }
+
+          // 兜底：带 content 的未知事件走过程，避免污染流式正文
+          if (eventData && typeof eventData === 'object') {
+            onEvent?.({ event: eventType || 'info', data: eventData, timestamp });
+          }
+        } catch (error) {
+          console.error('[sendMessageToAgent] Error parsing SSE:', error);
+        }
+      },
+      (error) => {
+        console.error('[sendMessageToAgent] SSE error:', error);
+        fail(error instanceof Error ? error : new Error(String(error)));
+      },
+      () => {
+        finish();
+      }
+    );
+  });
+}
+
+export interface ChatSessionMeta {
+  session_id: string;
+  last_active?: string;
+  message_count?: number;
+  title?: string;
+}
+
+export interface ChatSessionHistoryItem {
+  id?: string;
+  session_id: string;
+  message_type: string;
+  content: string;
+  agent_name?: string;
+  created_at?: string;
+}
+
+export async function listChatSessions(userId: string) {
+  return api.get<{ success: boolean; sessions: ChatSessionMeta[] }>('/juben/chat/sessions', {
+    user_id: userId,
+  });
+}
+
+export async function getChatSessionHistory(sessionId: string) {
+  return api.get<{ success: boolean; history: ChatSessionHistoryItem[] }>(
+    `/juben/chat/sessions/${sessionId}`
   );
+}
+
+export async function deleteChatSession(sessionId: string) {
+  return api.delete<{ success: boolean }>(`/juben/chat/sessions/${sessionId}`);
 }
 
 /**
@@ -332,7 +535,7 @@ export class ChatSessionManager {
   /**
    * 处理 SSE 事件
    */
-  private _handleSSEEvent(event: SSEvent): void {
+  private _handleSSEEvent(event: SSEEvent): void {
     console.log('[ChatSessionManager] SSE event:', event);
 
     // 触发 'event' 通用事件

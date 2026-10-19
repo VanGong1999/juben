@@ -43,7 +43,7 @@ class IPEvaluationAgent(BaseJubenAgent):
     4. 支持Agent as Tool机制
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("ip_evaluation", model_provider)
 
         # IP 评估配置（仅用于提示词说明）

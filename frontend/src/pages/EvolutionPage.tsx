@@ -23,6 +23,7 @@ import { useNotificationStore } from '@/store/notificationStore';
 import { getAgents } from '@/services/agentService';
 import { getEvolutionStatus, triggerEvolution, getVersions, getEvolutionReport } from '@/services/evolutionService';
 import type { Agent } from '@/types';
+import { useI18n } from '@/i18n';
 
 interface AgentPerformance {
   agentId: string;
@@ -34,6 +35,7 @@ interface AgentPerformance {
 }
 
 const EvolutionPage: React.FC = () => {
+  const { t, language } = useI18n();
   const { success, error } = useNotificationStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'settings'>('overview');
   const [isLoading, setIsLoading] = useState(false);
@@ -91,7 +93,7 @@ const EvolutionPage: React.FC = () => {
       });
 
       setOptimizerRunning(Boolean(data.optimizer_running));
-      setLastUpdated(new Date().toLocaleString('zh-CN'));
+      setLastUpdated(new Date().toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US'));
 
       const perf: AgentPerformance[] = triggers.map((item: any) => ({
         agentId: item.agent_name,
@@ -107,7 +109,7 @@ const EvolutionPage: React.FC = () => {
         setSelectedAgent(perf[0].agentId);
       }
     } catch (err: any) {
-      error('加载失败', err?.message || '无法获取进化状态');
+      error(t('admin.evolution.toast.loadFailed'), err?.message || t('admin.evolution.toast.loadStatusFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -134,10 +136,10 @@ const EvolutionPage: React.FC = () => {
     setIsLoading(true);
     try {
       await triggerEvolution(agentId);
-      success('进化已启动', 'Agent 进化任务已加入队列');
+      success(t('admin.evolution.toast.evolutionStarted'), t('admin.evolution.toast.evolutionQueued'));
       loadStatus();
     } catch (err: any) {
-      error('启动失败', err?.message || '无法启动进化任务');
+      error(t('admin.evolution.toast.startFailed'), err?.message || t('admin.evolution.toast.startEvolutionFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -150,9 +152,9 @@ const EvolutionPage: React.FC = () => {
       const compactDate = reportDate.replace(/-/g, '');
       const response = await getEvolutionReport(compactDate);
       setReport(response.data || null);
-      success('报告加载完成', `报告日期 ${reportDate}`);
+      success(t('admin.evolution.toast.reportLoaded'), t('admin.evolution.toast.reportDate', { date: reportDate }));
     } catch (err: any) {
-      setReportError(err?.message || '无法加载报告');
+      setReportError(err?.message || t('admin.evolution.toast.reportFailed'));
     }
   };
 
@@ -201,8 +203,8 @@ const EvolutionPage: React.FC = () => {
                     <Sparkles className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl font-bold text-gray-900">进化/优化系统</h1>
-                    <p className="text-sm text-gray-500 mt-1">监控 Agent 进化过程与版本质量</p>
+                    <h1 className="text-2xl font-bold text-gray-900">{t('admin.evolution.title')}</h1>
+                    <p className="text-sm text-gray-500 mt-1">{t('admin.evolution.subtitle')}</p>
                   </div>
                 </div>
                 <button
@@ -210,7 +212,7 @@ const EvolutionPage: React.FC = () => {
                   className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 text-sm"
                 >
                   <RefreshCw className={isLoading ? 'w-4 h-4 animate-spin' : 'w-4 h-4'} />
-                  刷新
+                  {t('admin.refresh')}
                 </button>
               </div>
             </div>
@@ -220,9 +222,9 @@ const EvolutionPage: React.FC = () => {
             {/* Tabs */}
             <div className="flex gap-2 mb-6">
               {[
-                { key: 'overview', label: '概览' },
-                { key: 'history', label: '版本历史' },
-                { key: 'settings', label: '系统状态' },
+                { key: 'overview', label: t('admin.evolution.tab.overview') },
+                { key: 'history', label: t('admin.evolution.tab.history') },
+                { key: 'settings', label: t('admin.evolution.tab.settings') },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -243,7 +245,7 @@ const EvolutionPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">Agent 数量</p>
+                        <p className="text-sm text-gray-500">{t('admin.evolution.agentCount')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalAgents}</p>
                       </div>
                       <Target className="w-8 h-8 text-blue-500" />
@@ -252,7 +254,7 @@ const EvolutionPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">待进化</p>
+                        <p className="text-sm text-gray-500">{t('admin.evolution.pendingEvolution')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{stats.needEvolution}</p>
                       </div>
                       <AlertCircle className="w-8 h-8 text-yellow-500" />
@@ -261,7 +263,7 @@ const EvolutionPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">A/B 测试</p>
+                        <p className="text-sm text-gray-500">{t('admin.evolution.abTests')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{stats.activeABTests}</p>
                       </div>
                       <GitBranch className="w-8 h-8 text-purple-500" />
@@ -270,7 +272,7 @@ const EvolutionPage: React.FC = () => {
                   <div className="bg-white rounded-lg shadow p-5">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-gray-500">平均评分</p>
+                        <p className="text-sm text-gray-500">{t('admin.evolution.avgRating')}</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">{stats.avgRating.toFixed(2)}</p>
                       </div>
                       <TrendingUp className="w-8 h-8 text-green-500" />
@@ -281,11 +283,11 @@ const EvolutionPage: React.FC = () => {
                 {/* Agent 表格 */}
                 <div className="bg-white rounded-lg shadow">
                   <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-900">Agent 评分状态</h2>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('admin.evolution.agentStatus')}</h2>
                   </div>
                   <div className="divide-y divide-gray-100">
                     {agentPerformance.length === 0 ? (
-                      <div className="p-8 text-sm text-gray-500 text-center">暂无可用数据</div>
+                      <div className="p-8 text-sm text-gray-500 text-center">{t('admin.evolution.noData')}</div>
                     ) : (
                       agentPerformance.map((agent) => (
                         <div key={agent.agentId} className="px-6 py-4 flex items-center justify-between">
@@ -296,9 +298,9 @@ const EvolutionPage: React.FC = () => {
                               <span className="text-xs text-gray-500">({agent.agentId})</span>
                             </div>
                             <div className="mt-2 text-xs text-gray-500 space-x-4">
-                              <span>评分: {agent.score.toFixed(2)}</span>
-                              <span>反馈: {agent.totalFeedbacks}</span>
-                              <span>{agent.reason || '状态正常'}</span>
+                              <span>{t('admin.evolution.rating', { score: agent.score.toFixed(2) })}</span>
+                              <span>{t('admin.evolution.feedback', { count: agent.totalFeedbacks })}</span>
+                              <span>{agent.reason || t('admin.evolution.statusNormal')}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -307,7 +309,7 @@ const EvolutionPage: React.FC = () => {
                                 onClick={() => handleTriggerEvolution(agent.agentId)}
                                 className="px-3 py-1.5 text-xs bg-black text-white rounded hover:bg-gray-800"
                               >
-                                触发进化
+                                {t('admin.evolution.triggerEvolution')}
                               </button>
                             )}
                             <button
@@ -317,7 +319,7 @@ const EvolutionPage: React.FC = () => {
                               }}
                               className="px-3 py-1.5 text-xs bg-gray-100 rounded hover:bg-gray-200"
                             >
-                              查看版本
+                              {t('admin.evolution.viewVersions')}
                             </button>
                           </div>
                         </div>
@@ -326,7 +328,7 @@ const EvolutionPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="mt-4 text-xs text-gray-500">最后更新：{lastUpdated || '—'}</div>
+                <div className="mt-4 text-xs text-gray-500">{t('admin.evolution.lastUpdated', { time: lastUpdated || '—' })}</div>
               </>
             )}
 
@@ -334,8 +336,8 @@ const EvolutionPage: React.FC = () => {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Prompt 版本历史</h2>
-                    <p className="text-sm text-gray-500">查看指定 Agent 的版本演进情况</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('admin.evolution.promptHistory')}</h2>
+                    <p className="text-sm text-gray-500">{t('admin.evolution.promptHistoryDesc')}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <select
@@ -354,27 +356,27 @@ const EvolutionPage: React.FC = () => {
                       onChange={(e) => setVersionStatus(e.target.value as any)}
                       className="text-sm border rounded px-2 py-1"
                     >
-                      <option value="all">全部状态</option>
-                      <option value="active">活跃</option>
-                      <option value="candidate">候选</option>
-                      <option value="archived">归档</option>
+                      <option value="all">{t('admin.evolution.allStatus')}</option>
+                      <option value="active">{t('admin.evolution.active')}</option>
+                      <option value="candidate">{t('admin.evolution.candidate')}</option>
+                      <option value="archived">{t('admin.evolution.archived')}</option>
                     </select>
                   </div>
                 </div>
 
                 {versions.length === 0 ? (
-                  <div className="text-sm text-gray-500">暂无版本记录</div>
+                  <div className="text-sm text-gray-500">{t('admin.evolution.noVersions')}</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="text-left text-gray-500">
-                          <th className="px-4 py-2">版本</th>
-                          <th className="px-4 py-2">状态</th>
-                          <th className="px-4 py-2">评分</th>
-                          <th className="px-4 py-2">反馈</th>
-                          <th className="px-4 py-2">创建时间</th>
-                          <th className="px-4 py-2">变更说明</th>
+                          <th className="px-4 py-2">{t('admin.evolution.version')}</th>
+                          <th className="px-4 py-2">{t('admin.status')}</th>
+                          <th className="px-4 py-2">{t('admin.evolution.score')}</th>
+                          <th className="px-4 py-2">{t('admin.evolution.feedbackCount')}</th>
+                          <th className="px-4 py-2">{t('admin.evolution.createdAt')}</th>
+                          <th className="px-4 py-2">{t('admin.evolution.changeNote')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -384,7 +386,7 @@ const EvolutionPage: React.FC = () => {
                             <td className="px-4 py-2">{item.status}</td>
                             <td className="px-4 py-2">{(item.avg_rating || 0).toFixed(2)}</td>
                             <td className="px-4 py-2">{item.total_feedbacks || 0}</td>
-                            <td className="px-4 py-2">{item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '-'}</td>
+                            <td className="px-4 py-2">{item.created_at ? new Date(item.created_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US') : '-'}</td>
                             <td className="px-4 py-2 text-xs text-gray-500">{item.changelog || item.optimization_reason || '-'}</td>
                           </tr>
                         ))}
@@ -399,13 +401,13 @@ const EvolutionPage: React.FC = () => {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">系统状态</h2>
-                    <p className="text-sm text-gray-500">查看优化器运行状态与日报</p>
+                    <h2 className="text-lg font-semibold text-gray-900">{t('admin.evolution.systemStatus')}</h2>
+                    <p className="text-sm text-gray-500">{t('admin.evolution.systemStatusDesc')}</p>
                   </div>
                   <div className="inline-flex items-center gap-2 text-sm">
-                    <span>优化器：</span>
+                    <span>{t('admin.evolution.optimizer')}</span>
                     <span className={`px-2 py-1 rounded ${optimizerRunning ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {optimizerRunning ? '运行中' : '未启动'}
+                      {optimizerRunning ? t('admin.evolution.running') : t('admin.evolution.notStarted')}
                     </span>
                   </div>
                 </div>
@@ -422,7 +424,7 @@ const EvolutionPage: React.FC = () => {
                       onClick={loadReport}
                       className="px-3 py-1.5 text-xs bg-black text-white rounded hover:bg-gray-800"
                     >
-                      加载日报
+                      {t('admin.evolution.loadReport')}
                     </button>
                   </div>
                   {reportError && <div className="text-xs text-red-500 mt-3">{reportError}</div>}
@@ -432,7 +434,7 @@ const EvolutionPage: React.FC = () => {
                     </pre>
                   )}
                   {!report && !reportError && (
-                    <div className="text-xs text-gray-500 mt-3">请选择日期加载进化报告</div>
+                    <div className="text-xs text-gray-500 mt-3">{t('admin.evolution.selectDate')}</div>
                   )}
                 </div>
               </div>

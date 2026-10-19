@@ -4,6 +4,7 @@
  */
 
 import { Wrench, CheckCircle, XCircle, Loader2, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 export interface ToolCall {
   tool_name: string;
@@ -24,6 +25,7 @@ interface ToolExecutionDisplayProps {
 }
 
 export default function ToolExecutionDisplay({ toolCalls, isExecuting }: ToolExecutionDisplayProps) {
+  const { t } = useI18n();
   if (toolCalls.length === 0 && !isExecuting) {
     return null;
   }
@@ -32,7 +34,7 @@ export default function ToolExecutionDisplay({ toolCalls, isExecuting }: ToolExe
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-xs text-gray-500">
         <Wrench className="w-4 h-4" />
-        <span>工具调用记录</span>
+        <span>{t('dataViews.toolExecution.title')}</span>
       </div>
 
       <div className="space-y-2">
@@ -44,7 +46,7 @@ export default function ToolExecutionDisplay({ toolCalls, isExecuting }: ToolExe
           <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
             <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-900">正在执行工具...</p>
+              <p className="text-sm font-medium text-blue-900">{t('dataViews.toolExecution.executing')}</p>
             </div>
           </div>
         )}
@@ -61,6 +63,7 @@ interface ToolCallCardProps {
 }
 
 function ToolCallCard({ call }: ToolCallCardProps) {
+  const { t } = useI18n();
   const isSuccess = call.result?.code === 0;
   const isError = call.error || call.result?.code !== 0;
 
@@ -68,11 +71,23 @@ function ToolCallCard({ call }: ToolCallCardProps) {
   const getToolIcon = (toolName: string) => {
     switch (toolName) {
       case 'search_url':
+      case 'web_search':
         return '🔍';
       case 'baike_search':
         return '📚';
       case 'knowledge_base':
+      case 'knowledge_query':
         return '💾';
+      case 'read':
+      case 'write':
+      case 'edit':
+      case 'ls':
+      case 'grep':
+      case 'find':
+      case 'file_reference':
+        return '📄';
+      case 'date':
+        return '📅';
       default:
         return '🔧';
     }
@@ -82,11 +97,27 @@ function ToolCallCard({ call }: ToolCallCardProps) {
   const getToolDisplayName = (toolName: string) => {
     switch (toolName) {
       case 'search_url':
-        return '网页搜索';
+      case 'web_search':
+        return t('dataViews.toolExecution.toolName.webSearch');
       case 'baike_search':
-        return '百度百科';
+        return t('dataViews.toolExecution.toolName.baike');
       case 'knowledge_base':
-        return '知识库查询';
+      case 'knowledge_query':
+        return t('dataViews.toolExecution.toolName.knowledge');
+      case 'text_split':
+        return t('dataViews.toolExecution.toolName.textSplit');
+      case 'text_truncate':
+        return t('dataViews.toolExecution.toolName.textTruncate');
+      case 'format_output':
+        return t('dataViews.toolExecution.toolName.formatOutput');
+      case 'generate_document':
+        return t('dataViews.toolExecution.toolName.generateDocument');
+      case 'extract_series_name':
+        return t('dataViews.toolExecution.toolName.extractSeriesName');
+      case 'extract_series_info':
+        return t('dataViews.toolExecution.toolName.extractSeriesInfo');
+      case 'file_reference':
+        return t('dataViews.toolExecution.toolName.fileReference');
       default:
         return toolName;
     }
@@ -148,7 +179,7 @@ function ToolCallCard({ call }: ToolCallCardProps) {
       {/* 错误信息 */}
       {isError && (
         <div className="px-4 py-3 bg-red-50 text-sm text-red-700">
-          {call.error || call.result?.msg || '执行失败'}
+          {call.error || call.result?.msg || t('dataViews.toolExecution.executionFailed')}
         </div>
       )}
     </div>
@@ -170,10 +201,11 @@ interface SearchResultsListProps {
 }
 
 function SearchResultsList({ results }: SearchResultsListProps) {
+  const { t } = useI18n();
   if (results.length === 0) {
     return (
       <div className="px-4 py-3 text-sm text-gray-500">
-        未找到搜索结果
+        {t('dataViews.toolExecution.noResults')}
       </div>
     );
   }
@@ -181,7 +213,7 @@ function SearchResultsList({ results }: SearchResultsListProps) {
   return (
     <div className="px-4 py-3 space-y-3">
       <div className="text-xs text-gray-500">
-        找到 {results.length} 条结果
+        {t('dataViews.toolExecution.found', { count: results.length })}
       </div>
       <div className="space-y-3">
         {results.slice(0, 3).map((result, index) => (
@@ -219,7 +251,7 @@ function SearchResultsList({ results }: SearchResultsListProps) {
 
         {results.length > 3 && (
           <div className="text-center text-xs text-gray-500">
-            还有 {results.length - 3} 条结果...
+            {t('dataViews.toolExecution.more', { count: results.length - 3 })}
           </div>
         )}
       </div>
@@ -238,6 +270,7 @@ interface BaikeResultProps {
 }
 
 function BaikeResult({ data }: BaikeResultProps) {
+  const { t } = useI18n();
   if (!data.baike && (!data.videos || data.videos.length === 0)) {
     return null;
   }
@@ -247,7 +280,7 @@ function BaikeResult({ data }: BaikeResultProps) {
       {/* 百科内容 */}
       {data.baike && (
         <div>
-          <div className="text-xs text-gray-500 mb-2">百科内容</div>
+          <div className="text-xs text-gray-500 mb-2">{t('dataViews.toolExecution.baikeContent')}</div>
           <div className="p-3 bg-white rounded border border-gray-200">
             <h4 className="text-sm font-medium text-gray-900 mb-1">
               {data.baike.lemma_title}
@@ -262,9 +295,9 @@ function BaikeResult({ data }: BaikeResultProps) {
       {/* 视频内容 */}
       {data.videos && data.videos.length > 0 && (
         <div>
-          <div className="text-xs text-gray-500 mb-2">相关视频</div>
+          <div className="text-xs text-gray-500 mb-2">{t('dataViews.toolExecution.relatedVideos')}</div>
           <div className="text-xs text-gray-600">
-            找到 {data.videos.length} 个相关视频
+            {t('dataViews.toolExecution.foundVideos', { count: data.videos.length })}
           </div>
         </div>
       )}

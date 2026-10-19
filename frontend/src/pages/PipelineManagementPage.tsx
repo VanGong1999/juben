@@ -27,6 +27,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import api from '@/services/api';
+import { useI18n } from '@/i18n';
 
 interface Pipeline {
   id: string;
@@ -66,6 +67,7 @@ interface PipelineRun {
 }
 
 export default function PipelineManagementPage() {
+  const { t, language } = useI18n();
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const navigate = useNavigate();
 
@@ -182,9 +184,9 @@ export default function PipelineManagementPage() {
                   <Workflow className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">管道管理</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{t('admin.pipeline.title')}</h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    管理数据处理管道和工作流
+                    {t('admin.pipeline.subtitle')}
                   </p>
                 </div>
               </div>
@@ -199,7 +201,7 @@ export default function PipelineManagementPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  管道模板
+                  {t('admin.pipeline.tab.templates')}
                 </button>
                 <button
                   onClick={() => setActiveTab('runs')}
@@ -209,7 +211,7 @@ export default function PipelineManagementPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  运行历史
+                  {t('admin.pipeline.tab.runs')}
                 </button>
               </div>
             </div>
@@ -259,7 +261,7 @@ export default function PipelineManagementPage() {
 
                               <div className="mb-4">
                                 <p className="text-xs text-gray-500 mb-2">
-                                  {template.steps.length} 个步骤
+                                  {t('admin.pipeline.stepsCount', { count: template.steps.length })}
                                 </p>
                                 <div className="flex flex-wrap gap-1">
                                   {template.steps.slice(0, 3).map((step, idx) => (
@@ -287,12 +289,12 @@ export default function PipelineManagementPage() {
                                   {runStatus[template.id] === 'running' ? (
                                     <>
                                       <Loader2 className="w-4 h-4 animate-spin" />
-                                      运行中
+                                      {t('admin.pipeline.running')}
                                     </>
                                   ) : (
                                     <>
                                       <Play className="w-4 h-4" />
-                                      运行
+                                      {t('admin.pipeline.run')}
                                     </>
                                   )}
                                 </button>
@@ -311,10 +313,10 @@ export default function PipelineManagementPage() {
                     <div className="text-center py-12">
                       <Workflow className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        还没有管道模板
+                        {t('admin.pipeline.noTemplates')}
                       </h3>
                       <p className="text-gray-500">
-                        管道模板将在系统配置后显示
+                        {t('admin.pipeline.noTemplatesDesc')}
                       </p>
                     </div>
                   )}
@@ -325,14 +327,14 @@ export default function PipelineManagementPage() {
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-200">
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-gray-900">运行历史</h2>
+                      <h2 className="text-lg font-semibold text-gray-900">{t('admin.pipeline.tab.runs')}</h2>
 
                       <button
                         onClick={loadRuns}
                         className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                       >
                         <Clock className="w-4 h-4" />
-                        刷新
+                        {t('admin.refresh')}
                       </button>
                     </div>
                   </div>
@@ -341,10 +343,10 @@ export default function PipelineManagementPage() {
                     <div className="p-12 text-center">
                       <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        还没有运行记录
+                        {t('admin.pipeline.noRuns')}
                       </h3>
                       <p className="text-gray-500">
-                        运行管道后，记录将显示在这里
+                        {t('admin.pipeline.noRunsDesc')}
                       </p>
                     </div>
                   ) : (
@@ -353,22 +355,22 @@ export default function PipelineManagementPage() {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              管道ID
+                              {t('admin.pipeline.pipelineId')}
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              状态
+                              {t('admin.status')}
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              开始时间
+                              {t('admin.pipeline.startTime')}
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              完成时间
+                              {t('admin.pipeline.endTime')}
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                              耗时
+                              {t('admin.pipeline.duration')}
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                              操作
+                              {t('admin.actions')}
                             </th>
                           </tr>
                         </thead>
@@ -383,25 +385,25 @@ export default function PipelineManagementPage() {
                               <td className="px-6 py-4">
                                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(run.status)}`}>
                                   {getStatusIcon(run.status)}
-                                  {run.status === 'running' && '运行中'}
-                                  {run.status === 'completed' && '已完成'}
-                                  {run.status === 'failed' && '失败'}
+                                  {run.status === 'running' && t('admin.pipeline.running')}
+                                  {run.status === 'completed' && t('admin.pipeline.completed')}
+                                  {run.status === 'failed' && t('admin.pipeline.failed')}
                                 </span>
                               </td>
 
                               <td className="px-6 py-4 text-sm text-gray-600">
-                                {new Date(run.started_at).toLocaleString('zh-CN')}
+                                {new Date(run.started_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}
                               </td>
 
                               <td className="px-6 py-4 text-sm text-gray-600">
                                 {run.completed_at
-                                  ? new Date(run.completed_at).toLocaleString('zh-CN')
+                                  ? new Date(run.completed_at).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')
                                   : '-'}
                               </td>
 
                               <td className="px-6 py-4 text-sm text-gray-600">
                                 {run.completed_at
-                                  ? `${Math.round((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000)}秒`
+                                  ? t('admin.pipeline.seconds', { n: Math.round((new Date(run.completed_at).getTime() - new Date(run.started_at).getTime()) / 1000) })
                                   : '-'}
                               </td>
 

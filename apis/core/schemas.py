@@ -3,9 +3,12 @@
  项目的优秀设计
 """
 from typing import Dict, Any, List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from enum import Enum
+
+# 项目管理/流式枚举模型已抽到 utils/project_types.py（切断 utils→apis 循环导入），此处 re-export 保持兼容
+from utils.project_types import Project, ProjectFile, ProjectStatus, FileType, StreamContentType
 
 # ==================== 基础响应模型 ====================
 
@@ -26,6 +29,8 @@ class ErrorResponse(BaseResponse):
 
 class ChatRequest(BaseModel):
     """聊天请求模型"""
+    model_config = ConfigDict(protected_namespaces=())
+
     input: str = Field(
         ...,
         description="用户输入",
@@ -54,17 +59,29 @@ class ChatRequest(BaseModel):
     )
     model_provider: Optional[str] = Field(
         default=None,
-        description="模型提供商 (zhipu, openrouter, openai, local, ollama)",
-        json_schema_extra={"enum": ["zhipu", "openrouter", "openai", "local", "ollama"]}
+        description="模型提供商 (deepseek, zhipu, openrouter, openai, local, ollama, dashscope)",
+        json_schema_extra={
+            "enum": ["deepseek", "zhipu", "openrouter", "openai", "local", "ollama", "dashscope"]
+        },
     )
     model: Optional[str] = Field(
         default=None,
         description="模型名称",
         max_length=100
     )
+    api_key: Optional[str] = Field(
+        default=None,
+        description="用户自备 API Key（仅本请求使用，不落库）",
+        max_length=512,
+    )
+    base_url: Optional[str] = Field(
+        default=None,
+        description="OpenAI 兼容 Base URL",
+        max_length=500,
+    )
     agent_id: Optional[str] = Field(
         default=None,
-        description="Agent ID",
+        description="Agent ID；空 / auto / juben_conductor 走总控编排，也可显式指定专家",
         max_length=100
     )
     history: List[Dict[str, str]] = Field(
@@ -152,73 +169,6 @@ class EventType(str, Enum):
     BILLING = "billing"           # 计费信息
     PROGRESS = "progress"         # 进度更新
     SYSTEM = "system"             # 系统消息
-
-class StreamContentType(str, Enum):
-    """流式内容类型枚举（用于流式事件的内容分类）- juben剧本创作专用"""
-
-    # ============ 基础类型 ============
-    TEXT = "text"                    # 普通文本
-    MARKDOWN = "markdown"            # Markdown格式内容
-    JSON = "json"                    # JSON结构化数据
-
-    # ============ 思考和分析类 ============
-    THOUGHT = "thought"              # Agent的内心思考过程
-    PLAN_STEP = "plan_step"          # 执行计划步骤
-    INSIGHT = "insight"              # 洞察分析
-
-    # ============ 人物相关 ============
-    CHARACTER_PROFILE = "character_profile"       # 人物画像/小传
-    CHARACTER_RELATIONSHIP = "character_relationship"  # 人物关系分析
-
-    # ============ 故事结构相关 ============
-    STORY_SUMMARY = "story_summary"              # 故事梗概/总结
-    STORY_OUTLINE = "story_outline"              # 故事大纲
-    STORY_TYPE = "story_type"                    # 故事类型分析
-    FIVE_ELEMENTS = "five_elements"              # 故事五元素分析
-    SERIES_INFO = "series_info"                  # 系列信息
-    SERIES_ANALYSIS = "series_analysis"          # 系列分析
-
-    # ============ 情节相关 ============
-    MAJOR_PLOT = "major_plot"                    # 大情节点
-    DETAILED_PLOT = "detailed_plot"              # 详细情节点
-    DRAMA_ANALYSIS = "drama_analysis"            # 戏剧功能分析
-    PLOT_ANALYSIS = "plot_analysis"              # 情节分析
-
-    # ============ 创作相关 ============
-    SCRIPT = "script"                            # 剧本内容
-    DRAMA_PLAN = "drama_plan"                    # 剧本策划
-    PROPOSAL = "proposal"                        # 内容提案
-
-    # ============ 可视化 ============
-    MIND_MAP = "mind_map"                        # 思维导图
-
-    # ============ 评估相关 ============
-    EVALUATION = "evaluation"                    # 综合评估结果
-    SCRIPT_EVALUATION = "script_evaluation"      # 剧本评估
-    STORY_EVALUATION = "story_evaluation"        # 故事评估
-    OUTLINE_EVALUATION = "outline_evaluation"    # 大纲评估
-    IP_EVALUATION = "ip_evaluation"              # IP评估
-    NOVEL_SCREENING = "novel_screening"          # 小说筛选
-    SCORE_ANALYSIS = "score_analysis"            # 评分分析
-
-    # ============ 工具相关 ============
-    SEARCH_RESULT = "search_result"              # 搜索结果（百度/网络）
-    KNOWLEDGE_RESULT = "knowledge_result"        # 知识库检索结果
-    REFERENCE_RESULT = "reference_result"        # 参考文献结果
-    DOCUMENT = "document"                        # 文档生成
-    FORMATTED_CONTENT = "formatted_content"      # 格式化输出
-
-    # ============ 系统相关 ============
-    SYSTEM_PROGRESS = "system_progress"          # 系统进度提示
-    TOOL_RESULT = "tool_result"                  # 工具执行结果
-    WORKFLOW_PROGRESS = "workflow_progress"      # 工作流进度
-    RESULT_INTEGRATION = "result_integration"    # 结果整合
-    TEXT_OPERATION = "text_operation"            # 文本操作（截断/分割）
-    BATCH_PROGRESS = "batch_progress"            # 批处理进度
-
-    # ============ 其他 ============
-    FINAL_ANSWER = "final_answer"                # 最终整合答案
-    ERROR = "error_content"                      # 错误内容
 
 class StreamEvent(BaseModel):
     """🆕 增强版流式事件模型"""
@@ -496,6 +446,7 @@ class AgentInfo(BaseModel):
     status: str = Field(description="运行状态")
     capabilities: List[str] = Field(description="能力列表")
     examples: List[str] = Field(description="使用示例")
+    product_line: Optional[str] = Field(default=None, description="产品线（short_drama/general/shared）")
 
 class AgentListResponse(BaseResponse):
     """Agent列表响应模型"""
@@ -619,53 +570,6 @@ class ExportResponse(BaseResponse):
 
 
 # ==================== 项目管理模型 ====================
-
-class ProjectStatus(str, Enum):
-    """项目状态枚举"""
-    ACTIVE = "active"           # 活跃项目
-    ARCHIVED = "archived"       # 已归档
-    DELETED = "deleted"         # 已删除
-    COMPLETED = "completed"     # 已完成
-
-class FileType(str, Enum):
-    """文件类型枚举"""
-    CONVERSATION = "conversation"     # 对话记录
-    DRAMA_PLANNING = "drama_planning" # 剧本策划
-    CHARACTER_PROFILE = "character_profile"  # 人物小传
-    SCRIPT = "script"                # 剧本
-    PLOT_POINTS = "plot_points"      # 情节点
-    EVALUATION = "evaluation"        # 评估
-    NOTE = "note"                    # 笔记
-    REFERENCE = "reference"          # 参考资料
-    EXPORT = "export"                # 导出文件
-    OTHER = "other"                  # 其他
-
-class Project(BaseModel):
-    """项目模型"""
-    id: str = Field(description="项目唯一ID")
-    name: str = Field(description="项目名称")
-    description: Optional[str] = Field(default="", description="项目描述")
-    user_id: str = Field(description="用户ID")
-    created_at: datetime = Field(description="创建时间")
-    updated_at: datetime = Field(description="更新时间")
-    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, description="项目状态")
-    tags: List[str] = Field(default_factory=list, description="标签列表")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="元数据")
-    file_count: int = Field(default=0, description="文件数量")
-
-class ProjectFile(BaseModel):
-    """项目文件模型"""
-    id: str = Field(description="文件ID")
-    project_id: str = Field(description="项目ID")
-    filename: str = Field(description="文件名")
-    file_type: FileType = Field(description="文件类型")
-    agent_source: Optional[str] = Field(default=None, description="来源Agent")
-    content: Any = Field(default=None, description="文件内容")
-    tags: List[str] = Field(default_factory=list, description="标签列表")
-    created_at: datetime = Field(description="创建时间")
-    updated_at: datetime = Field(description="更新时间")
-    file_size: int = Field(default=0, description="文件大小(字节)")
-    version: int = Field(default=1, description="版本号")
 
 class ProjectCreateRequest(BaseModel):
     """创建项目请求模型"""

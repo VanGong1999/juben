@@ -27,7 +27,9 @@ except ImportError:
     from pathlib import Path
     sys.path.insert(0, str(Path(__file__).parent.parent))
 
-    from agents.base_juben_agent import BaseJubenAgent 
+    from agents.base_juben_agent import BaseJubenAgent
+
+from utils.text_processor import TextSplitter
 
 class NovelScreeningEvaluationAgent(BaseJubenAgent):
     """
@@ -42,7 +44,7 @@ class NovelScreeningEvaluationAgent(BaseJubenAgent):
     6. 模块化外包：智能体间相互调用，上下文隔离
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化小说初筛评估智能体"""
         super().__init__("novel_screening_evaluation", model_provider)
         
@@ -571,51 +573,33 @@ class NovelScreeningEvaluationAgent(BaseJubenAgent):
                     "tool_name": tool_name
                 }
 
-            # 获取工具智能体实例
-            tool_agent = await self._get_tool_agent(tool_name)
-            if not tool_agent:
-                return {
-                    "success": False,
-                    "error": f"无法获取工具智能体: {tool_name}",
-                    "tool_name": tool_name
-                }
-
-            # 创建独立的工具调用上下文（上下文隔离）
-            tool_context = {
-                "user_id": context.get("user_id", "unknown") if context else "unknown",
-                "session_id": context.get("session_id", "unknown") if context else "unknown",
-                "parent_agent": "novel_screening_evaluation",
-                "tool_call": True,
-                "original_context": context
+            # 统一 SubagentRunner：别名 → 真实 agent_id
+            agent_id_map = {
+                "story_summary": "story_summary_generator",
+                "story_evaluation": "story_evaluation",
+                "score_analyzer": "score_analyzer",
+                "text_truncator": "text_truncator",
             }
-
-            # 调用工具智能体并收集结果（带超时）
-            tool_results = []
-
-            async def collect_results():
-                async for event in tool_agent.process_request(tool_input, tool_context):
-                    # 收集LLM响应内容
-                    if event.get("event_type") == "llm_chunk":
-                        tool_results.append(event.get("data", ""))
-
-            # 使用超时控制
-            try:
-                await asyncio.wait_for(collect_results(), timeout=60)
-            except asyncio.TimeoutError:
-                self.logger.error(f"工具智能体 {tool_name} 调用超时(60秒)")
-                return {
-                    "success": False,
-                    "error": f"工具调用超时(60秒): {tool_name}",
-                    "tool_name": tool_name
-                }
-
-            # 整合工具调用结果
-            combined_result = "".join(tool_results)
-
+            agent_id = agent_id_map.get(tool_name, tool_name)
+            task = (
+                tool_input.get("input")
+                or tool_input.get("query")
+                or tool_input.get("text")
+                or str(tool_input)
+            )
+            depth = int((context or {}).get("subagent_depth") or 0)
+            spawn_result = await self.spawn_subagent(
+                agent_id,
+                str(task),
+                context=context,
+                timeout=60,
+                depth=depth,
+            )
             return {
-                "success": True,
-                "result": combined_result,
-                "tool_name": tool_name
+                "success": spawn_result.get("success", False),
+                "result": spawn_result.get("result") or "",
+                "error": spawn_result.get("error"),
+                "tool_name": tool_name,
             }
 
         except ValueError as e:

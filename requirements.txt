@@ -1,16 +1,23 @@
 # 竖屏短剧策划助手 - 依赖包列表
+# 兼容 Python 3.10–3.12
 
 # Web框架
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
 # 数据验证和配置
-pydantic==2.5.0
+# pydantic 2.5.0 与 zhipuai 的 pydantic-core>=2.14.6 冲突，故上调
+pydantic==2.9.2
+email-validator==2.2.0
 python-dotenv==1.0.0
+pydantic-settings==2.5.2
 
 # HTTP客户端
 aiohttp==3.9.0
 httpx==0.25.0
+
+# 飞书集成（WebSocket 长连接 + 云文档）
+lark-oapi==1.7.5
 
 # 智谱AI
 zhipuai==2.1.5.20250825
@@ -22,14 +29,13 @@ dashscope==1.14.0
 openai==1.3.0
 
 # LangSmith追踪
-langsmith==0.0.69
+# langsmith 0.0.69 与 langchain 0.1.0（需要 >=0.0.77）冲突
+langsmith==0.0.87
 langchain==0.1.0
 langchain-community==0.0.10
 
-# 数据处理
-numpy==1.24.0
-
-# 数据处理
+# 数据处理（1.24.0 不支持 Python 3.12）
+numpy==1.26.4
 pyyaml==6.0.1
 
 # 数据库和存储
@@ -51,11 +57,12 @@ pytest-mock==3.12.0
 
 # 其他工具
 pathlib2==2.3.7
-typing-extensions==4.8.0
+typing-extensions>=4.12.0
+# pymilvus 2.4 仍依赖 pkg_resources，setuptools>=81 已移除
+setuptools>=69,<81
 
-# 缺失的依赖
-pydantic-settings==2.0.0
-psutil==5.9.0
+# 系统监控
+psutil==5.9.8
 
 # 认证和安全
 pyjwt==2.8.0
@@ -63,15 +70,23 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
 # 性能优化
-tenacity==8.2.0
-backoff==2.2.0
+tenacity==8.2.3
+backoff==2.2.1
 
 # 高级功能
-cachetools==5.3.0
-ujson==5.8.0
+cachetools==5.3.3
+ujson==5.10.0
 
 # 图数据库
-neo4j==5.14.0
+neo4j==5.14.1
 aiofiles==23.2.1
-faster-whisper==1.0.0
-soundfile==0.12.1
+
+# ASR（可选，需要系统 ffmpeg/pkg-config；安装失败不影响主服务）
+# faster-whisper==1.0.0
+# soundfile==0.12.1
+
+# Agent Infra（可选增强）
+# mcp>=1.0.0
+# opentelemetry-api>=1.20.0
+# opentelemetry-sdk>=1.20.0
+# opentelemetry-exporter-otlp-proto-http>=1.20.0

@@ -191,7 +191,7 @@ class StyleLibraryManager:
 
 求职者:"斯坦福健身房办的卡。"
 
-【面试官倒地】"""
+【面试官倒地】""",
                 tags=["面试", "误会", "反转"],
                 metadata={"scene": "interview", "mood": "funny"}
             ),

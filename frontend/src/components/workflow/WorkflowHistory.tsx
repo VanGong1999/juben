@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { History, Clock, CheckCircle2, XCircle, AlertCircle, Eye, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 export interface WorkflowExecution {
   id: string;
@@ -35,6 +36,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
   onRerun,
   onViewDetails,
 }) => {
+  const { t, language } = useI18n();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed' | 'running' | 'paused'>('all');
 
@@ -68,13 +70,13 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
   const getStatusText = (status: string) => {
     switch (status) {
       case 'success':
-        return '成功';
+        return t('chatGraph.workflow.status.success');
       case 'failed':
-        return '失败';
+        return t('chatGraph.workflow.status.failed');
       case 'running':
-        return '运行中';
+        return t('chatGraph.workflow.running');
       case 'paused':
-        return '已暂停';
+        return t('chatGraph.workflow.paused');
       default:
         return status;
     }
@@ -100,10 +102,10 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
               <History className="w-6 h-6 text-purple-500" />
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  工作流执行历史
+                  {t('chatGraph.workflow.historyTitle')}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  共 {executions.length} 条执行记录
+                  {t('chatGraph.workflow.historyCount', { count: executions.length })}
                 </p>
               </div>
             </div>
@@ -117,7 +119,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
 
           {/* 状态过滤器 */}
           <div className="flex items-center gap-2 mt-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400">状态:</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{t('chatGraph.workflow.statusFilter')}</span>
             <div className="flex gap-1">
               {(['all', 'success', 'failed', 'running', 'paused'] as const).map((status) => (
                 <button
@@ -129,7 +131,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {status === 'all' ? '全部' : getStatusText(status)}
+                  {status === 'all' ? t('common.all') : getStatusText(status)}
                 </button>
               ))}
             </div>
@@ -141,7 +143,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
           {filteredExecutions.length === 0 ? (
             <div className="p-12 text-center text-gray-500 dark:text-gray-400">
               <History className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>暂无执行记录</p>
+              <p>{t('chatGraph.workflow.noExecutions')}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -187,29 +189,29 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                       {/* 基本信息 */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-2">
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400">开始时间:</span>
+                          <span className="text-gray-500 dark:text-gray-400">{t('chatGraph.workflow.startTime')}</span>
                           <span className="ml-2 text-gray-900 dark:text-white">
-                            {new Date(execution.startTime).toLocaleString()}
+                            {new Date(execution.startTime).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}
                           </span>
                         </div>
                         {execution.endTime && (
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">结束时间:</span>
+                            <span className="text-gray-500 dark:text-gray-400">{t('chatGraph.workflow.endTime')}</span>
                             <span className="ml-2 text-gray-900 dark:text-white">
-                              {new Date(execution.endTime).toLocaleString()}
+                              {new Date(execution.endTime).toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US')}
                             </span>
                           </div>
                         )}
                         {execution.duration && (
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">执行时长:</span>
+                            <span className="text-gray-500 dark:text-gray-400">{t('chatGraph.workflow.duration')}</span>
                             <span className="ml-2 text-gray-900 dark:text-white">
                               {formatDuration(execution.duration)}
                             </span>
                           </div>
                         )}
                         <div>
-                          <span className="text-gray-500 dark:text-gray-400">节点进度:</span>
+                          <span className="text-gray-500 dark:text-gray-400">{t('chatGraph.workflow.nodeProgress')}</span>
                           <span className="ml-2 text-gray-900 dark:text-white">
                             {execution.nodesExecuted} / {execution.nodesTotal}
                           </span>
@@ -222,7 +224,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                           {execution.errorMessage && (
                             <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
                               <p className="text-sm text-red-700 dark:text-red-300">
-                                <span className="font-medium">错误信息:</span>{' '}
+                                <span className="font-medium">{t('chatGraph.workflow.errorInfo')}</span>{' '}
                                 {execution.errorMessage}
                               </p>
                             </div>
@@ -231,7 +233,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                输入
+                                {t('chatGraph.workflow.input')}
                               </label>
                               <div className="p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs">
                                 <pre className="whitespace-pre-wrap">
@@ -243,7 +245,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                             {execution.output && (
                               <div>
                                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                  输出
+                                  {t('chatGraph.workflow.output')}
                                 </label>
                                 <div className="p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs max-h-40 overflow-y-auto">
                                   <pre className="whitespace-pre-wrap">
@@ -260,7 +262,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                               className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 text-sm"
                             >
                               <Eye className="w-3 h-3" />
-                              查看详情
+                              {t('chatGraph.workflow.viewDetail')}
                             </button>
                             {execution.status === 'failed' && (
                               <button
@@ -268,7 +270,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
                                 className="flex items-center gap-1 px-3 py-1.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded hover:bg-orange-200 dark:hover:bg-orange-900/50 text-sm"
                               >
                                 <Clock className="w-3 h-3" />
-                                重新执行
+                                {t('chatGraph.workflow.rerun')}
                               </button>
                             )}
                           </div>
@@ -288,7 +290,7 @@ export const WorkflowHistory: React.FC<WorkflowHistoryProps> = ({
             onClick={onClose}
             className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors"
           >
-            关闭
+            {t('project.close')}
           </button>
         </div>
       </div>

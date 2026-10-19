@@ -34,12 +34,19 @@ except ImportError:
 
 class StreamEventType(Enum):
     """流式事件类型"""
-    MESSAGE = "message"           # 消息事件
+    MESSAGE = "message"           # 消息事件（正文）
     THINKING = "thinking"         # 思考过程
     PROGRESS = "progress"         # 进度更新
     ERROR = "error"               # 错误事件
     COMPLETE = "complete"         # 完成事件
     HEARTBEAT = "heartbeat"       # 心跳事件
+    AGENT_DECISION = "agent_decision"  # 路由/决策
+    SUBAGENT = "subagent"         # 子专家起止
+    HANDOFF = "handoff"           # 会话交接
+    COMPOSITION = "composition"   # 组合编排进度
+    SYSTEM = "system"             # 进度提示（不混入正文）
+    BILLING = "billing"           # 计费提示
+    TOOL = "tool"                 # 工具调用
 
 
 @dataclass
@@ -151,6 +158,61 @@ class StreamSessionManager:
 
         except Exception as e:
             self.logger.error(f"保存事件失败: {e}")
+            return False
+
+    async def resume_session(
+        self,
+        session_id: str,
+        message_id: str,
+        from_sequence: int = 0,
+    ):
+        """
+        恢复会话流（供 chat_routes /resume 调用）。
+        返回 SSE async generator；无缓存时返回 None。
+        """
+        events = await self.get_cached_events(message_id, from_sequence)
+        if not events:
+            return None
+        # get_stream_response_generator 在模块底部定义，运行时可用
+        return get_stream_response_generator().resume(message_id, from_sequence)
+
+    async def stop_session(self, session_id: str, message_id: Optional[str] = None) -> bool:
+        """
+        停止会话：标记 abort + 清理流缓存。
+        """
+        try:
+            from utils.stop_manager import StopReason, get_juben_stop_manager
+
+            mgr = await get_juben_stop_manager()
+            # user_id 未知时用 session 占位；stop_manager 以 session 维度工作
+            await mgr.request_stop(
+                user_id="stream",
+                session_id=session_id,
+                reason=StopReason.USER_REQUEST,
+            )
+        except Exception as e:
+            self.logger.warning(f"stop_manager 标记失败: {e}")
+
+        # 记录 abort 标记到 Redis，供运行中的 loop 检查
+        try:
+            redis = await self._get_redis()
+            if redis:
+                abort_key = f"stream:abort:{session_id}"
+                await redis.set(abort_key, message_id or "1", ex=3600)
+        except Exception as e:
+            self.logger.warning(f"写入 abort 标记失败: {e}")
+
+        if message_id:
+            await self.clear_cache(message_id)
+        return True
+
+    async def is_aborted(self, session_id: str) -> bool:
+        try:
+            redis = await self._get_redis()
+            if not redis:
+                return False
+            return bool(await redis.exists(f"stream:abort:{session_id}"))
+        except Exception:
             return False
 
     async def get_cached_events(
@@ -523,21 +585,113 @@ class StreamResponseGenerator:
             StreamEvent: 流式事件
         """
         event_type_str = agent_event.get("event_type", agent_event.get("type", "message"))
+        raw_data = agent_event.get("data", agent_event.get("content", ""))
 
-        # 映射事件类型
+        # 映射事件类型（未列出的：data 是 str → 正文；data 是 dict/list → 元信息，不混入正文）
         event_type_map = {
             "thinking": StreamEventType.THINKING,
             "progress": StreamEventType.PROGRESS,
             "error": StreamEventType.ERROR,
             "complete": StreamEventType.COMPLETE,
+            "agent_decision": StreamEventType.AGENT_DECISION,
+            "subagent_start": StreamEventType.SUBAGENT,
+            "subagent_end": StreamEventType.SUBAGENT,
+            "handoff": StreamEventType.HANDOFF,
+            "composition_progress": StreamEventType.COMPOSITION,
+            # 进度/计费/工具类：不要混入正文
+            "system": StreamEventType.SYSTEM,
+            "billing": StreamEventType.BILLING,
+            "tool_call": StreamEventType.TOOL,
+            "tool_return": StreamEventType.TOOL,
+            # 工具起止/处理中事件（data 是 dict 元信息，不能混入正文）
+            "tool_start": StreamEventType.TOOL,
+            "tool_processing": StreamEventType.TOOL,
+            "tool_complete": StreamEventType.TOOL,
+            "tool_result": StreamEventType.TOOL,
+            "tool_error": StreamEventType.TOOL,
+            # 工作流/批处理/步骤类事件（data 是 dict 元信息）
+            "workflow_start": StreamEventType.SYSTEM,
+            "workflow_step": StreamEventType.SYSTEM,
+            "workflow_progress": StreamEventType.SYSTEM,
+            "workflow_complete": StreamEventType.SYSTEM,
+            "workflow_processing": StreamEventType.SYSTEM,
+            "step_start": StreamEventType.SYSTEM,
+            "step_complete": StreamEventType.SYSTEM,
+            "batch_start": StreamEventType.SYSTEM,
+            "batch_processing": StreamEventType.SYSTEM,
+            "batch_complete": StreamEventType.SYSTEM,
+            "processing_start": StreamEventType.SYSTEM,
+            "processing_complete": StreamEventType.SYSTEM,
+            "stream_complete": StreamEventType.SYSTEM,
         }
 
-        event_type = event_type_map.get(event_type_str, StreamEventType.MESSAGE)
+        event_type = event_type_map.get(event_type_str)
+        if event_type is None:
+            # 未映射：结构化数据 / 短进度文案 → system；长正文（报告）→ message
+            # 人物关系分析等会 emit identifying_characters 等自定义类型，data 是「正在…」短句；
+            # 若当 MESSAGE 会在前端被拼成一行。注意 analysis_complete 带 stage=complete 且正文很长，必须仍走 MESSAGE。
+            meta_preview = agent_event.get("metadata") or {}
+            text_preview = raw_data if isinstance(raw_data, str) else ""
+            stage = str(meta_preview.get("stage") or "")
+            is_finalish = stage in ("complete", "error", "done", "final") or event_type_str.endswith(
+                ("_complete", "_error", "_done", "_result")
+            )
+            short_progress_text = bool(
+                text_preview
+                and len(text_preview) < 160
+                and not text_preview.lstrip().startswith("#")
+                and (
+                    text_preview.rstrip().endswith(("...", "…"))
+                    or text_preview.startswith("正在")
+                    or text_preview.startswith("开始")
+                )
+            )
+            progress_event_name = any(
+                event_type_str.startswith(p)
+                for p in (
+                    "identifying_",
+                    "analyzing_",
+                    "enriching_",
+                    "building_",
+                    "generating_",
+                    "formatting_",
+                )
+            ) or event_type_str in (
+                "analysis_start",
+                "analysis_progress",
+            )
+            looks_like_progress = (not is_finalish) and (
+                short_progress_text
+                or progress_event_name
+                or (bool(stage) and short_progress_text)
+            )
+            event_type = (
+                StreamEventType.SYSTEM
+                if isinstance(raw_data, (dict, list)) or looks_like_progress
+                else StreamEventType.MESSAGE
+            )
+        if isinstance(raw_data, (dict, list)):
+            content = json.dumps(raw_data, ensure_ascii=False)
+        else:
+            content = raw_data if raw_data is not None else ""
+
+        # 输出侧脱敏（API Key / secret / token → xx）；失败不阻断流式输出
+        try:
+            from utils.agent_infra.output_hooks import redact_agent_output
+
+            content = redact_agent_output(content)
+        except Exception as e:
+            self.logger.warning(f"输出脱敏失败: {e}")
+
+        metadata = dict(agent_event.get("metadata") or {})
+        metadata.setdefault("original_event_type", event_type_str)
+        if agent_event.get("agent_source"):
+            metadata.setdefault("agent_source", agent_event["agent_source"])
 
         return StreamEvent(
             event_type=event_type,
-            content=agent_event.get("data", agent_event.get("content", "")),
-            metadata=agent_event.get("metadata", {}),
+            content=content if isinstance(content, str) else str(content),
+            metadata=metadata,
             timestamp=agent_event.get("timestamp", datetime.now().isoformat()),
             message_id=message_id,
             sequence=sequence

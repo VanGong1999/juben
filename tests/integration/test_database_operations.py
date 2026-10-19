@@ -28,7 +28,7 @@ class TestPostgresOperations:
             message_metadata={},
         )
 
-        with patch('utils.database_client.fetch_one') as fetch_one:
+        with patch('utils.storage_manager.fetch_one') as fetch_one:
             fetch_one.return_value = {"id": "msg_1"}
             sm = JubenStorageManager()
             sm.redis_client = None
@@ -40,7 +40,7 @@ class TestPostgresOperations:
     async def test_chat_message_retrieve(self):
         from utils.storage_manager import JubenStorageManager
 
-        with patch('utils.database_client.fetch_all') as fetch_all:
+        with patch('utils.storage_manager.fetch_all') as fetch_all:
             fetch_all.return_value = [
                 {
                     "id": "msg1",
@@ -71,7 +71,7 @@ class TestPostgresOperations:
             context_data={"k": "v"},
         )
 
-        with patch('utils.database_client.fetch_one') as fetch_one:
+        with patch('utils.storage_manager.fetch_one') as fetch_one:
             fetch_one.return_value = {"user_id": "test_user"}
             sm = JubenStorageManager()
             sm.redis_client = None
@@ -91,7 +91,7 @@ class TestPostgresOperations:
             context="ctx",
         )
 
-        with patch('utils.database_client.fetch_one') as fetch_one:
+        with patch('utils.storage_manager.fetch_one') as fetch_one:
             fetch_one.return_value = {"id": "note_1"}
             sm = JubenStorageManager()
             sm.redis_client = None
@@ -115,7 +115,7 @@ class TestPostgresOperations:
             cost_points=0.1,
         )
 
-        with patch('utils.database_client.fetch_one') as fetch_one:
+        with patch('utils.storage_manager.fetch_one') as fetch_one:
             fetch_one.return_value = {"id": "usage_1"}
             sm = JubenStorageManager()
             sm.redis_client = None
@@ -127,7 +127,7 @@ class TestPostgresOperations:
     async def test_stream_event_save(self):
         from utils.storage_manager import JubenStorageManager
 
-        with patch('utils.database_client.fetch_one') as fetch_one:
+        with patch('utils.storage_manager.fetch_one') as fetch_one:
             fetch_one.return_value = {"id": "evt_1"}
             sm = JubenStorageManager()
             sm.redis_client = None

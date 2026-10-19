@@ -66,11 +66,9 @@ class SearchURLTool(Tool):
             搜索结果列表
         """
         try:
-            # 使用百度搜索 API（已集成）
-            from utils.baidu_client import get_baidu_client
+            from utils.agent_tools.external import _run_web_search
 
-            client = get_baidu_client()
-            result = await client.web_search(query=query, top_k=max_results)
+            result = await _run_web_search(query=query, top_k=max_results)
 
             # 转换为文档格式
             formatted_results = []
@@ -80,16 +78,18 @@ class SearchURLTool(Tool):
                     "url": ref.get('url', ''),
                     "image_url": ref.get('image', '') or '',
                     "logo_url": "",
-                    "sitename": self._extract_domain(ref.get('url', '')),
+                    "sitename": ref.get('site_name') or self._extract_domain(ref.get('url', '')),
                     "summary": ref.get('content', ''),
-                    "has_image": bool(ref.get('image'))
+                    "has_image": bool(ref.get('image')),
+                    "provider": result.get("provider") or "deepseek",
                 })
 
             return {
                 "log_id": f"tool_{id(self)}",
                 "msg": "success",
                 "code": 0,
-                "data": formatted_results
+                "data": formatted_results,
+                "provider": result.get("provider") or "deepseek",
             }
 
         except Exception as e:
@@ -362,12 +362,121 @@ class ToolExecutor:
 # 创建工具注册表
 _tool_registry = ToolRegistry()
 
+class DramaReadTool(Tool):
+    """读取短剧文件夹内容（大纲 / bible / 分集）"""
+
+    def __init__(self):
+        super().__init__(
+            name="drama_read",
+            description="读取短剧文件夹中的大纲、设定或指定分集正文",
+        )
+
+    def _get_parameters(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "drama_id": {"type": "string"},
+                "kind": {"type": "string", "enum": ["outline", "bible", "episode", "meta"]},
+                "episode_number": {"type": "integer"},
+            },
+            "required": ["drama_id", "kind"],
+        }
+
+    async def execute(self, drama_id: str, kind: str = "meta", episode_number: int = 1, **kwargs) -> Dict[str, Any]:
+        from utils.drama_manager import get_drama_manager
+        mgr = get_drama_manager()
+        if kind == "meta":
+            data = await mgr.get_drama(drama_id)
+            return {"success": True, "data": data}
+        if kind == "outline":
+            drama = await mgr.get_drama(drama_id)
+            return {"success": True, "data": (drama or {}).get("outline", "")}
+        if kind == "bible":
+            drama = await mgr.get_drama(drama_id)
+            return {"success": True, "data": (drama or {}).get("bible", {})}
+        if kind == "episode":
+            ep = await mgr.get_episode(drama_id, int(episode_number))
+            return {"success": True, "data": ep}
+        return {"success": False, "error": f"未知 kind: {kind}"}
+
+
+class DramaWriteEpisodeTool(Tool):
+    """写入 / 生成指定分集"""
+
+    def __init__(self):
+        super().__init__(
+            name="drama_write_episode",
+            description="为指定短剧生成或写入某一集剧本",
+        )
+
+    def _get_parameters(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "drama_id": {"type": "string"},
+                "episode_number": {"type": "integer"},
+                "instruction": {"type": "string"},
+            },
+            "required": ["drama_id", "episode_number"],
+        }
+
+    async def execute(
+        self,
+        drama_id: str,
+        episode_number: int,
+        instruction: str = "",
+        **kwargs,
+    ) -> Dict[str, Any]:
+        from utils.drama_manager import get_drama_manager
+        mgr = get_drama_manager()
+        result = await mgr.write_episode_with_llm(drama_id, int(episode_number), instruction or None)
+        return {"success": True, "data": result}
+
+
+class MemorySearchTool(Tool):
+    """检索用户 / 剧级记忆摘要"""
+
+    def __init__(self):
+        super().__init__(
+            name="memory_search",
+            description="检索用户画像或项目记忆相关信息",
+        )
+
+    def _get_parameters(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "user_id": {"type": "string"},
+                "query": {"type": "string"},
+            },
+            "required": ["user_id"],
+        }
+
+    async def execute(self, user_id: str, query: str = "", **kwargs) -> Dict[str, Any]:
+        try:
+            from utils.memory_manager import get_user_profile_manager
+            manager = get_user_profile_manager()
+            profile = await manager.get_profile(user_id)
+            return {
+                "success": True,
+                "data": {
+                    "profile": profile.to_dict() if profile else None,
+                    "query": query,
+                },
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+
 # 注册所有工具
 def register_default_tools():
     """注册默认工具"""
     _tool_registry.register(SearchURLTool())
     _tool_registry.register(KnowledgeBaseTool())
     _tool_registry.register(BaikeSearchTool())
+    _tool_registry.register(DramaReadTool())
+    _tool_registry.register(DramaWriteEpisodeTool())
+    _tool_registry.register(MemorySearchTool())
 
 
 # 创建工具执行器

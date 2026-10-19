@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { History, Eye, Download, RotateCounterClockwise, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { History, Eye, Download, RotateCcw, X, ChevronDown, ChevronUp } from 'lucide-react';
 
 export interface FileVersion {
   version: number;
@@ -202,7 +202,7 @@ export const FileVersionHistory: React.FC<FileVersionHistoryProps> = ({
                           className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg transition-colors"
                           title="恢复此版本"
                         >
-                          <RotateCounterClockwise className={`w-4 h-4 text-green-600 ${isRestoring ? 'animate-spin' : ''}`} />
+                          <RotateCcw className={`w-4 h-4 text-green-600 ${isRestoring ? 'animate-spin' : ''}`} />
                         </button>
                       )}
                     </div>

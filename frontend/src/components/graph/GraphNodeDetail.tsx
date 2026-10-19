@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useGraphStore } from '@/store/graphStore';
 import type { NodeType } from '@/services/graphService';
+import { useI18n } from '@/i18n';
 
 interface GraphNodeDetailProps {
   nodeId: string;
@@ -39,6 +40,7 @@ const NODE_ICONS: Record<NodeType, React.ElementType> = {
 };
 
 export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
+  const { t } = useI18n();
   const { nodes, characters, plotNodes, worldRules, deleteNode, saveNodeUpdates } = useGraphStore();
   const [node, setNode] = useState<any>(null);
   const [nodeType, setNodeType] = useState<NodeType | null>(null);
@@ -89,7 +91,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
   const isGenericNode = ['Location', 'Item', 'Conflict', 'Theme', 'Motivation'].includes(nodeType);
 
   const handleDelete = async () => {
-    if (confirm('确定要删除此节点吗？此操作不可撤销。')) {
+    if (confirm(t('chatGraph.graph.deleteNodeConfirm'))) {
       await deleteNode(nodeId, nodeType);
       onClose();
     }
@@ -107,12 +109,12 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
       <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
         <div className="flex items-center space-x-2">
           <Icon className="w-5 h-5 text-indigo-600" />
-          <h2 className="text-lg font-semibold text-gray-900">节点详情</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('chatGraph.graph.nodeDetailTitle')}</h2>
         </div>
         <button
           onClick={onClose}
           className="p-1 rounded-md hover:bg-gray-100 transition-colors"
-          title="关闭"
+          title={t('project.close')}
         >
           <X className="w-5 h-5 text-gray-500" />
         </button>
@@ -122,12 +124,12 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
       <div className="px-6 py-4 space-y-6">
         {/* 基本信息 */}
         <div>
-          <h3 className="text-sm font-medium text-gray-500 mb-2">基本信息</h3>
+          <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.basicInfo')}</h3>
           <dl className="space-y-3">
             {nodeType === 'Character' && (
               <>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">角色名称</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.characterName')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -141,7 +143,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">状态</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('ui.status')}</dt>
                   <dd className="mt-1">
                     {isEditing ? (
                       <select
@@ -149,9 +151,9 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                         value={editForm.status || 'alive'}
                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                       >
-                        <option value="alive">存活</option>
-                        <option value="deceased">死亡</option>
-                        <option value="unknown">未知</option>
+                        <option value="alive">{t('toolbox.graph.status.alive')}</option>
+                        <option value="deceased">{t('toolbox.graph.status.deceased')}</option>
+                        <option value="unknown">{t('toolbox.graph.status.unknown')}</option>
                       </select>
                     ) : (
                       <span
@@ -163,14 +165,14 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
-                        {node.status === 'alive' ? '存活' : node.status === 'deceased' ? '死亡' : '未知'}
+                        {node.status === 'alive' ? t('toolbox.graph.status.alive') : node.status === 'deceased' ? t('toolbox.graph.status.deceased') : t('toolbox.graph.status.unknown')}
                       </span>
                     )}
                   </dd>
                 </div>
                 {(node.location || isEditing) && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-900">当前位置</dt>
+                    <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.location')}</dt>
                     <dd className="mt-1 text-sm text-gray-600">
                       {isEditing ? (
                         <input
@@ -186,7 +188,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                 )}
                 {node.arc !== undefined && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-900">成长曲线</dt>
+                    <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.arc')}</dt>
                     <dd className="mt-1">
                       <div className="flex items-center space-x-2">
                         <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -206,7 +208,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
             {nodeType === 'PlotNode' && (
               <>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">情节标题</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.plotTitle')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -220,7 +222,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">序号</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.sequence')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -238,12 +240,12 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                 </div>
                 {node.chapter !== null && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-900">章节</dt>
-                    <dd className="mt-1 text-sm text-gray-600">第 {node.chapter} 章</dd>
+                    <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.chapter')}</dt>
+                    <dd className="mt-1 text-sm text-gray-600">{t('chatGraph.graph.chapterFormat', { n: node.chapter })}</dd>
                   </div>
                 )}
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">张力得分</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.tension')}</dt>
                   <dd className="mt-1">
                     <div className="flex items-center space-x-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -263,7 +265,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">重要性</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.importance')}</dt>
                   <dd className="mt-1">
                     <div className="flex items-center space-x-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -282,7 +284,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
             {nodeType === 'Story' && (
               <>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">故事名称</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.storyName')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -296,7 +298,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">状态</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('ui.status')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <select
@@ -304,9 +306,9 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                         value={editForm.status || 'active'}
                         onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                       >
-                        <option value="active">进行中</option>
-                        <option value="paused">暂停</option>
-                        <option value="archived">已归档</option>
+                        <option value="active">{t('toolbox.graph.storyStatus.active')}</option>
+                        <option value="paused">{t('toolbox.graph.storyStatus.paused')}</option>
+                        <option value="archived">{t('toolbox.graph.storyStatus.archived')}</option>
                       </select>
                     ) : (
                       <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
@@ -317,7 +319,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                 </div>
                 {(node.genre || isEditing) && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-900">题材</dt>
+                    <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.genre')}</dt>
                     <dd className="mt-1 text-sm text-gray-600">
                       {isEditing ? (
                         <input
@@ -326,7 +328,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                           onChange={(e) => setEditForm({ ...editForm, genre: e.target.value })}
                         />
                       ) : (
-                        node.genre || '未设置'
+                        node.genre || t('chatGraph.graph.unset')
                       )}
                     </dd>
                   </div>
@@ -337,7 +339,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
             {isGenericNode && (
               <>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">名称</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.name')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -351,7 +353,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">分类</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.category')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -360,7 +362,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                         onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                       />
                     ) : (
-                      node.category || '未设置'
+                      node.category || t('chatGraph.graph.unset')
                     )}
                   </dd>
                 </div>
@@ -370,7 +372,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
             {nodeType === 'WorldRule' && (
               <>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">规则名称</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.ruleName')}</dt>
                   <dd className="mt-1 text-sm text-gray-600">
                     {isEditing ? (
                       <input
@@ -384,7 +386,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-900">分类</dt>
+                  <dt className="text-sm font-medium text-gray-900">{t('chatGraph.graph.category')}</dt>
                   <dd className="mt-1">
                     {isEditing ? (
                       <input
@@ -407,7 +409,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
         {/* 描述 */}
         {(node.description || isEditing) && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">描述</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('ui.description')}</h3>
             {isEditing ? (
               <textarea
                 className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
@@ -423,7 +425,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
 
         {nodeType === 'Story' && (node.tags?.length > 0 || isEditing) && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">标签</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.tags')}</h3>
             {isEditing ? (
               <input
                 className="w-full rounded-md border border-gray-200 px-2 py-1 text-sm"
@@ -437,7 +439,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
                       .filter(Boolean),
                   })
                 }
-                placeholder="使用逗号分隔"
+                placeholder={t('chatGraph.graph.commaSeparated')}
               />
             ) : (
               <div className="flex flex-wrap gap-2">
@@ -457,7 +459,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
         {/* 角色：性格标签 */}
         {nodeType === 'Character' && node.persona && node.persona.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">性格标签</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.persona')}</h3>
             <div className="flex flex-wrap gap-2">
               {node.persona.map((trait: string, index: number) => (
                 <span
@@ -474,7 +476,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
         {/* 角色：动机 */}
         {nodeType === 'Character' && node.motivations && node.motivations.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">动机</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.motivations')}</h3>
             <ul className="space-y-1">
               {node.motivations.map((motivation: string, index: number) => (
                 <li key={index} className="text-sm text-gray-600 flex items-start">
@@ -489,11 +491,11 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
         {/* 角色：优缺点 */}
         {nodeType === 'Character' && (node.strengths?.length > 0 || node.flaws?.length > 0) && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">特质</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.traits')}</h3>
             <div className="space-y-2">
               {node.strengths && node.strengths.length > 0 && (
                 <div>
-                  <span className="text-xs font-medium text-green-700">优点：</span>
+                  <span className="text-xs font-medium text-green-700">{t('chatGraph.graph.strengths')}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {node.strengths.map((strength: string, index: number) => (
                       <span
@@ -508,7 +510,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
               )}
               {node.flaws && node.flaws.length > 0 && (
                 <div>
-                  <span className="text-xs font-medium text-red-700">缺点：</span>
+                  <span className="text-xs font-medium text-red-700">{t('chatGraph.graph.flaws')}</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {node.flaws.map((flaw: string, index: number) => (
                       <span
@@ -528,7 +530,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
         {/* 情节：参与角色 */}
         {nodeType === 'PlotNode' && node.characters_involved && node.characters_involved.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">参与角色</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.charactersInvolved')}</h3>
             <div className="flex flex-wrap gap-2">
               {node.characters_involved.map((charId: string, index: number) => {
                 const char = characters.find((c) => c.character_id === charId);
@@ -549,7 +551,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
         {/* 情节：地点 */}
         {nodeType === 'PlotNode' && node.locations && node.locations.length > 0 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-500 mb-2">地点</h3>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.locations')}</h3>
             <div className="flex flex-wrap gap-2">
               {node.locations.map((location: string, index: number) => (
                 <span
@@ -569,7 +571,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
           <>
             {node.constraints && node.constraints.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">约束条件</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.constraints')}</h3>
                 <ul className="space-y-1">
                   {node.constraints.map((constraint: string, index: number) => (
                     <li key={index} className="text-sm text-gray-600 flex items-start">
@@ -582,7 +584,7 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
             )}
             {node.examples && node.examples.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-2">示例</h3>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">{t('chatGraph.graph.examples')}</h3>
                 <ul className="space-y-1">
                   {node.examples.map((example: string, index: number) => (
                     <li key={index} className="text-sm text-gray-600 flex items-start">
@@ -610,14 +612,14 @@ export function GraphNodeDetail({ nodeId, onClose }: GraphNodeDetailProps) {
               }}
             >
               <Edit className="w-4 h-4 mr-2" />
-              {isEditing ? '保存' : '编辑'}
+              {isEditing ? t('common.save') : t('project.edit')}
             </button>
             <button
               className="flex-1 inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
               onClick={handleDelete}
             >
               <Trash2 className="w-4 h-4 mr-2" />
-              删除
+              {t('common.delete')}
             </button>
           </div>
         </div>

@@ -11,6 +11,27 @@ from .schemas import AgentInfo, AgentListResponse
 
 logger = get_logger("AgentAPI")
 
+
+def _agent_info_from_config(cfg: Dict[str, Any]) -> AgentInfo:
+    """将 config.agents 条目映射为 schemas.AgentInfo。"""
+    examples: List[str] = []
+    if cfg.get("input_example"):
+        examples.append(cfg["input_example"])
+    if cfg.get("output_example"):
+        examples.append(cfg["output_example"])
+    return AgentInfo(
+        name=cfg.get("display_name") or cfg.get("name", ""),
+        type=cfg.get("id", ""),
+        description=cfg.get("description", ""),
+        category=cfg.get("category", ""),
+        features=cfg.get("features", []),
+        status=cfg.get("status", "active"),
+        capabilities=cfg.get("capabilities", []),
+        examples=examples,
+        product_line=cfg.get("product_line"),
+    )
+
+
 # 创建路由器
 router = APIRouter(prefix="/agents", tags=["Agents"])
 
@@ -59,21 +80,12 @@ async def list_agents(
                    search_lower in a.get("description", "").lower()
             ]
 
+        agent_models = [_agent_info_from_config(a) for a in agents]
         return AgentListResponse(
             success=True,
-            agents=[
-                AgentInfo(
-                    id=a.get("id"),
-                    name=a.get("name"),
-                    description=a.get("description"),
-                    category=a.get("category"),
-                    capabilities=a.get("capabilities", []),
-                    apiEndpoint=a.get("api_endpoint"),
-                    icon=a.get("icon"),
-                    color=a.get("color")
-                )
-                for a in agents
-            ]
+            message="获取 Agent 列表成功",
+            agents=agent_models,
+            total=len(agent_models),
         )
 
     except Exception as e:
@@ -100,20 +112,15 @@ async def get_agent_info(agent_id: str):
         if not agent:
             raise HTTPException(status_code=404, detail=f"Agent {agent_id} 不存在")
 
+        detail = _agent_info_from_config(agent)
         return {
             "success": True,
-            "agent": AgentInfo(
-                id=agent.get("id"),
-                name=agent.get("name"),
-                description=agent.get("description"),
-                category=agent.get("category"),
-                capabilities=agent.get("capabilities", []),
-                apiEndpoint=agent.get("api_endpoint"),
-                icon=agent.get("icon"),
-                color=agent.get("color"),
-                examples=agent.get("examples", []),
-                parameters=agent.get("parameters", {})
-            )
+            "agent": detail,
+            "id": agent.get("id"),
+            "api_endpoint": agent.get("api_endpoint"),
+            "icon": agent.get("icon"),
+            "color": agent.get("color"),
+            "parameters": agent.get("parameters", {}),
         }
 
     except HTTPException:

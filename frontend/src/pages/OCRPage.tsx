@@ -5,9 +5,12 @@
 
 import React, { useState } from 'react';
 import { FileText, Sparkles, Info } from 'lucide-react';
+import AppShell from '@/components/layout/AppShell';
 import { OCRUploader, OCRResult } from '@/components/ocr';
+import { useI18n } from '@/i18n';
 
 export default function OCRPage() {
+  const { t } = useI18n();
   const [showInfo, setShowInfo] = useState(false);
 
   const handleUploadComplete = (result: OCRResult) => {
@@ -19,105 +22,81 @@ export default function OCRPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* 头部 */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-600 rounded-xl">
-                <FileText className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  OCR 文字识别
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  基于 PaddleOCR-VL 的智能文字识别服务
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowInfo(!showInfo)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <Info className="w-6 h-6 text-gray-500" />
-            </button>
-          </div>
-
-          {/* 功能说明 */}
-          {showInfo && (
-            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                功能说明
-              </h3>
-              <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-400">
-                <li>• 支持中英文混合识别</li>
-                <li>• 支持表格识别和结构化输出</li>
-                <li>• 支持公式识别（LaTeX 格式）</li>
-                <li>• 多种输出格式：纯文本、Markdown、JSON</li>
-                <li>• 本地 GPU 加速（RTX 5070 8GB）</li>
-              </ul>
-            </div>
-          )}
+    <AppShell
+      title={t('toolbox.ocr.title')}
+      subtitle={t('toolbox.ocr.subtitle')}
+    >
+      <div className="px-4 sm:px-8 lg:px-10 py-6 sm:py-8 max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        {/* 功能说明开关 */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-pearl-soft transition-colors text-sm text-ink-muted"
+          >
+            <Info className="w-4 h-4" />
+            {t('toolbox.ocr.info')}
+          </button>
         </div>
-      </header>
 
-      {/* 主内容 */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* 功能说明 */}
+        {showInfo && (
+          <div className="glass-panel p-4 sm:p-5">
+            <h3 className="font-display font-semibold text-ink mb-2">{t('toolbox.ocr.info')}</h3>
+            <ul className="space-y-1 text-sm text-ink-muted">
+              <li>• {t('toolbox.ocr.supportsMixed')}</li>
+              <li>• {t('toolbox.ocr.supportsTable')}</li>
+              <li>• {t('toolbox.ocr.supportsFormula')}</li>
+              <li>• {t('toolbox.ocr.formats')}</li>
+              <li>• {t('toolbox.ocr.gpu')}</li>
+            </ul>
+          </div>
+        )}
+
         {/* OCR 上传组件 */}
         <OCRUploader
           onUploadComplete={handleUploadComplete}
           onError={handleError}
-          className="mb-8"
         />
 
         {/* 功能特性 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+          <div className="glass-panel p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 bg-atelier-teal-soft rounded-lg">
+                <Sparkles className="w-5 h-5 text-atelier-teal" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                高精度识别
-              </h3>
+              <h3 className="font-semibold text-ink">{t('toolbox.ocr.highPrecision')}</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              基于深度学习的文字检测和识别，准确率超过 95%
+            <p className="text-sm text-ink-muted">
+              {t('toolbox.ocr.highPrecisionDesc')}
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+          <div className="glass-panel p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <div className="p-2 bg-atelier-gold-soft rounded-lg">
+                <FileText className="w-5 h-5 text-atelier-gold" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                结构化输出
-              </h3>
+              <h3 className="font-semibold text-ink">{t('toolbox.ocr.structuredOutput')}</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              自动识别表格、公式、版面结构，输出格式化结果
+            <p className="text-sm text-ink-muted">
+              {t('toolbox.ocr.structuredOutputDesc')}
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+          <div className="glass-panel p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div className="p-2 bg-pearl-soft rounded-lg">
+                <FileText className="w-5 h-5 text-atelier-slate" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
-                本地处理
-              </h3>
+              <h3 className="font-semibold text-ink">{t('toolbox.ocr.localProcess')}</h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              所有识别在本地 GPU 完成，数据不上传云端
+            <p className="text-sm text-ink-muted">
+              {t('toolbox.ocr.localProcessDesc')}
             </p>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }

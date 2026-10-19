@@ -4,9 +4,11 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Download, FileText, Clock, Layers, History } from 'lucide-react';
+import { Play, RotateCcw, Download, FileText, Clock, Layers, History } from 'lucide-react';
+import AppShell from '@/components/layout/AppShell';
 import { WorkflowVisualizer, WorkflowEvent, NodeStatus, WorkflowTemplateManager, WorkflowHistory } from '@/components/workflow';
 import { API_BASE_URL, getAuthHeaderValue } from '@/services/api';
+import { useI18n } from '@/i18n';
 
 interface WorkflowTemplate {
   id: string;
@@ -36,6 +38,7 @@ interface WorkflowExecution {
 type TabType = 'monitor' | 'templates' | 'history';
 
 export default function WorkflowMonitorPage() {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabType>('monitor');
   const [workflowId, setWorkflowId] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
@@ -157,7 +160,7 @@ export default function WorkflowMonitorPage() {
                   status: 'failed',
                   endTime: new Date().toISOString(),
                   duration: Date.now() - new Date(execution.startTime).getTime(),
-                  errorMessage: error instanceof Error ? error.message : '工作流执行失败',
+                  errorMessage: error instanceof Error ? error.message : t('admin.workflow.workflowFailed'),
                 }
               : execution
           )
@@ -269,11 +272,17 @@ export default function WorkflowMonitorPage() {
     setExecutionDetailOpen(true);
   };
 
+  const tabs: { key: TabType; label: string; icon: React.ElementType }[] = [
+    { key: 'monitor', label: t('admin.workflow.tab.monitor'), icon: FileText },
+    { key: 'templates', label: t('admin.workflow.tab.templates'), icon: Layers },
+    { key: 'history', label: t('admin.workflow.tab.history'), icon: Clock },
+  ];
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'monitor':
         return (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="glass-panel overflow-hidden h-[65vh] min-h-[480px] flex">
             {/* 工作流可视化 */}
             <div className="flex-1">
               <WorkflowVisualizer
@@ -285,14 +294,14 @@ export default function WorkflowMonitorPage() {
             </div>
 
             {/* 事件日志侧边栏 */}
-            <aside className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900 dark:text-white">事件日志</h2>
+            <aside className="w-80 bg-white/50 border-l border-pearl-line flex flex-col">
+              <div className="px-4 py-3 border-b border-pearl-line flex items-center justify-between">
+                <h2 className="font-semibold text-ink">{t('admin.workflow.eventLog')}</h2>
                 <button
                   onClick={handleDownloadLog}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  className="p-1 hover:bg-pearl-soft rounded"
                 >
-                  <Download className="w-4 h-4 text-gray-500" />
+                  <Download className="w-4 h-4 text-ink-muted" />
                 </button>
               </div>
               <div
@@ -305,20 +314,20 @@ export default function WorkflowMonitorPage() {
 
       case 'templates':
         return (
-          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="glass-panel flex items-center justify-center min-h-[320px]">
             <div className="text-center">
-              <Layers className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                工作流模板管理
+              <Layers className="w-16 h-16 mx-auto mb-4 text-ink-faint" />
+              <h3 className="text-lg font-semibold text-ink mb-2">
+                {t('admin.workflow.templateManager')}
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                管理和复用工作流模板
+              <p className="text-ink-muted mb-4">
+                {t('admin.workflow.templateManagerDesc')}
               </p>
               <button
                 onClick={() => setTemplateManagerOpen(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                className="btn btn-primary"
               >
-                打开模板管理器
+                {t('admin.workflow.openTemplateManager')}
               </button>
             </div>
           </div>
@@ -326,20 +335,20 @@ export default function WorkflowMonitorPage() {
 
       case 'history':
         return (
-          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="glass-panel flex items-center justify-center min-h-[320px]">
             <div className="text-center">
-              <History className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                执行历史记录
+              <History className="w-16 h-16 mx-auto mb-4 text-ink-faint" />
+              <h3 className="text-lg font-semibold text-ink mb-2">
+                {t('admin.workflow.executionHistory')}
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 mb-4">
-                查看过往工作流执行记录
+              <p className="text-ink-muted mb-4">
+                {t('admin.workflow.executionHistoryDesc')}
               </p>
               <button
                 onClick={() => setHistoryOpen(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                className="btn btn-primary"
               >
-                查看执行历史
+                {t('admin.workflow.viewHistory')}
               </button>
             </div>
           </div>
@@ -351,95 +360,72 @@ export default function WorkflowMonitorPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      {/* 头部控制栏 */}
-      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              工作流监控器
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              监控、管理和分析工作流执行
-            </p>
+    <AppShell
+      title={t('admin.workflow.title')}
+      subtitle={t('admin.workflow.subtitle')}
+      actions={
+        activeTab === 'monitor' ? (
+          <div className="flex gap-2">
+            <button
+              onClick={handleStartWorkflow}
+              disabled={isRunning}
+              className="btn btn-primary btn-sm"
+            >
+              <Play className="w-4 h-4" />
+              {t('admin.workflow.start')}
+            </button>
+            <button
+              onClick={handleReset}
+              className="btn btn-secondary btn-sm"
+            >
+              <RotateCcw className="w-4 h-4" />
+              {t('admin.workflow.reset')}
+            </button>
           </div>
+        ) : undefined
+      }
+    >
+      <div className="px-4 sm:px-8 lg:px-10 py-6 sm:py-8 max-w-6xl mx-auto space-y-6">
+        {/* 控制栏 */}
+        <div className="glass-panel p-4 sm:p-5 space-y-4">
+          {/* 标签页导航 */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-atelier-teal text-white'
+                    : 'bg-pearl-soft text-ink-muted hover:bg-pearl-soft/70'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 输入区域 - 仅在监控标签显示 */}
           {activeTab === 'monitor' && (
-            <div className="flex gap-3">
-              <button
-                onClick={handleStartWorkflow}
-                disabled={isRunning}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
-              >
-                <Play className="w-4 h-4" />
-                启动工作流
-              </button>
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-medium transition-colors"
-              >
-                <RotateCcw className="w-4 h-4" />
-                重置
-              </button>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-2">
+                {t('admin.workflow.inputText')}
+              </label>
+              <textarea
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder={t('admin.workflow.inputPlaceholder')}
+                rows={3}
+                className="w-full px-4 py-2 border border-pearl-line rounded-lg bg-white/60 focus:outline-none focus:ring-2 focus:ring-atelier-teal/30 focus:border-transparent text-ink"
+              />
             </div>
           )}
         </div>
 
-        {/* 标签页导航 */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setActiveTab('monitor')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'monitor'
-                ? 'bg-black text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            实时监控
-          </button>
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'templates'
-                ? 'bg-black text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            模板管理
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'history'
-                ? 'bg-black text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            执行历史
-          </button>
-        </div>
-
-        {/* 输入区域 - 仅在监控标签显示 */}
-        {activeTab === 'monitor' && (
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              输入文本
-            </label>
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="请输入要处理的文本..."
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-          </div>
-        )}
-      </header>
-
-      {/* 主内容区 */}
-      {renderTabContent()}
+        {/* 主内容区 */}
+        {renderTabContent()}
+      </div>
 
       {/* 模板管理器弹窗 */}
       <WorkflowTemplateManager
@@ -462,19 +448,19 @@ export default function WorkflowMonitorPage() {
 
       {executionDetailOpen && selectedExecution && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="glass-dense rounded-2xl shadow-atelier-lg max-w-3xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-pearl-line flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  执行详情
+                <h3 className="text-lg font-semibold text-ink">
+                  {t('admin.workflow.detail')}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-ink-muted mt-1">
                   {selectedExecution.workflowName} · {selectedExecution.id}
                 </p>
               </div>
               <button
                 onClick={() => setExecutionDetailOpen(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="p-2 hover:bg-pearl-soft rounded-lg"
               >
                 ✕
               </button>
@@ -482,25 +468,25 @@ export default function WorkflowMonitorPage() {
             <div className="p-6 overflow-y-auto max-h-[70vh] space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500">状态</div>
-                  <div className="font-medium text-gray-900 dark:text-white">{selectedExecution.status}</div>
+                  <div className="text-xs text-ink-muted">{t('admin.status')}</div>
+                  <div className="font-medium text-ink">{selectedExecution.status}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">节点进度</div>
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="text-xs text-ink-muted">{t('admin.workflow.nodeProgress')}</div>
+                  <div className="font-medium text-ink">
                     {selectedExecution.nodesExecuted} / {selectedExecution.nodesTotal}
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">开始时间</div>
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="text-xs text-ink-muted">{t('admin.workflow.startTime')}</div>
+                  <div className="font-medium text-ink">
                     {new Date(selectedExecution.startTime).toLocaleString()}
                   </div>
                 </div>
                 {selectedExecution.endTime && (
                   <div>
-                    <div className="text-xs text-gray-500">结束时间</div>
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="text-xs text-ink-muted">{t('admin.workflow.endTime')}</div>
+                    <div className="font-medium text-ink">
                       {new Date(selectedExecution.endTime).toLocaleString()}
                     </div>
                   </div>
@@ -508,37 +494,37 @@ export default function WorkflowMonitorPage() {
               </div>
 
               {selectedExecution.errorMessage && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-700 dark:text-red-300">
+                <div className="p-3 bg-red-50 rounded-lg text-red-700">
                   {selectedExecution.errorMessage}
                 </div>
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div>
-                  <div className="text-xs text-gray-500 mb-2">输入</div>
-                  <pre className="text-xs bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-auto">
+                  <div className="text-xs text-ink-muted mb-2">{t('admin.workflow.input')}</div>
+                  <pre className="text-xs bg-pearl-soft p-3 rounded-lg overflow-auto">
                     {JSON.stringify(selectedExecution.input, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500 mb-2">输出</div>
-                  <pre className="text-xs bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-auto">
-                    {selectedExecution.output ? JSON.stringify(selectedExecution.output, null, 2) : '暂无输出'}
+                  <div className="text-xs text-ink-muted mb-2">{t('admin.workflow.output')}</div>
+                  <pre className="text-xs bg-pearl-soft p-3 rounded-lg overflow-auto">
+                    {selectedExecution.output ? JSON.stringify(selectedExecution.output, null, 2) : t('admin.workflow.noOutput')}
                   </pre>
                 </div>
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <div className="p-6 border-t border-pearl-line flex justify-end">
               <button
                 onClick={() => setExecutionDetailOpen(false)}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg"
+                className="btn btn-secondary"
               >
-                关闭
+                {t('admin.close')}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

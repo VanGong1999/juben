@@ -46,7 +46,7 @@ class CharacterRelationshipAnalyzerAgent(BaseJubenAgent):
         "other": "其他关系"
     }
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化人物关系分析智能体"""
         super().__init__(
             agent_name="character_relationship_analyzer_agent",

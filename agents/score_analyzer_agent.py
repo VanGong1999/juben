@@ -39,7 +39,7 @@ class ScoreAnalyzerAgent(BaseJubenAgent):
     4. 综合评估报告生成
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化评分分析工具智能体"""
         super().__init__("score_analyzer", model_provider)
         

@@ -41,7 +41,7 @@ class ResultIntegratorAgent(BaseJubenAgent):
     3. 生成最终的综合分析报告
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化结果整合智能体"""
         super().__init__("result_integrator", model_provider)
 

@@ -15,6 +15,7 @@ import {
   GitBranch,
   CircleDot,
 } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 interface GraphToolbarProps {
   onRefresh: () => void;
@@ -30,10 +31,10 @@ interface GraphToolbarProps {
 }
 
 const VIEW_MODES = [
-  { value: 'force', icon: Network, label: '力导向' },
-  { value: 'tree', icon: GitBranch, label: '树状' },
-  { value: 'radial', icon: CircleDot, label: '径向' },
-  { value: 'circle', icon: Grid3x3, label: '环形' },
+  { value: 'force', icon: Network, labelKey: 'chatGraph.graph.viewMode.force' },
+  { value: 'tree', icon: GitBranch, labelKey: 'chatGraph.graph.viewMode.tree' },
+  { value: 'radial', icon: CircleDot, labelKey: 'chatGraph.graph.viewMode.radial' },
+  { value: 'circle', icon: Grid3x3, labelKey: 'chatGraph.graph.viewMode.circle' },
 ] as const;
 
 export function GraphToolbar({
@@ -48,6 +49,7 @@ export function GraphToolbar({
   loading,
   zoom,
 }: GraphToolbarProps) {
+  const { t } = useI18n();
 
   return (
     <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
@@ -55,7 +57,7 @@ export function GraphToolbar({
       <div className="flex items-center space-x-2">
         {/* 视图模式切换 */}
         <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-          {VIEW_MODES.map(({ value, icon: Icon, label }) => (
+          {VIEW_MODES.map(({ value, icon: Icon, labelKey }) => (
             <button
               key={value}
               onClick={() => onViewModeChange(value as any)}
@@ -64,7 +66,7 @@ export function GraphToolbar({
                   ? 'bg-white shadow-sm text-indigo-600'
                   : 'text-gray-600 hover:bg-white hover:shadow-sm'
               }`}
-              title={label}
+              title={t(labelKey)}
             >
               <Icon className="w-4 h-4" />
             </button>
@@ -76,7 +78,7 @@ export function GraphToolbar({
           <button
             onClick={onZoomOut}
             className="p-2 rounded-md hover:bg-white hover:shadow-sm transition-colors text-gray-600"
-            title="缩小"
+            title={t('chatGraph.graph.zoomOut')}
           >
             <ZoomOut className="w-4 h-4" />
           </button>
@@ -84,14 +86,14 @@ export function GraphToolbar({
           <button
             onClick={onZoomIn}
             className="p-2 rounded-md hover:bg-white hover:shadow-sm transition-colors text-gray-600"
-            title="放大"
+            title={t('chatGraph.graph.zoomIn')}
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={onResetView}
             className="p-2 rounded-md hover:bg-white hover:shadow-sm transition-colors text-gray-600 border-l border-gray-300"
-            title="重置视图"
+            title={t('chatGraph.graph.resetView')}
           >
             <Maximize2 className="w-4 h-4" />
           </button>
@@ -104,20 +106,20 @@ export function GraphToolbar({
         <button
           onClick={onOpenFilter}
           className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-          title="打开过滤器"
+          title={t('chatGraph.graph.openFilter')}
         >
           <Filter className="w-4 h-4 mr-2" />
-          过滤器
+          {t('chatGraph.graph.filterTitle')}
         </button>
 
         {/* 导出图片按钮 */}
         <button
           onClick={onExportImage}
           className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-          title="导出为图片"
+          title={t('chatGraph.graph.exportImage')}
         >
           <Download className="w-4 h-4 mr-2" />
-          导出
+          {t('studio.export')}
         </button>
 
         {/* 刷新按钮 */}
@@ -127,10 +129,10 @@ export function GraphToolbar({
           className={`inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors ${
             loading ? 'opacity-50 cursor-not-allowed' : ''
           }`}
-          title="刷新数据"
+          title={t('chatGraph.graph.refreshData')}
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          刷新
+          {t('studio.refresh')}
         </button>
       </div>
     </div>

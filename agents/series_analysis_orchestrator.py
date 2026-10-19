@@ -17,7 +17,7 @@ from .websearch_agent import WebSearchAgent
 class SeriesAnalysisOrchestrator(BaseJubenAgent):
     """已播剧集分析与拉工作流编排器"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("series_analysis_orchestrator", model_provider)
         
         # 初始化子智能体
@@ -25,7 +25,7 @@ class SeriesAnalysisOrchestrator(BaseJubenAgent):
         self.series_info_agent = SeriesInfoAgent(model_provider)
         self.drama_analysis_agent = DramaAnalysisAgent(model_provider)
         self.story_five_elements_agent = StoryFiveElementsAgent(model_provider)
-        self.websearch_agent = WebSearchAgent(model_provider)
+        self.websearch_agent = WebSearchAgent()
         
         # 工作流状态
         self.workflow_state = {

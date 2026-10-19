@@ -2,94 +2,52 @@
 
 # 模型配置
 models:
-  default_provider: "zhipu"  # 默认模型提供商
+  default_provider: "deepseek"  # 默认模型提供商（便宜主力）
   providers:
-    # 智谱AI - 免费模型配置
-    zhipu:
+    # DeepSeek — 默认（deepseek-flash 最便宜）
+    deepseek:
       enabled: true
-      api_key: "${ZHIPU_API_KEY}"
-      base_url: "https://open.bigmodel.cn/api/paas/v4"
-
-      # 默认模型配置
-      model: "glm-4-flash"
+      api_key: "${DEEPSEEK_API_KEY}"
+      base_url: "https://api.deepseek.com"
+      model: "deepseek-flash"
       temperature: 0.7
       max_tokens: 4096
-
-      # 可用模型列表（免费）
       available_models:
-        # 通用文本模型
-        - name: "glm-4-flash"
-          display_name: "GLM-4-Flash (免费)"
+        - name: "deepseek-flash"
+          display_name: "DeepSeek Flash（推荐·便宜）"
           type: "text"
-          description: "快速响应的文本生成模型"
-          max_tokens: 128000
+          description: "V4.1 Flash，日常创作与工具调用默认"
+          max_tokens: 1000000
           default: true
-
-        - name: "glm-4.7-flash"
-          display_name: "GLM-4.7-Flash (免费)"
+        - name: "deepseek-v4-pro"
+          display_name: "DeepSeek V4 Pro"
           type: "text"
-          description: "最新版快速文本生成"
-          max_tokens: 128000
-
-        - name: "glm-4-flash-250414"
-          display_name: "GLM-4-Flash-250414 (免费)"
-          type: "text"
-          description: "特定版本Flash模型"
-          max_tokens: 128000
-
-        - name: "glm-4.1v-thinking-flash"
-          display_name: "GLM-4.1V-Thinking-Flash (免费)"
-          type: "text"
-          description: "带思考链的推理模型"
-          max_tokens: 128000
-          thinking_enabled: true
-
-        # 视觉理解模型
-        - name: "glm-4v-flash"
-          display_name: "GLM-4V-Flash (免费)"
-          type: "vision"
-          description: "视觉理解模型"
-          supports: ["image", "video_frame"]
-
-        - name: "glm-4.6v-flash"
-          display_name: "GLM-4.6V-Flash (免费)"
-          type: "vision"
-          description: "最新视觉理解模型"
-          supports: ["image", "video_frame"]
-
-        # 图像生成模型
-        - name: "cogview-3-flash"
-          display_name: "Cogview-3-Flash (免费)"
-          type: "image_generation"
-          description: "图像生成模型"
-          supports: ["text_to_image"]
-
-        # 视频生成模型
-        - name: "cogvideox-flash"
-          display_name: "CogVideoX-Flash (免费)"
-          type: "video_generation"
-          description: "视频生成模型"
-          supports: ["text_to_video"]
-
-      # 模型使用场景映射
+          description: "更强推理，成本更高，按需使用"
+          max_tokens: 1000000
       model_mapping:
-        # 默认使用快速模型
-        default: "glm-4-flash"
+        default: "deepseek-flash"
+        cheapest: "deepseek-flash"
+        latest: "deepseek-flash"
+        reasoning: "deepseek-v4-pro"
+        vision: "deepseek-flash"
 
-        # 需要推理的场景使用思考模型
-        reasoning: "glm-4.1v-thinking-flash"
-
-        # 需要视觉理解的场景
-        vision: "glm-4v-flash"
-
-        # 图像生成
-        image_gen: "cogview-3-flash"
-
-        # 视频生成
-        video_gen: "cogvideox-flash"
-
-        # 最新最佳模型
-        latest: "glm-4.7-flash"
+    # 智谱AI（可选备用）
+    zhipu:
+      enabled: false
+      api_key: "${ZHIPU_API_KEY}"
+      base_url: "https://open.bigmodel.cn/api/paas/v4"
+      model: "deepseek-flash"
+      temperature: 0.7
+      max_tokens: 4096
+      available_models:
+        - name: "deepseek-flash"
+          display_name: "GLM-4.7-Flash"
+          type: "text"
+          description: "智谱快速文本"
+          max_tokens: 128000
+      model_mapping:
+        default: "deepseek-flash"
+        reasoning: "deepseek-v4-pro"
 
     # OpenRouter (备用)
     openrouter:
@@ -113,47 +71,41 @@ models:
 agent_models:
   # 编排器使用最新最快模型
   orchestrator:
-    model: "glm-4-flash"
+    model: "deepseek-flash"
     temperature: 0.5
 
   # 接待员使用快速模型
   concierge:
-    model: "glm-4-flash"
+    model: "deepseek-flash"
     temperature: 0.4
 
   # 知识查询使用思考模型
   knowledge:
-    model: "glm-4.1v-thinking-flash"
+    model: "deepseek-v4-pro"
     temperature: 0.3
 
   # 创作使用最新模型
   creation:
-    model: "glm-4.7-flash"
+    model: "deepseek-flash"
     temperature: 0.6
 
   # 评估使用思考模型
   evaluation:
-    model: "glm-4.1v-thinking-flash"
+    model: "deepseek-v4-pro"
     temperature: 0.2
 
-  # 视觉相关使用视觉模型
+  # 视觉相关（DeepSeek Flash 支持 vision）
   vision:
-    model: "glm-4v-flash"
+    model: "deepseek-flash"
     temperature: 0.4
-
-  # 图像生成
-  image_gen:
-    model: "cogview-3-flash"
-
-  # 视频生成
-  video_gen:
-    model: "cogvideox-flash"
 
 # 搜索配置
 search:
   enabled: true
   auto_search: true
   confidence_threshold: 0.5
+  provider: deepseek
+  provider: deepseek
 
 # 知识库配置
 knowledge_base:
@@ -245,16 +197,33 @@ performance:
   enable_caching: true
   cache_ttl: 3600
 
+# Prompt Cache（对照 OpenClaw / Pi）
+# - stable prefix：system 规则 / static hooks / 排序后的 tools
+# - dynamic suffix：memory 召回 / runtime / dynamic hooks
+# - compaction：保留 recent tail，摘要不改写稳定前缀
+# - pruning cache-ttl：仅 TTL 过期后修剪旧 tool results
+prompt_cache:
+  enabled: true
+  cache_retention: "short"  # none | short | long
+  supports_prompt_cache_key: true
+  cache_control_format: null  # null | anthropic
+  tool_result_max_chars: 8000
+  pruning_mode: "cache-ttl"  # off | always | cache-ttl
+  pruning_ttl_seconds: 3600
+  keep_recent_messages: 12
+  compact_threshold_chars: 24000
+  auto_compact: true  # run_tool_loop 每步预判式压缩（仅当超过 compact_threshold_chars 触发）
+
 # 免费模型使用统计
 free_model_stats:
   track_usage: true
   log_requests: true
   models:
-    - "glm-4-flash"
-    - "glm-4.7-flash"
+    - "deepseek-flash"
+    - "deepseek-flash"
     - "glm-4.6v-flash"
-    - "glm-4.1v-thinking-flash"
-    - "glm-4-flash-250414"
+    - "deepseek-v4-pro"
+    - "deepseek-flash-250414"
     - "glm-4v-flash"
     - "cogview-3-flash"
     - "cogvideox-flash"

@@ -10,22 +10,20 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useUIStore } from '@/store/uiStore';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGraphStore } from '@/store/graphStore';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import StatusBar from '@/components/layout/StatusBar';
-import MobileMenu from '@/components/common/MobileMenu';
-import SettingsModal from '@/components/modals/SettingsModal';
+import AppShell from '@/components/layout/AppShell';
 import { GraphVisualization } from '@/components/graph';
-import { Network, BookOpen, Plus, Search, ChevronDown, Link2, ClipboardCheck, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
+import { BookOpen, Plus, Search, ChevronDown, ChevronUp, Link2, ClipboardCheck, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
 import { graphService } from '@/services/graphService';
+import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 
 export default function GraphVisualizationPage() {
-  const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const notify = useNotificationStore();
+  const { t } = useI18n();
   const {
     currentStoryId,
     setCurrentStoryId,
@@ -51,6 +49,7 @@ export default function GraphVisualizationPage() {
   } = useGraphStore();
 
   const [showStorySelector, setShowStorySelector] = useState(true);
+  const [showToolbar, setShowToolbar] = useState(true);
   const [selectedStoryName, setSelectedStoryName] = useState('');
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddType, setQuickAddType] = useState<
@@ -335,25 +334,36 @@ export default function GraphVisualizationPage() {
   };
 
   const handleExtractPreview = async () => {
-    if (!currentStoryId) return;
-    if (!extractFile && !extractForm.content.trim()) return;
+    if (!currentStoryId) {
+      notify.warning(t('toolbox.graph.toast.noStory'), t('toolbox.graph.toast.noStoryDesc'));
+      return;
+    }
+    if (!extractFile && !extractForm.content.trim()) {
+      notify.warning(t('toolbox.graph.toast.emptyContent'), t('toolbox.graph.toast.emptyContentDesc'));
+      return;
+    }
     let result: any = null;
-    if (extractFile) {
-      result = await extractGraphFromFile({
-        story_id: currentStoryId,
-        file: extractFile,
-        chunk_size: extractForm.chunkSize,
-        overlap: extractForm.overlap,
-        dry_run: true,
-      });
-    } else {
-      result = await extractGraphFromText({
-        story_id: currentStoryId,
-        content: extractForm.content.trim(),
-        chunk_size: extractForm.chunkSize,
-        overlap: extractForm.overlap,
-        dry_run: true,
-      });
+    try {
+      if (extractFile) {
+        result = await extractGraphFromFile({
+          story_id: currentStoryId,
+          file: extractFile,
+          chunk_size: extractForm.chunkSize,
+          overlap: extractForm.overlap,
+          dry_run: true,
+        });
+      } else {
+        result = await extractGraphFromText({
+          story_id: currentStoryId,
+          content: extractForm.content.trim(),
+          chunk_size: extractForm.chunkSize,
+          overlap: extractForm.overlap,
+          dry_run: true,
+        });
+      }
+    } catch (err: any) {
+      notify.error(t('toolbox.graph.toast.extractFailed'), err?.message || t('toolbox.graph.toast.extractFailedDesc'));
+      return;
     }
     const pending = result?.pending_review || {};
     const created = {
@@ -472,7 +482,7 @@ export default function GraphVisualizationPage() {
     const allCandidateNodes = [...previewPayload.high.nodes, ...previewPayload.low.nodes];
     const missingDeps = ensureRelationshipDependencies(selectedNodes, selectedRels, allCandidateNodes);
     if (missingDeps.length > 0) {
-      setDependencyNotice(`已自动补齐 ${missingDeps.length} 个关系依赖节点`);
+      setDependencyNotice(t('toolbox.graph.toast.autoFill', { count: missingDeps.length }));
       missingDeps.forEach((node) => selectedNodes.push(node));
     }
 
@@ -518,256 +528,270 @@ export default function GraphVisualizationPage() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
-      <MobileMenu />
-      <Sidebar />
+    <AppShell
+      title={t('toolbox.graph.title')}
+      subtitle={t('toolbox.graph.subtitle')}
+      actions={
+        <Link
+          to="/toolbox/graph-review"
+          className="inline-flex items-center gap-1 text-[11px] text-atelier-teal hover:underline"
+        >
+          <ClipboardCheck className="w-3.5 h-3.5" />
+          {t('toolbox.graph.reviewQueue')}
+        </Link>
+      }
+    >
+      <div className="px-4 sm:px-8 lg:px-10 py-6 sm:py-8 max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        {/* 工具栏 */}
+        <div className="glass-panel p-5 sm:p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider text-ink-faint">{t('toolbox.graph.toolbar')}</span>
+            <button
+              type="button"
+              onClick={() => setShowToolbar(!showToolbar)}
+              className="inline-flex items-center gap-1 text-xs text-ink-faint hover:text-ink transition-colors"
+            >
+              {showToolbar ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+          {showToolbar && (
+            <>
+          {/* 操作按钮 */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setStoryModalOpen(true)}
+              className="btn btn-primary btn-sm"
+              title={t('toolbox.graph.createStory')}
+            >
+              <Plus className="w-4 h-4" />
+              {t('toolbox.graph.newStory')}
+            </button>
+            <button
+              onClick={() => setQuickAddOpen(true)}
+              className="btn btn-secondary btn-sm"
+              title={t('toolbox.graph.quickAddNode')}
+            >
+              <Plus className="w-4 h-4" />
+              {t('toolbox.graph.add')}
+            </button>
+            <button
+              onClick={() => setRelationshipModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              title={t('toolbox.graph.createRelation')}
+            >
+              <Link2 className="w-4 h-4" />
+              {t('toolbox.graph.relation')}
+            </button>
+            <button
+              onClick={() => setExtractModalOpen(true)}
+              className="btn btn-secondary btn-sm"
+              title={t('toolbox.graph.autoExtractTitle')}
+            >
+              {t('toolbox.graph.autoExtract')}
+            </button>
+            <button
+              onClick={() => navigate('/toolbox/graph-review')}
+              className="btn btn-secondary btn-sm"
+              title={t('toolbox.graph.review')}
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              {t('toolbox.graph.review')}
+            </button>
+            <button
+              onClick={handleGraphValidate}
+              className="btn btn-secondary btn-sm"
+              title={t('toolbox.graph.graphValidate')}
+              disabled={!currentStoryId || validationLoading}
+            >
+              {t('toolbox.graph.graphValidate')}
+            </button>
+            <button
+              onClick={handleCharacterConsistency}
+              className="btn btn-primary btn-sm"
+              title={t('toolbox.graph.characterConsistency')}
+              disabled={!projectId || validationLoading}
+            >
+              {t('toolbox.graph.characterConsistency')}
+            </button>
+          </div>
 
-      <div
-        className={`flex flex-col flex-1 transition-all duration-300 ${
-          !sidebarOpen ? 'ml-0' : sidebarCollapsed ? 'ml-16' : 'ml-80'
-        }`}
-      >
-        <Header />
-        <StatusBar />
-
-        <div className="flex flex-col flex-1 overflow-hidden">
-          {/* 页面头部 */}
-          <div className="border-b border-gray-200 bg-white">
-            <div className="max-w-7xl mx-auto px-6 py-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <Network className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">图谱可视化</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                      探索剧本中的人物关系、情节发展和世界观规则
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {/* 快速添加按钮 */}
-                  <button
-                    onClick={() => setQuickAddOpen(true)}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                    title="快速添加节点"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    添加
-                  </button>
-                  <button
-                    onClick={() => setRelationshipModalOpen(true)}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                    title="创建关系"
-                  >
-                    <Link2 className="w-4 h-4 mr-2" />
-                    关系
-                  </button>
-                  <button
-                    onClick={() => setExtractModalOpen(true)}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                    title="自动抽取图谱"
-                  >
-                    自动抽取
-                  </button>
-                  <button
-                    onClick={() => navigate('/graph/review')}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                    title="审核中心"
-                  >
-                    <ClipboardCheck className="w-4 h-4 mr-2" />
-                    审核中心
-                  </button>
-                  <button
-                    onClick={handleGraphValidate}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                    title="图谱自动校验"
-                    disabled={!currentStoryId || validationLoading}
-                  >
-                    图谱校验
-                  </button>
-                  <button
-                    onClick={handleCharacterConsistency}
-                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-black rounded-lg hover:bg-gray-800 transition-colors"
-                    title="人物一致性检测"
-                    disabled={!projectId || validationLoading}
-                  >
-                    人物一致性
-                  </button>
-                </div>
-              </div>
-
-              {/* 工具栏 */}
-              <div className="flex items-center gap-4">
-                {/* 故事选择器 */}
-                <div className="relative">
-                  <button
-                    onClick={() => setShowStorySelector(!showStorySelector)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                  >
-                    <BookOpen className="w-4 h-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-900">
-                      {selectedStoryName || '选择故事'}
-                    </span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-gray-500 transition-transform ${
-                        showStorySelector ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </button>
-
-                  {showStorySelector && (
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                      <div className="p-2">
-                        {stories.length === 0 && (
-                          <div className="px-3 py-2 text-sm text-gray-500">暂无故事，请先创建</div>
-                        )}
-                        {stories.map((story: any) => (
-                          <button
-                            key={story.story_id}
-                            onClick={() => handleStoryChange(story.story_id, story.name)}
-                            className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                              currentStoryId === story.story_id
-                                ? 'bg-indigo-50 text-indigo-700'
-                                : 'hover:bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            <div className="font-medium text-sm">{story.name}</div>
-                            <div className="text-xs text-gray-500">{story.description}</div>
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => {
-                            setShowStorySelector(false);
-                            setStoryModalOpen(true);
-                          }}
-                          className="w-full text-left px-3 py-2 rounded-lg transition-colors hover:bg-gray-50 text-gray-700"
-                        >
-                          <div className="font-medium text-sm">+ 新建故事</div>
-                          <div className="text-xs text-gray-500">创建新的剧本项目</div>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 搜索框 */}
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="搜索节点..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 text-sm"
-                    onChange={(e) => setFilter({ searchQuery: e.target.value })}
-                  />
-                </div>
-                <input
-                  type="text"
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  placeholder="项目ID（人物一致性）"
-                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
+          {/* 工具栏 */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* 故事选择器 */}
+            <div className="relative">
+              <button
+                onClick={() => setShowStorySelector(!showStorySelector)}
+                className="flex items-center gap-2 px-4 py-2 bg-pearl-soft hover:bg-pearl-line rounded-lg transition-colors"
+              >
+                <BookOpen className="w-4 h-4 text-ink-muted" />
+                <span className="text-sm font-medium text-ink">
+                  {selectedStoryName || t('toolbox.graph.selectStory')}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-ink-muted transition-transform ${
+                    showStorySelector ? 'rotate-180' : ''
+                  }`}
                 />
-                <label className="flex items-center gap-2 text-xs text-gray-600">
-                  <input
-                    type="checkbox"
-                    checked={enableLlmCheck}
-                    onChange={(e) => setEnableLlmCheck(e.target.checked)}
-                  />
-                  动机一致性（LLM）
-                </label>
-              </div>
+              </button>
 
-              {(graphValidateResult || characterConsistencyResult) && (
-                <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-xl p-3 bg-white">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-semibold text-gray-900">图谱冲突</span>
-                    </div>
-                    {!graphValidateResult ? (
-                      <div className="text-xs text-gray-500">暂无校验结果</div>
-                    ) : (graphValidateResult.issues || []).length === 0 ? (
-                      <div className="text-xs text-emerald-600 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> 未发现冲突
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {graphValidateResult.issues.map((issue: any, idx: number) => (
-                          <button
-                            key={`${issue.message || issue}-${idx}`}
-                            className="text-left text-xs text-gray-700 border border-gray-100 rounded-lg p-2 hover:bg-gray-50"
-                            onClick={() => {
-                              const focus = issue.source_id || issue.target_id || (issue.nodes && issue.nodes[0]);
-                              if (focus) {
-                                setSelectedNodeId(focus);
-                              }
-                            }}
-                          >
-                            {issue.message || issue}
-                          </button>
-                        ))}
-                      </div>
+              {showStorySelector && (
+                <div className="absolute top-full left-0 mt-2 w-64 glass-dense shadow-lg z-10">
+                  <div className="p-2">
+                    {stories.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-ink-muted">{t('toolbox.graph.noStory')}</div>
                     )}
-                  </div>
-                  <div className="border border-gray-200 rounded-xl p-3 bg-white">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-indigo-500" />
-                      <span className="text-sm font-semibold text-gray-900">人物一致性</span>
-                    </div>
-                    {!characterConsistencyResult ? (
-                      <div className="text-xs text-gray-500">暂无检测结果</div>
-                    ) : (characterConsistencyResult.issues || []).length === 0 ? (
-                      <div className="text-xs text-emerald-600 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> 未发现明显问题
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {characterConsistencyResult.issues.map((issue: string, idx: number) => (
-                          <div key={`${issue}-${idx}`} className="text-xs text-gray-700 border border-gray-100 rounded-lg p-2">
-                            {issue}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {characterConsistencyResult?.llm_motivation && (
-                      <div className="mt-2 text-xs text-gray-600">
-                        动机评分: {characterConsistencyResult.llm_motivation.score ?? '-'}
-                      </div>
-                    )}
+                    {stories.map((story: any) => (
+                      <button
+                        key={story.story_id}
+                        onClick={() => handleStoryChange(story.story_id, story.name)}
+                        className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                          currentStoryId === story.story_id
+                            ? 'bg-atelier-teal-soft text-atelier-teal'
+                            : 'hover:bg-pearl-soft text-ink'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{story.name}</div>
+                        <div className="text-xs text-ink-muted">{story.description}</div>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        setShowStorySelector(false);
+                        setStoryModalOpen(true);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg transition-colors hover:bg-pearl-soft text-ink"
+                    >
+                      <div className="font-medium text-sm">+ {t('toolbox.graph.newStory')}</div>
+                      <div className="text-xs text-ink-muted">{t('toolbox.graph.createStoryHint')}</div>
+                    </button>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* 搜索框 */}
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+              <input
+                type="text"
+                placeholder={t('toolbox.graph.searchNodes')}
+                className="w-full pl-10 pr-4 py-2 border border-pearl-line rounded-lg focus:outline-none focus:border-atelier-teal text-sm"
+                onChange={(e) => setFilter({ searchQuery: e.target.value })}
+              />
+            </div>
+            <input
+              type="text"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder={t('toolbox.graph.projectIdPh')}
+              className="px-3 py-2 border border-pearl-line rounded-lg text-sm"
+            />
+            <label className="flex items-center gap-2 text-xs text-ink-muted">
+              <input
+                type="checkbox"
+                checked={enableLlmCheck}
+                onChange={(e) => setEnableLlmCheck(e.target.checked)}
+              />
+              {t('toolbox.graph.motivationAi')}
+            </label>
           </div>
 
-          {/* 图谱可视化区域 */}
-          <div className="flex-1 relative bg-gray-50">
+          {(graphValidateResult || characterConsistencyResult) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="glass-dense p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-semibold text-ink">{t('toolbox.graph.graphConflict')}</span>
+                </div>
+                {!graphValidateResult ? (
+                  <div className="text-xs text-ink-muted">{t('toolbox.graph.noValidateResult')}</div>
+                ) : (graphValidateResult.issues || []).length === 0 ? (
+                  <div className="text-xs text-emerald-600 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> {t('toolbox.graph.noConflict')}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {graphValidateResult.issues.map((issue: any, idx: number) => (
+                      <button
+                        key={`${issue.message || issue}-${idx}`}
+                        className="text-left text-xs text-ink border border-pearl-line rounded-lg p-2 hover:bg-pearl-soft"
+                        onClick={() => {
+                          const focus = issue.source_id || issue.target_id || (issue.nodes && issue.nodes[0]);
+                          if (focus) {
+                            setSelectedNodeId(focus);
+                          }
+                        }}
+                      >
+                        {issue.message || issue}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="glass-dense p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-atelier-teal" />
+                  <span className="text-sm font-semibold text-ink">{t('toolbox.graph.characterConsistency')}</span>
+                </div>
+                {!characterConsistencyResult ? (
+                  <div className="text-xs text-ink-muted">{t('toolbox.graph.noDetectResult')}</div>
+                ) : (characterConsistencyResult.issues || []).length === 0 ? (
+                  <div className="text-xs text-emerald-600 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> {t('toolbox.graph.noIssue')}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {characterConsistencyResult.issues.map((issue: string, idx: number) => (
+                      <div key={`${issue}-${idx}`} className="text-xs text-ink border border-pearl-line rounded-lg p-2">
+                        {issue}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {characterConsistencyResult?.llm_motivation && (
+                  <div className="mt-2 text-xs text-ink-muted">
+                    {t('toolbox.graph.motivationScore')}: {characterConsistencyResult.llm_motivation.score ?? '-'}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+            </>
+          )}
+        </div>
+
+        {/* 图谱可视化区域 */}
+        <div className="glass-panel overflow-hidden relative">
+          <div className="relative h-[70vh] min-h-[480px]">
             <GraphVisualization className="w-full h-full" height="100%" />
             {!currentStoryId && (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-500">
-                请先选择或创建故事以查看图谱
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-sm text-ink-muted">
+                <span>{t('toolbox.graph.createStoryFirst')}</span>
+                <button
+                  type="button"
+                  onClick={() => setStoryModalOpen(true)}
+                  className="btn btn-primary btn-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  {t('toolbox.graph.newStory')}
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      <SettingsModal />
-
       {/* 快速添加菜单（当用户点击"添加"按钮时显示） */}
       {quickAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">快速添加节点</h3>
+              <h3 className="text-lg font-semibold text-ink">{t('toolbox.graph.quickAddNode')}</h3>
               <button
                 onClick={() => setQuickAddOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-ink-muted hover:text-ink"
               >
-                关闭
+                {t('toolbox.close')}
               </button>
             </div>
 
@@ -789,41 +813,41 @@ export default function GraphVisualizationPage() {
                   onClick={() => setQuickAddType(type)}
                   className={`px-3 py-2 text-sm rounded-lg border ${
                     quickAddType === type
-                      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      : 'bg-white text-gray-600 border-gray-200'
+                      ? 'bg-atelier-teal-soft text-atelier-teal border-atelier-teal/20'
+                      : 'bg-white text-ink-muted border-pearl-line'
                   }`}
                 >
                   {type === 'Character'
-                    ? '角色'
+                    ? t('toolbox.graph.nodeType.character')
                     : type === 'PlotNode'
-                    ? '情节'
+                    ? t('toolbox.graph.nodeType.plot')
                     : type === 'WorldRule'
-                    ? '规则'
+                    ? t('toolbox.graph.nodeType.rule')
                     : type === 'Location'
-                    ? '地点'
+                    ? t('toolbox.graph.nodeType.location')
                     : type === 'Item'
-                    ? '物品'
+                    ? t('toolbox.graph.nodeType.item')
                     : type === 'Conflict'
-                    ? '冲突'
+                    ? t('toolbox.graph.nodeType.conflict')
                     : type === 'Theme'
-                    ? '主题'
-                    : '动机'}
+                    ? t('toolbox.graph.nodeType.theme')
+                    : t('toolbox.graph.nodeType.motivation')}
                 </button>
               ))}
             </div>
 
             <div className="space-y-3">
               <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder={quickAddType === 'PlotNode' ? '情节标题' : '名称'}
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                placeholder={quickAddType === 'PlotNode' ? t('toolbox.graph.plotTitle') : t('toolbox.graph.name')}
                 value={quickAddForm.name}
                 onChange={(e) => setQuickAddForm({ ...quickAddForm, name: e.target.value })}
               />
 
               {quickAddType !== 'Character' && quickAddType !== 'Location' && quickAddType !== 'Item' && quickAddType !== 'Conflict' && quickAddType !== 'Theme' && quickAddType !== 'Motivation' && (
                 <textarea
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="描述"
+                  className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                  placeholder={t('toolbox.graph.description')}
                   rows={3}
                   value={quickAddForm.description}
                   onChange={(e) => setQuickAddForm({ ...quickAddForm, description: e.target.value })}
@@ -833,8 +857,8 @@ export default function GraphVisualizationPage() {
               {['Location', 'Item', 'Conflict', 'Theme', 'Motivation'].includes(quickAddType) && (
                 <>
                   <textarea
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="描述"
+                    className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.description')}
                     rows={3}
                     value={quickAddForm.description}
                     onChange={(e) =>
@@ -842,8 +866,8 @@ export default function GraphVisualizationPage() {
                     }
                   />
                   <input
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="分类（可选）"
+                    className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.categoryOptional')}
                     value={quickAddForm.category}
                     onChange={(e) => setQuickAddForm({ ...quickAddForm, category: e.target.value })}
                   />
@@ -854,17 +878,17 @@ export default function GraphVisualizationPage() {
                 <>
                   <div className="flex gap-2">
                     <select
-                      className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                      className="flex-1 rounded-lg border border-pearl-line px-3 py-2 text-sm"
                       value={quickAddForm.status}
                       onChange={(e) => setQuickAddForm({ ...quickAddForm, status: e.target.value })}
                     >
-                      <option value="alive">存活</option>
-                      <option value="deceased">死亡</option>
-                      <option value="unknown">未知</option>
+                      <option value="alive">{t('toolbox.graph.status.alive')}</option>
+                      <option value="deceased">{t('toolbox.graph.status.deceased')}</option>
+                      <option value="unknown">{t('toolbox.graph.status.unknown')}</option>
                     </select>
                     <input
-                      className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                      placeholder="当前位置（可选）"
+                      className="flex-1 rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                      placeholder={t('toolbox.graph.locationOptional')}
                       value={quickAddForm.location}
                       onChange={(e) => setQuickAddForm({ ...quickAddForm, location: e.target.value })}
                     />
@@ -876,8 +900,8 @@ export default function GraphVisualizationPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <input
                     type="number"
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="序号"
+                    className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.sequence')}
                     value={quickAddForm.sequenceNumber}
                     onChange={(e) =>
                       setQuickAddForm({ ...quickAddForm, sequenceNumber: Number(e.target.value) })
@@ -885,8 +909,8 @@ export default function GraphVisualizationPage() {
                   />
                   <input
                     type="number"
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="张力"
+                    className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.tension')}
                     value={quickAddForm.tensionScore}
                     onChange={(e) =>
                       setQuickAddForm({ ...quickAddForm, tensionScore: Number(e.target.value) })
@@ -894,8 +918,8 @@ export default function GraphVisualizationPage() {
                   />
                   <input
                     type="number"
-                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="重要性"
+                    className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.importance')}
                     value={quickAddForm.importance}
                     onChange={(e) =>
                       setQuickAddForm({ ...quickAddForm, importance: Number(e.target.value) })
@@ -907,22 +931,22 @@ export default function GraphVisualizationPage() {
               {quickAddType === 'WorldRule' && (
                 <>
                   <input
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="规则类型（如 magic/physics）"
+                    className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.ruleType')}
                     value={quickAddForm.ruleType}
                     onChange={(e) => setQuickAddForm({ ...quickAddForm, ruleType: e.target.value })}
                   />
                   <input
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="约束条件（逗号分隔）"
+                    className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.constraints')}
                     value={quickAddForm.constraints}
                     onChange={(e) =>
                       setQuickAddForm({ ...quickAddForm, constraints: e.target.value })
                     }
                   />
                   <input
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                    placeholder="示例（逗号分隔）"
+                    className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                    placeholder={t('toolbox.graph.examples')}
                     value={quickAddForm.examples}
                     onChange={(e) =>
                       setQuickAddForm({ ...quickAddForm, examples: e.target.value })
@@ -934,16 +958,16 @@ export default function GraphVisualizationPage() {
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600"
+                className="px-4 py-2 text-sm rounded-lg border border-pearl-line text-ink-muted"
                 onClick={() => setQuickAddOpen(false)}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
-                className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white"
+                className="px-4 py-2 text-sm rounded-lg bg-atelier-teal text-white"
                 onClick={handleQuickAddSubmit}
               >
-                创建
+                {t('toolbox.graph.create')}
               </button>
             </div>
           </div>
@@ -954,49 +978,49 @@ export default function GraphVisualizationPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">新建故事</h3>
+              <h3 className="text-lg font-semibold text-ink">{t('toolbox.graph.newStory')}</h3>
               <button
                 onClick={() => setStoryModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-ink-muted hover:text-ink"
               >
-                关闭
+                {t('toolbox.close')}
               </button>
             </div>
 
             <div className="space-y-3">
               <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="故事名称"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                placeholder={t('toolbox.graph.storyName')}
                 value={storyForm.name}
                 onChange={(e) => setStoryForm({ ...storyForm, name: e.target.value })}
               />
               <textarea
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="故事简介"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                placeholder={t('toolbox.graph.storyDesc')}
                 rows={3}
                 value={storyForm.description}
                 onChange={(e) => setStoryForm({ ...storyForm, description: e.target.value })}
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="题材（可选）"
+                  className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                  placeholder={t('toolbox.graph.genreOptional')}
                   value={storyForm.genre}
                   onChange={(e) => setStoryForm({ ...storyForm, genre: e.target.value })}
                 />
                 <select
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                  className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
                   value={storyForm.status}
                   onChange={(e) => setStoryForm({ ...storyForm, status: e.target.value })}
                 >
-                  <option value="active">进行中</option>
-                  <option value="paused">暂停</option>
-                  <option value="archived">已归档</option>
+                  <option value="active">{t('toolbox.graph.storyStatus.active')}</option>
+                  <option value="paused">{t('toolbox.graph.storyStatus.paused')}</option>
+                  <option value="archived">{t('toolbox.graph.storyStatus.archived')}</option>
                 </select>
               </div>
               <input
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="标签（逗号分隔）"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                placeholder={t('toolbox.graph.tagsPh')}
                 value={storyForm.tags}
                 onChange={(e) => setStoryForm({ ...storyForm, tags: e.target.value })}
               />
@@ -1004,16 +1028,16 @@ export default function GraphVisualizationPage() {
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600"
+                className="px-4 py-2 text-sm rounded-lg border border-pearl-line text-ink-muted"
                 onClick={() => setStoryModalOpen(false)}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
-                className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white"
+                className="px-4 py-2 text-sm rounded-lg bg-atelier-teal text-white"
                 onClick={handleCreateStory}
               >
-                创建
+                {t('toolbox.graph.create')}
               </button>
             </div>
           </div>
@@ -1024,22 +1048,22 @@ export default function GraphVisualizationPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">创建关系</h3>
+              <h3 className="text-lg font-semibold text-ink">{t('toolbox.graph.createRelation')}</h3>
               <button
                 onClick={() => setRelationshipModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-ink-muted hover:text-ink"
               >
-                关闭
+                {t('toolbox.close')}
               </button>
             </div>
 
             <div className="space-y-3">
               <select
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
                 value={relationshipForm.sourceId}
                 onChange={(e) => setRelationshipForm({ ...relationshipForm, sourceId: e.target.value })}
               >
-                <option value="">选择源节点</option>
+                <option value="">{t('toolbox.graph.selectSource')}</option>
                 {nodes.map((node) => (
                   <option key={node.id} value={node.id}>
                     {node.properties?.name || node.properties?.title || node.id} ({node.type})
@@ -1048,11 +1072,11 @@ export default function GraphVisualizationPage() {
               </select>
 
               <select
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
                 value={relationshipForm.targetId}
                 onChange={(e) => setRelationshipForm({ ...relationshipForm, targetId: e.target.value })}
               >
-                <option value="">选择目标节点</option>
+                <option value="">{t('toolbox.graph.selectTarget')}</option>
                 {nodes.map((node) => (
                   <option key={node.id} value={node.id}>
                     {node.properties?.name || node.properties?.title || node.id} ({node.type})
@@ -1061,7 +1085,7 @@ export default function GraphVisualizationPage() {
               </select>
 
               <select
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
                 value={relationshipForm.relationType}
                 onChange={(e) => setRelationshipForm({ ...relationshipForm, relationType: e.target.value })}
               >
@@ -1076,8 +1100,8 @@ export default function GraphVisualizationPage() {
               </select>
 
               <textarea
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="关系描述（可选）"
+                className="w-full rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                placeholder={t('toolbox.graph.relationDesc')}
                 rows={2}
                 value={relationshipForm.description}
                 onChange={(e) => setRelationshipForm({ ...relationshipForm, description: e.target.value })}
@@ -1086,16 +1110,16 @@ export default function GraphVisualizationPage() {
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600"
+                className="px-4 py-2 text-sm rounded-lg border border-pearl-line text-ink-muted"
                 onClick={() => setRelationshipModalOpen(false)}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
-                className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white"
+                className="px-4 py-2 text-sm rounded-lg bg-atelier-teal text-white"
                 onClick={handleCreateRelationship}
               >
-                创建
+                {t('toolbox.graph.create')}
               </button>
             </div>
           </div>
@@ -1106,21 +1130,21 @@ export default function GraphVisualizationPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">自动抽取图谱</h3>
+              <h3 className="text-lg font-semibold text-ink">{t('toolbox.graph.autoExtractTitle')}</h3>
               <button
                 onClick={() => setExtractModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-ink-muted hover:text-ink"
               >
-                关闭
+                {t('toolbox.close')}
               </button>
             </div>
 
             <div className="space-y-3">
               <textarea
-                className={`w-full rounded-lg border border-gray-200 px-3 py-2 text-sm ${
-                  extractFile ? 'bg-gray-50 text-gray-400' : ''
+                className={`w-full rounded-lg border border-pearl-line px-3 py-2 text-sm ${
+                  extractFile ? 'bg-pearl-soft text-ink-faint' : ''
                 }`}
-                placeholder="粘贴剧本文本（人物/地点/冲突/动机会自动抽取）"
+                placeholder={t('toolbox.graph.pasteScript')}
                 rows={10}
                 value={extractForm.content}
                 disabled={!!extractFile}
@@ -1128,7 +1152,7 @@ export default function GraphVisualizationPage() {
               />
               {extractFile && (
                 <div className="text-xs text-amber-600">
-                  已选择文件，将以文件内容为准并忽略文本输入
+                  {t('toolbox.graph.fileSelected')}
                 </div>
               )}
               <div className="flex items-center gap-3">
@@ -1146,16 +1170,16 @@ export default function GraphVisualizationPage() {
                   className="text-sm"
                 />
                 {extractFile && (
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span>已选择文件：{extractFile.name}</span>
+                  <div className="flex items-center gap-2 text-xs text-ink-muted">
+                    <span>{t('toolbox.graph.fileSelectedName')}{extractFile.name}</span>
                     <button
-                      className="text-xs text-gray-600 underline"
+                      className="text-xs text-ink-muted underline"
                       onClick={() => {
                         setExtractFile(null);
                         setFileInputKey((prev) => prev + 1);
                       }}
                     >
-                      清除文件
+                      {t('toolbox.graph.clearFile')}
                     </button>
                   </div>
                 )}
@@ -1163,8 +1187,8 @@ export default function GraphVisualizationPage() {
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="number"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="分块大小"
+                  className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                  placeholder={t('toolbox.graph.chunkSize')}
                   value={extractForm.chunkSize}
                   onChange={(e) =>
                     setExtractForm({ ...extractForm, chunkSize: Number(e.target.value) || 4000 })
@@ -1172,8 +1196,8 @@ export default function GraphVisualizationPage() {
                 />
                 <input
                   type="number"
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  placeholder="重叠长度"
+                  className="rounded-lg border border-pearl-line px-3 py-2 text-sm"
+                  placeholder={t('toolbox.graph.overlap')}
                   value={extractForm.overlap}
                   onChange={(e) =>
                     setExtractForm({ ...extractForm, overlap: Number(e.target.value) || 200 })
@@ -1184,16 +1208,16 @@ export default function GraphVisualizationPage() {
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600"
+                className="px-4 py-2 text-sm rounded-lg border border-pearl-line text-ink-muted"
                 onClick={() => setExtractModalOpen(false)}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
-                className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white"
+                className="px-4 py-2 text-sm rounded-lg bg-atelier-teal text-white"
                 onClick={handleExtractPreview}
               >
-                预览抽取
+                {t('toolbox.graph.previewExtract')}
               </button>
             </div>
           </div>
@@ -1205,16 +1229,16 @@ export default function GraphVisualizationPage() {
           <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">抽取预览</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  高置信度候选与低置信度待审可分别勾选，确认后统一入库
+                <h3 className="text-lg font-semibold text-ink">{t('toolbox.graph.extractPreview')}</h3>
+                <p className="text-xs text-ink-muted mt-1">
+                  {t('toolbox.graph.previewHint')}
                 </p>
               </div>
               <button
                 onClick={() => setPreviewModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-ink-muted hover:text-ink"
               >
-                关闭
+                {t('toolbox.close')}
               </button>
             </div>
 
@@ -1225,10 +1249,10 @@ export default function GraphVisualizationPage() {
             <div className="grid grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto">
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">高置信度候选</h4>
+                  <h4 className="text-sm font-medium text-ink mb-2">{t('toolbox.graph.highConfidence')}</h4>
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-1">节点</div>
+                      <div className="text-xs font-medium text-ink-muted mb-1">{t('toolbox.graph.nodes')}</div>
                       <div className="space-y-2">
                         {previewPayload.high.nodes.map((item, idx) => (
                           <label key={`high-node-${idx}`} className="flex items-start gap-2 text-sm">
@@ -1239,18 +1263,18 @@ export default function GraphVisualizationPage() {
                             />
                             <span>
                               <span className="font-medium">{item.name}</span> ({item.type})
-                              {item.confidence !== undefined ? ` · 置信度 ${item.confidence}` : ''}
+                              {item.confidence !== undefined ? ` · ${t('toolbox.graph.confidence')} ${item.confidence}` : ''}
                             </span>
                           </label>
                         ))}
                         {previewPayload.high.nodes.length === 0 && (
-                          <div className="text-xs text-gray-500">无候选节点</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.graph.noCandidateNodes')}</div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-1">情节节点</div>
+                      <div className="text-xs font-medium text-ink-muted mb-1">{t('toolbox.graph.plotNodes')}</div>
                       <div className="space-y-2">
                         {previewPayload.high.plot_nodes.map((item, idx) => (
                           <label key={`high-plot-${idx}`} className="flex items-start gap-2 text-sm">
@@ -1261,18 +1285,18 @@ export default function GraphVisualizationPage() {
                             />
                             <span>
                               <span className="font-medium">{item.title}</span>
-                              {item.confidence !== undefined ? ` · 置信度 ${item.confidence}` : ''}
+                              {item.confidence !== undefined ? ` · ${t('toolbox.graph.confidence')} ${item.confidence}` : ''}
                             </span>
                           </label>
                         ))}
                         {previewPayload.high.plot_nodes.length === 0 && (
-                          <div className="text-xs text-gray-500">无候选情节节点</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.graph.noCandidatePlot')}</div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-1">关系</div>
+                      <div className="text-xs font-medium text-ink-muted mb-1">{t('toolbox.graph.relations')}</div>
                       <div className="space-y-2">
                         {previewPayload.high.relationships.map((item, idx) => (
                           <label key={`high-rel-${idx}`} className="flex items-start gap-2 text-sm">
@@ -1286,12 +1310,12 @@ export default function GraphVisualizationPage() {
                                 {item.source_name || item.source} → {item.target_name || item.target}
                               </span>{' '}
                               ({item.type})
-                              {item.confidence !== undefined ? ` · 置信度 ${item.confidence}` : ''}
+                              {item.confidence !== undefined ? ` · ${t('toolbox.graph.confidence')} ${item.confidence}` : ''}
                             </span>
                           </label>
                         ))}
                         {previewPayload.high.relationships.length === 0 && (
-                          <div className="text-xs text-gray-500">无候选关系</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.graph.noCandidateRelations')}</div>
                         )}
                       </div>
                     </div>
@@ -1301,10 +1325,10 @@ export default function GraphVisualizationPage() {
 
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">低置信度待审</h4>
+                  <h4 className="text-sm font-medium text-ink mb-2">{t('toolbox.graph.lowConfidence')}</h4>
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-1">节点</div>
+                      <div className="text-xs font-medium text-ink-muted mb-1">{t('toolbox.graph.nodes')}</div>
                       <div className="space-y-2">
                         {previewPayload.low.nodes.map((item, idx) => (
                           <label key={`low-node-${idx}`} className="flex items-start gap-2 text-sm">
@@ -1314,19 +1338,19 @@ export default function GraphVisualizationPage() {
                               onChange={() => togglePreviewSelection('low', 'nodes', idx)}
                             />
                             <span>
-                              <span className="font-medium">{item.name}</span> ({item.type}) - 置信度 {item.confidence}
+                              <span className="font-medium">{item.name}</span> ({item.type}) - {t('toolbox.graph.confidence')} {item.confidence}
                               {item.reason ? ` · ${item.reason}` : ''}
                             </span>
                           </label>
                         ))}
                         {previewPayload.low.nodes.length === 0 && (
-                          <div className="text-xs text-gray-500">无待审节点</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.graph.noPendingNodes')}</div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-1">情节节点</div>
+                      <div className="text-xs font-medium text-ink-muted mb-1">{t('toolbox.graph.plotNodes')}</div>
                       <div className="space-y-2">
                         {previewPayload.low.plot_nodes.map((item, idx) => (
                           <label key={`low-plot-${idx}`} className="flex items-start gap-2 text-sm">
@@ -1336,19 +1360,19 @@ export default function GraphVisualizationPage() {
                               onChange={() => togglePreviewSelection('low', 'plot_nodes', idx)}
                             />
                             <span>
-                              <span className="font-medium">{item.title}</span> - 置信度 {item.confidence}
+                              <span className="font-medium">{item.title}</span> - {t('toolbox.graph.confidence')} {item.confidence}
                               {item.reason ? ` · ${item.reason}` : ''}
                             </span>
                           </label>
                         ))}
                         {previewPayload.low.plot_nodes.length === 0 && (
-                          <div className="text-xs text-gray-500">无待审情节节点</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.graph.noPendingPlot')}</div>
                         )}
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-xs font-medium text-gray-500 mb-1">关系</div>
+                      <div className="text-xs font-medium text-ink-muted mb-1">{t('toolbox.graph.relations')}</div>
                       <div className="space-y-2">
                         {previewPayload.low.relationships.map((item, idx) => (
                           <label key={`low-rel-${idx}`} className="flex items-start gap-2 text-sm">
@@ -1361,13 +1385,13 @@ export default function GraphVisualizationPage() {
                               <span className="font-medium">
                                 {item.source} → {item.target}
                               </span>{' '}
-                              ({item.type}) - 置信度 {item.confidence}
+                              ({item.type}) - {t('toolbox.graph.confidence')} {item.confidence}
                               {item.reason ? ` · ${item.reason}` : ''}
                             </span>
                           </label>
                         ))}
                         {previewPayload.low.relationships.length === 0 && (
-                          <div className="text-xs text-gray-500">无待审关系</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.graph.noPendingRelations')}</div>
                         )}
                       </div>
                     </div>
@@ -1378,34 +1402,34 @@ export default function GraphVisualizationPage() {
 
             {previewPayload.validation_issues.length > 0 && (
               <div className="mt-4 text-xs text-amber-600">
-                校验提示：{previewPayload.validation_issues.join('；')}
+                {t('toolbox.graph.validationHint')}{previewPayload.validation_issues.join('；')}
               </div>
             )}
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600"
+                className="px-4 py-2 text-sm rounded-lg border border-pearl-line text-ink-muted"
                 onClick={() => setPreviewModalOpen(false)}
               >
-                取消
+                {t('common.cancel')}
               </button>
               <button
-                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-700"
+                className="px-4 py-2 text-sm rounded-lg border border-pearl-line text-ink"
                 onClick={handleSaveToReviewQueue}
                 disabled={previewPayload.low.nodes.length + previewPayload.low.plot_nodes.length + previewPayload.low.relationships.length === 0}
               >
-                加入审核中心
+                {t('toolbox.graph.addToReview')}
               </button>
               <button
-                className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white"
+                className="px-4 py-2 text-sm rounded-lg bg-atelier-teal text-white"
                 onClick={handleSubmitPreview}
               >
-                确认入库
+                {t('toolbox.graph.confirmCommit')}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

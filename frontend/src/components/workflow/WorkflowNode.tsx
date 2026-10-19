@@ -4,7 +4,7 @@
  */
 
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, Node } from '@xyflow/react';
 import { clsx } from 'clsx';
 import { NodeStatus, WorkflowNodeData } from './types';
 import {
@@ -79,7 +79,7 @@ const statusColors = {
   },
 };
 
-export const WorkflowNode = memo(({ data, selected }: NodeProps<WorkflowNodeData>) => {
+export const WorkflowNode = memo(({ data, selected }: NodeProps<Node<WorkflowNodeData>>) => {
   const StatusIconComponent = StatusIcon[data.status];
   const TypeIconComponent = NodeTypeIcon[data.nodeType] || FileText;
   const colors = statusColors[data.status];

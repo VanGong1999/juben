@@ -48,7 +48,7 @@ class StoryOutlineEvaluationAgent(BaseJubenAgent):
     6. 模块化外包：智能体间相互调用，上下文隔离
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化故事大纲评估智能体"""
         super().__init__("story_outline_evaluation", model_provider)
         
@@ -222,7 +222,12 @@ class StoryOutlineEvaluationAgent(BaseJubenAgent):
             }
             
             document_result = await self._generate_document(analysis_result, evaluation_results)
-            
+
+            # 把报告正文流式输出（否则 workflow_complete 的 result 不显示为正文）
+            doc_content = (document_result or {}).get("content") or ""
+            if doc_content:
+                yield {"event_type": "llm_chunk", "data": doc_content, "metadata": {}}
+
             yield {
                 "event_type": "step_complete",
                 "data": {

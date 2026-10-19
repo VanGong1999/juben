@@ -9,16 +9,23 @@ import { api } from './api';
 
 export interface ToolSchema {
   name: string;
+  label?: string;
   description: string;
+  category?: 'prebuilt' | 'external';
   parameters: {
     type: 'object';
     properties: Record<string, {
       type: string;
-      description: string;
+      description?: string;
       default?: any;
+      enum?: string[];
     }>;
-    required: string[];
+    required?: string[];
   };
+  requires_sandbox?: boolean;
+  dangerous?: boolean;
+  enabled?: boolean;
+  tags?: string[];
 }
 
 export interface ToolExecuteRequest {
@@ -30,11 +37,13 @@ export interface ToolExecuteRequest {
 export interface ToolExecuteResult {
   success: boolean;
   tool_name: string;
+  tool_call_id?: string;
   result?: {
     log_id: string;
     msg: string;
     code: number;
     data: any;
+    llm_text?: string;
   };
   error?: string;
 }
@@ -97,7 +106,7 @@ export async function getToolSchemas(): Promise<{
  */
 export async function executeTool(request: ToolExecuteRequest): Promise<ToolExecuteResult> {
   try {
-    const response = await api.post<ToolExecuteResult>('/tools/execute', request);
+    const response = await api.post<{ success: boolean; data: ToolExecuteResult }>('/tools/execute', request);
     return response.data;
   } catch (error) {
     console.error('[工具执行] 请求失败:', error);
@@ -167,9 +176,7 @@ export async function quickSearch(query: string, maxResults: number = 10): Promi
   total: number;
 }> {
   try {
-    const response = await api.post('/tools/search', null, {
-      params: { query, max_results: maxResults }
-    });
+    const response = await api.post('/tools/search', { query, max_results: maxResults });
     return response.data;
   } catch (error) {
     console.error('[快速搜索] 请求失败:', error);
@@ -187,9 +194,7 @@ export async function quickBaike(query: string, includeVideos: boolean = false):
   videos: any[];
 }> {
   try {
-    const response = await api.post('/tools/baike', null, {
-      params: { query, include_videos: includeVideos }
-    });
+    const response = await api.post('/tools/baike', { query, include_videos: includeVideos });
     return response.data;
   } catch (error) {
     console.error('[快速百科] 请求失败:', error);

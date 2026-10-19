@@ -4,6 +4,7 @@
  */
 
 import { Play, Clock, ExternalLink } from 'lucide-react';
+import { useI18n } from '@/i18n';
 import { SecondKnowVideo } from '@/services/baiduService';
 
 interface BaiduVideoListProps {
@@ -12,6 +13,7 @@ interface BaiduVideoListProps {
 }
 
 export default function BaiduVideoList({ videos, loading }: BaiduVideoListProps) {
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -30,7 +32,7 @@ export default function BaiduVideoList({ videos, loading }: BaiduVideoListProps)
     return (
       <div className="text-center py-8 text-gray-500">
         <Play className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-        <p>暂无相关视频</p>
+        <p>{t('dataViews.baidu.video.none')}</p>
       </div>
     );
   }
@@ -52,6 +54,7 @@ interface VideoCardProps {
 }
 
 function VideoCard({ video }: VideoCardProps) {
+  const { t } = useI18n();
   // 格式化时长
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -63,11 +66,11 @@ function VideoCard({ video }: VideoCardProps) {
   const getVideoTypeLabel = (type: number) => {
     switch (type) {
       case 1:
-        return '概述';
+        return t('dataViews.baidu.video.overview');
       case 2:
-        return '解释';
+        return t('dataViews.baidu.video.explain');
       case 3:
-        return '延展';
+        return t('dataViews.baidu.video.extend');
       default:
         return '';
     }
@@ -119,7 +122,7 @@ function VideoCard({ video }: VideoCardProps) {
         {/* 竖屏标记 */}
         {video.is_vertical === 1 && (
           <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600/90 text-white text-xs rounded">
-            竖屏
+            {t('dataViews.baidu.video.vertical')}
           </div>
         )}
       </div>
@@ -148,7 +151,7 @@ function VideoCard({ video }: VideoCardProps) {
           className="flex-1 px-3 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
         >
           <Play className="w-4 h-4" />
-          播放
+          {t('dataViews.baidu.video.play')}
         </a>
         {video.cover_pic_url && (
           <button
@@ -174,6 +177,7 @@ interface VideoListItemProps {
 }
 
 export function VideoListItem({ video }: VideoListItemProps) {
+  const { t } = useI18n();
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -215,7 +219,7 @@ export function VideoListItem({ video }: VideoListItemProps) {
         rel="noopener noreferrer"
         className="flex-shrink-0 self-center px-3 py-2 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
       >
-        播放
+        {t('dataViews.baidu.video.play')}
       </a>
     </div>
   );

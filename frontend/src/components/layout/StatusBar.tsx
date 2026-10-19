@@ -7,9 +7,11 @@ import { useAgents } from '@/hooks/useAgents';
 import { useUIStore } from '@/store/uiStore';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
+import { useI18n } from '@/i18n';
 
 export default function StatusBar() {
   const { isStreaming, messages, streamingMessageId } = useChatStore();
+  const { t } = useI18n();
   const { activeAgentData } = useAgents();
   const { thoughtChainExpanded, toggleThoughtChain } = useUIStore();
 
@@ -22,7 +24,7 @@ export default function StatusBar() {
       <div className="flex items-center gap-4">
         {activeAgentData && (
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">Agent:</span>
+            <span className="text-gray-600">{t('ui.agentLabel')}</span>
             <span className="font-medium text-gray-900">{activeAgentData.displayName}</span>
           </div>
         )}
@@ -30,16 +32,16 @@ export default function StatusBar() {
         {isStreaming && (
           <div className="flex items-center gap-2">
             <Loader2 className="w-3 h-3 animate-spin text-black" />
-            <span className="text-gray-600">响应中...</span>
+            <span className="text-gray-600">{t('ui.responding')}</span>
             {tokensUsed > 0 && (
-              <span className="text-gray-500">· 已生成 {tokensUsed} tokens</span>
+              <span className="text-gray-500">{t('ui.generatedTokens', { count: tokensUsed })}</span>
             )}
           </div>
         )}
 
         {!isStreaming && messages.length > 0 && (
           <div className="text-gray-500">
-            <span>共 {messages.length} 条消息</span>
+            <span>{t('ui.totalMessages', { count: messages.length })}</span>
           </div>
         )}
       </div>
@@ -56,7 +58,7 @@ export default function StatusBar() {
           ) : (
             <EyeOff className="w-3.5 h-3.5" />
           )}
-          <span>思考过程</span>
+          <span>{t('settings.thoughtChain')}</span>
         </button>
 
         {/* 当前时间 */}

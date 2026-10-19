@@ -27,6 +27,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import api from '@/services/api';
+import { useI18n } from '@/i18n';
 
 type EvaluationStatus = 'idle' | 'evaluating' | 'completed' | 'error';
 
@@ -59,6 +60,7 @@ export default function NovelScreeningPage() {
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [novelTitle, setNovelTitle] = useState('');
   const [novelContent, setNovelContent] = useState('');
@@ -71,38 +73,38 @@ export default function NovelScreeningPage() {
   const criteria: EvaluationCriteria[] = [
     {
       id: 'story_structure',
-      name: '故事结构',
-      description: '剧情完整性和结构清晰度',
+      name: t('toolbox.novelScreening.criteria.storyStructure.name'),
+      description: t('toolbox.novelScreening.criteria.storyStructure.desc'),
       weight: 20
     },
     {
       id: 'character_depth',
-      name: '角色深度',
-      description: '角色塑造的立体感和成长性',
+      name: t('toolbox.novelScreening.criteria.characterDepth.name'),
+      description: t('toolbox.novelScreening.criteria.characterDepth.desc'),
       weight: 20
     },
     {
       id: 'emotional_impact',
-      name: '情感冲击',
-      description: '情感张力和观众共鸣潜力',
+      name: t('toolbox.novelScreening.criteria.emotionalImpact.name'),
+      description: t('toolbox.novelScreening.criteria.emotionalImpact.desc'),
       weight: 20
     },
     {
       id: 'visual_potential',
-      name: '视觉化潜力',
-      description: '场景描述的可视化程度',
+      name: t('toolbox.novelScreening.criteria.visualPotential.name'),
+      description: t('toolbox.novelScreening.criteria.visualPotential.desc'),
       weight: 15
     },
     {
       id: 'dialogue_quality',
-      name: '对话质量',
-      description: '对话的自然度和戏剧性',
+      name: t('toolbox.novelScreening.criteria.dialogueQuality.name'),
+      description: t('toolbox.novelScreening.criteria.dialogueQuality.desc'),
       weight: 15
     },
     {
       id: 'pace_rhythm',
-      name: '节奏把握',
-      description: '故事节奏和情节推进速度',
+      name: t('toolbox.novelScreening.criteria.paceRhythm.name'),
+      description: t('toolbox.novelScreening.criteria.paceRhythm.desc'),
       weight: 10
     }
   ];
@@ -110,7 +112,7 @@ export default function NovelScreeningPage() {
   // 运行评估
   const runEvaluation = async () => {
     if (!novelContent.trim() || !novelTitle.trim()) {
-      alert('请填写小说标题和内容');
+      alert(t('toolbox.novelScreening.fillTitleContent'));
       return;
     }
 
@@ -139,7 +141,7 @@ export default function NovelScreeningPage() {
   // 运行流式评估
   const runStreamEvaluation = async () => {
     if (!novelContent.trim() || !novelTitle.trim()) {
-      alert('请填写小说标题和内容');
+      alert(t('toolbox.novelScreening.fillTitleContent'));
       return;
     }
 
@@ -162,7 +164,7 @@ export default function NovelScreeningPage() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let result = null;
+      let result: any = null;
 
       if (reader) {
         while (true) {
@@ -201,35 +203,35 @@ export default function NovelScreeningPage() {
     switch (recommendation) {
       case 'highly_recommended':
         return {
-          label: '强烈推荐',
+          label: t('toolbox.novelScreening.recommendation.highlyRecommended'),
           color: 'bg-green-100 text-green-700',
           icon: <Award className="w-5 h-5" />,
-          description: '非常适合改编，具有很高的商业价值'
+          description: t('toolbox.novelScreening.recommendationDesc.highlyRecommended')
         };
       case 'recommended':
         return {
-          label: '推荐',
+          label: t('toolbox.novelScreening.recommendation.recommended'),
           color: 'bg-blue-100 text-blue-700',
           icon: <CheckCircle2 className="w-5 h-5" />,
-          description: '适合改编，具有良好的市场潜力'
+          description: t('toolbox.novelScreening.recommendationDesc.recommended')
         };
       case 'conditional':
         return {
-          label: '有条件推荐',
+          label: t('toolbox.novelScreening.recommendation.conditional'),
           color: 'bg-orange-100 text-orange-700',
           icon: <AlertCircle className="w-5 h-5" />,
-          description: '需要适当调整后才适合改编'
+          description: t('toolbox.novelScreening.recommendationDesc.conditional')
         };
       case 'not_recommended':
         return {
-          label: '不推荐',
+          label: t('toolbox.novelScreening.recommendation.notRecommended'),
           color: 'bg-red-100 text-red-700',
           icon: <XCircle className="w-5 h-5" />,
-          description: '不太适合改编为短剧'
+          description: t('toolbox.novelScreening.recommendationDesc.notRecommended')
         };
       default:
         return {
-          label: '未知',
+          label: t('toolbox.novelScreening.recommendation.unknown'),
           color: 'bg-gray-100 text-gray-700',
           icon: null,
           description: ''
@@ -278,9 +280,9 @@ export default function NovelScreeningPage() {
                   <BookOpen className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">小说筛选评估</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{t('toolbox.novelScreening.title')}</h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    评估小说是否适合改编为短剧
+                    {t('toolbox.novelScreening.subtitle')}
                   </p>
                 </div>
               </div>
@@ -294,30 +296,30 @@ export default function NovelScreeningPage() {
                 {/* 左侧：输入区 */}
                 <div className="lg:col-span-1 space-y-6">
                   <div className="bg-white border border-gray-200 rounded-xl p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">小说信息</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('toolbox.novelScreening.novelInfo')}</h2>
 
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          小说标题 *
+                          {t('toolbox.novelScreening.novelTitle')} *
                         </label>
                         <input
                           type="text"
                           value={novelTitle}
                           onChange={(e) => setNovelTitle(e.target.value)}
-                          placeholder="输入小说标题"
+                          placeholder={t('toolbox.novelScreening.titlePlaceholder')}
                           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          小说简介（可选）
+                          {t('toolbox.novelScreening.novelSummary')}
                         </label>
                         <textarea
                           value={novelSummary}
                           onChange={(e) => setNovelSummary(e.target.value)}
-                          placeholder="简要介绍小说的主要内容和特色..."
+                          placeholder={t('toolbox.novelScreening.summaryPlaceholder')}
                           rows={4}
                           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm resize-none"
                         />
@@ -325,19 +327,19 @@ export default function NovelScreeningPage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          小说内容/片段 *
+                          {t('toolbox.novelScreening.novelContent')} *
                         </label>
                         <textarea
                           value={novelContent}
                           onChange={(e) => setNovelContent(e.target.value)}
-                          placeholder="粘贴小说内容或关键章节片段进行评估..."
+                          placeholder={t('toolbox.novelScreening.contentPlaceholder')}
                           rows={12}
                           className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm resize-none"
                         />
                       </div>
 
                       <div className="flex items-center justify-between text-sm text-gray-500">
-                        <span>{novelContent.length} 字符</span>
+                        <span>{t('toolbox.novelScreening.chars', { count: novelContent.length })}</span>
                         <button
                           onClick={() => {
                             setNovelContent('');
@@ -345,7 +347,7 @@ export default function NovelScreeningPage() {
                           }}
                           className="text-gray-600 hover:text-gray-900"
                         >
-                          清空
+                          {t('toolbox.novelScreening.clear')}
                         </button>
                       </div>
 
@@ -358,12 +360,12 @@ export default function NovelScreeningPage() {
                           {evaluationStatus === 'evaluating' ? (
                             <>
                               <Loader2 className="w-4 h-4 animate-spin" />
-                              评估中...
+                              {t('toolbox.novelScreening.evaluating')}
                             </>
                           ) : (
                             <>
                               <Play className="w-4 h-4" />
-                              开始评估
+                              {t('toolbox.novelScreening.startEval')}
                             </>
                           )}
                         </button>
@@ -373,7 +375,7 @@ export default function NovelScreeningPage() {
                           disabled={evaluationStatus === 'evaluating' || !novelContent.trim() || !novelTitle.trim()}
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors text-sm"
                         >
-                          流式评估
+                          {t('toolbox.novelScreening.streamEval')}
                         </button>
                       </div>
                     </div>
@@ -382,7 +384,7 @@ export default function NovelScreeningPage() {
                   {/* 评估历史 */}
                   {evaluationHistory.length > 0 && (
                     <div className="bg-white border border-gray-200 rounded-xl p-6">
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">评估历史</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('toolbox.novelScreening.evalHistory')}</h2>
 
                       <div className="space-y-2">
                         {evaluationHistory.map((result, idx) => (
@@ -396,7 +398,7 @@ export default function NovelScreeningPage() {
                                 {result.novel_title}
                               </span>
                               <span className={`text-sm font-bold ${getScoreColor(result.overall_score)}`}>
-                                {result.overall_score}分
+                                {t('toolbox.novelScreening.scoreUnit', { score: result.overall_score })}
                               </span>
                             </div>
                           </button>
@@ -412,10 +414,10 @@ export default function NovelScreeningPage() {
                     <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
                       <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        等待评估
+                        {t('toolbox.novelScreening.waiting')}
                       </h3>
                       <p className="text-gray-500">
-                        在左侧填写小说信息后，点击"开始评估"按钮
+                        {t('toolbox.novelScreening.waitingDesc')}
                       </p>
                     </div>
                   )}
@@ -424,10 +426,10 @@ export default function NovelScreeningPage() {
                     <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
                       <Loader2 className="w-16 h-16 animate-spin text-black mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        正在评估...
+                        {t('toolbox.novelScreening.evaluating')}
                       </h3>
                       <p className="text-gray-500">
-                        请稍候，这可能需要几秒钟
+                        {t('toolbox.novelScreening.evaluatingDesc')}
                       </p>
                     </div>
                   )}
@@ -436,16 +438,16 @@ export default function NovelScreeningPage() {
                     <div className="bg-white border border-red-200 rounded-xl p-12 text-center">
                       <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        评估失败
+                        {t('toolbox.novelScreening.evalFailed')}
                       </h3>
                       <p className="text-gray-500 mb-4">
-                        请检查输入内容或稍后重试
+                        {t('toolbox.novelScreening.evalFailedDesc')}
                       </p>
                       <button
                         onClick={() => setEvaluationStatus('idle')}
                         className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
                       >
-                        返回
+                        {t('toolbox.novelScreening.back')}
                       </button>
                     </div>
                   )}
@@ -459,7 +461,7 @@ export default function NovelScreeningPage() {
                             <h2 className="text-xl font-bold text-gray-900 mb-2">
                               {evaluationResult.novel_title}
                             </h2>
-                            <p className="text-sm text-gray-500">评估完成</p>
+                            <p className="text-sm text-gray-500">{t('toolbox.novelScreening.evalDone')}</p>
                           </div>
 
                           <button
@@ -467,13 +469,13 @@ export default function NovelScreeningPage() {
                             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                           >
                             <Download className="w-4 h-4" />
-                            导出结果
+                            {t('toolbox.novelScreening.exportResult')}
                           </button>
                         </div>
 
                         <div className="flex items-center justify-between p-6 bg-gray-50 rounded-xl mb-6">
                           <div>
-                            <p className="text-sm text-gray-500 mb-1">综合评分</p>
+                            <p className="text-sm text-gray-500 mb-1">{t('toolbox.novelScreening.overallScore')}</p>
                             <p className={`text-5xl font-bold ${getScoreColor(evaluationResult.overall_score)}`}>
                               {evaluationResult.overall_score}
                             </p>
@@ -506,7 +508,7 @@ export default function NovelScreeningPage() {
 
                       {/* 评估标准得分 */}
                       <div className="bg-white border border-gray-200 rounded-xl p-6">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">详细评估</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('toolbox.novelScreening.detailedEval')}</h3>
 
                         <div className="space-y-4">
                           {criteria.map((criterion) => {
@@ -519,7 +521,7 @@ export default function NovelScreeningPage() {
                                     <p className="text-xs text-gray-500">{criterion.description}</p>
                                   </div>
                                   <span className={`text-lg font-bold ${getScoreColor(score)}`}>
-                                    {score}分
+                                    {t('toolbox.novelScreening.scoreUnit', { score })}
                                   </span>
                                 </div>
 
@@ -544,7 +546,7 @@ export default function NovelScreeningPage() {
                           <div className="bg-white border border-green-200 rounded-xl p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                               <CheckCircle2 className="w-5 h-5 text-green-500" />
-                              优势
+                              {t('toolbox.novelScreening.strengths')}
                             </h3>
 
                             <ul className="space-y-2">
@@ -562,7 +564,7 @@ export default function NovelScreeningPage() {
                           <div className="bg-white border border-orange-200 rounded-xl p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                               <AlertCircle className="w-5 h-5 text-orange-500" />
-                              需要改进
+                              {t('toolbox.novelScreening.improvements')}
                             </h3>
 
                             <ul className="space-y-2">
@@ -582,7 +584,7 @@ export default function NovelScreeningPage() {
                         <div className="bg-white border border-blue-200 rounded-xl p-6">
                           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-blue-500" />
-                            改编建议
+                            {t('toolbox.novelScreening.suggestions')}
                           </h3>
 
                           <ul className="space-y-2">
@@ -601,26 +603,26 @@ export default function NovelScreeningPage() {
                         <div className="bg-white border border-gray-200 rounded-xl p-6">
                           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                             <BarChart3 className="w-5 h-5" />
-                            市场分析
+                            {t('toolbox.novelScreening.marketAnalysis')}
                           </h3>
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="text-xs text-gray-500 mb-1">目标观众</p>
+                              <p className="text-xs text-gray-500 mb-1">{t('toolbox.novelScreening.targetAudience')}</p>
                               <p className="font-medium text-gray-900">
                                 {evaluationResult.market_analysis.target_audience}
                               </p>
                             </div>
 
                             <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="text-xs text-gray-500 mb-1">类型适配度</p>
+                              <p className="text-xs text-gray-500 mb-1">{t('toolbox.novelScreening.genreFit')}</p>
                               <p className={`text-2xl font-bold ${getScoreColor(evaluationResult.market_analysis.genre_fit)}`}>
                                 {evaluationResult.market_analysis.genre_fit}%
                               </p>
                             </div>
 
                             <div className="p-4 bg-gray-50 rounded-lg">
-                              <p className="text-xs text-gray-500 mb-1">商业潜力</p>
+                              <p className="text-xs text-gray-500 mb-1">{t('toolbox.novelScreening.commercialPotential')}</p>
                               <p className={`text-2xl font-bold ${getScoreColor(evaluationResult.market_analysis.commercial_potential)}`}>
                                 {evaluationResult.market_analysis.commercial_potential}%
                               </p>

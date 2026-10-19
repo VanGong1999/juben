@@ -32,6 +32,7 @@ import {
   Trash2
 } from 'lucide-react';
 import api from '@/services/api';
+import { useI18n } from '@/i18n';
 
 type ToolStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -69,6 +70,7 @@ export default function ToolsPage() {
   const { sidebarOpen, sidebarCollapsed } = useUIStore();
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   const [tools, setTools] = useState<ToolSchema[]>([]);
   const [filteredTools, setFilteredTools] = useState<ToolSchema[]>([]);
@@ -156,7 +158,7 @@ export default function ToolsPage() {
       console.error('工具执行失败:', err);
       setExecutions(prev => prev.map(e =>
         e.tool_name === toolName
-          ? { ...e, status: 'error', error: '执行失败' }
+          ? { ...e, status: 'error', error: t('toolbox.toolsPage.execFailed') }
           : e
       ));
     }
@@ -165,7 +167,7 @@ export default function ToolsPage() {
   // 批量执行工具
   const executeBatch = async () => {
     if (selectedTools.size === 0) {
-      alert('请先选择要执行的工具');
+      alert(t('toolbox.toolsPage.selectToolsFirst'));
       return;
     }
 
@@ -199,7 +201,7 @@ export default function ToolsPage() {
       }
     } catch (err) {
       console.error('批量执行失败:', err);
-      alert('批量执行失败');
+      alert(t('toolbox.toolsPage.batchFailed'));
       setIsBatchMode(false);
     }
   };
@@ -215,7 +217,7 @@ export default function ToolsPage() {
 
   // 清空执行历史
   const clearHistory = () => {
-    if (confirm('确定要清空执行历史吗？')) {
+    if (confirm(t('toolbox.toolsPage.clearConfirm'))) {
       setExecutions([]);
     }
   };
@@ -285,9 +287,9 @@ export default function ToolsPage() {
                   <Wrench className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">工具管理</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{t('toolbox.toolsPage.title')}</h1>
                   <p className="text-sm text-gray-500 mt-1">
-                    管理和执行系统工具
+                    {t('toolbox.toolsPage.subtitle')}
                   </p>
                 </div>
               </div>
@@ -299,7 +301,7 @@ export default function ToolsPage() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="搜索工具..."
+                    placeholder={t('toolbox.toolsPage.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-black text-sm"
@@ -312,11 +314,11 @@ export default function ToolsPage() {
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black"
                 >
-                  <option value="all">全部类型</option>
-                  <option value="search">搜索类</option>
-                  <option value="api">API类</option>
-                  <option value="file">文件类</option>
-                  <option value="analysis">分析类</option>
+                  <option value="all">{t('toolbox.toolsPage.allTypes')}</option>
+                  <option value="search">{t('toolbox.toolsPage.searchType')}</option>
+                  <option value="api">{t('toolbox.toolsPage.apiType')}</option>
+                  <option value="file">{t('toolbox.toolsPage.fileType')}</option>
+                  <option value="analysis">{t('toolbox.toolsPage.analysisType')}</option>
                 </select>
 
                 {/* 批量模式 */}
@@ -338,12 +340,12 @@ export default function ToolsPage() {
                   {isBatchMode ? (
                     <>
                       <Square className="w-4 h-4" />
-                      退出批量
+                      {t('toolbox.toolsPage.exitBatch')}
                     </>
                   ) : (
                     <>
                       <Layers className="w-4 h-4" />
-                      批量执行
+                      {t('toolbox.toolsPage.batchExec')}
                     </>
                   )}
                 </button>
@@ -354,7 +356,7 @@ export default function ToolsPage() {
                       onClick={selectAllTools}
                       className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
                     >
-                      全选
+                      {t('toolbox.toolsPage.selectAll')}
                     </button>
                     <button
                       onClick={executeBatch}
@@ -362,7 +364,7 @@ export default function ToolsPage() {
                       className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
                     >
                       <Play className="w-4 h-4" />
-                      执行选中 ({selectedTools.size})
+                      {t('toolbox.toolsPage.execSelected')} ({selectedTools.size})
                     </button>
                   </>
                 )}
@@ -380,10 +382,10 @@ export default function ToolsPage() {
                     <div className="text-center py-12">
                       <Wrench className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        没有找到工具
+                        {t('toolbox.toolsPage.noTools')}
                       </h3>
                       <p className="text-gray-500">
-                        {searchQuery ? '尝试调整搜索条件' : '系统中暂无可用工具'}
+                        {searchQuery ? t('toolbox.toolsPage.adjustSearch') : t('toolbox.toolsPage.noToolsHint')}
                       </p>
                     </div>
                   ) : (
@@ -430,7 +432,7 @@ export default function ToolsPage() {
                         {/* 参数列表 */}
                         {tool.parameters && tool.parameters.length > 0 && (
                           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                            <h4 className="text-xs font-medium text-gray-700 mb-2">参数</h4>
+                            <h4 className="text-xs font-medium text-gray-700 mb-2">{t('toolbox.toolsPage.params')}</h4>
                             <div className="space-y-1">
                               {tool.parameters.map((param, idx) => (
                                 <div key={idx} className="text-xs text-gray-600">
@@ -447,7 +449,7 @@ export default function ToolsPage() {
                         {/* 返回值 */}
                         {tool.returns && (
                           <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                            <h4 className="text-xs font-medium text-blue-700 mb-1">返回</h4>
+                            <h4 className="text-xs font-medium text-blue-700 mb-1">{t('toolbox.toolsPage.returns')}</h4>
                             <p className="text-xs text-blue-600">{tool.returns}</p>
                           </div>
                         )}
@@ -460,7 +462,7 @@ export default function ToolsPage() {
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 text-sm font-medium"
                             >
                               <Play className="w-4 h-4" />
-                              执行
+                              {t('toolbox.toolsPage.execute')}
                             </button>
                           )}
 
@@ -469,7 +471,7 @@ export default function ToolsPage() {
                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium"
                           >
                             <Code className="w-4 h-4" />
-                            查看代码
+                            {t('toolbox.toolsPage.viewCode')}
                           </button>
                         </div>
                       </div>
@@ -481,7 +483,7 @@ export default function ToolsPage() {
                 <div className="lg:col-span-1">
                   <div className="bg-white border border-gray-200 rounded-xl p-5">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-lg font-semibold text-gray-900">执行历史</h2>
+                      <h2 className="text-lg font-semibold text-gray-900">{t('toolbox.toolsPage.execHistory')}</h2>
                       {executions.length > 0 && (
                         <button
                           onClick={clearHistory}
@@ -497,7 +499,7 @@ export default function ToolsPage() {
                         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                           <FileText className="w-6 h-6 text-gray-400" />
                         </div>
-                        <p className="text-sm text-gray-500">暂无执行记录</p>
+                        <p className="text-sm text-gray-500">{t('toolbox.toolsPage.noExecRecords')}</p>
                       </div>
                     ) : (
                       <div className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -522,7 +524,7 @@ export default function ToolsPage() {
                                 className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-lg text-xs"
                               >
                                 <Square className="w-3 h-3" />
-                                停止
+                                {t('toolbox.toolsPage.stop')}
                               </button>
                             )}
 

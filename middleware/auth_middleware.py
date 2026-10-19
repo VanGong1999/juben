@@ -169,7 +169,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if auth_header.startswith("Bearer "):
             return auth_header[7:]  # Remove "Bearer " prefix
 
-        return auth_header
+        # 只接受 Bearer 前缀，拒绝裸 token（收紧令牌误用面）
+        return None
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

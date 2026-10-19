@@ -83,7 +83,7 @@ class SynthesisSession:
 class GenerativeAgents:
     """Generative Agents机制"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """
         初始化Generative Agents机制
         

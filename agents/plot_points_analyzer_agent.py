@@ -33,7 +33,7 @@ except ImportError:
 class PlotPointsAnalyzerAgent(BaseJubenAgent):
     """大情节点分析智能体类"""
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化情节点分析智能体"""
         super().__init__(
             agent_name="plot_points_analyzer_agent",

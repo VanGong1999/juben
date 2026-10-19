@@ -13,12 +13,14 @@ import { useState } from 'react';
 import { useAgentStore } from '@/store/agentStore';
 import type { Agent } from '@/types';
 import { AGENTS_CONFIG } from '@/config/agents';
+import { useI18n } from '@/i18n';
 
 export default function ChatContainer() {
   const { messages, isStreaming } = useChat();
   const { autoScroll, showThoughtChain } = useSettingsStore();
   const { thoughtChainExpanded } = useUIStore();
   const { agents } = useAgentStore();
+  const { t } = useI18n();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const availableAgents = agents.length > 0 ? agents : AGENTS_CONFIG;
 
@@ -49,7 +51,7 @@ export default function ChatContainer() {
             {isStreaming && (
               <div className="flex items-center gap-2 text-gray-400 text-sm py-4">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>正在生成回复...</span>
+                <span>{t('chat.generating')}</span>
               </div>
             )}
 
@@ -68,6 +70,7 @@ export default function ChatContainer() {
  * 欢迎状态 - 展示所有Agents（无分类，一行四个）
  */
 function WelcomeState({ agents }: { agents: Agent[] }) {
+  const { t } = useI18n();
   return (
     <div className="h-full overflow-y-auto scrollbar p-6">
       <div className="max-w-7xl mx-auto">
@@ -77,11 +80,10 @@ function WelcomeState({ agents }: { agents: Agent[] }) {
             <span className="text-4xl text-white font-bold">剧</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-3">
-            剧本创作 Agent 平台
+            {t('main.title')}
           </h1>
           <p className="text-gray-600 max-w-3xl mx-auto text-base leading-relaxed">
-            专业的短剧策划、创作、评估一站式平台，拥有 <span className="font-semibold text-black">{agents.length}</span> 个智能Agent，
-            覆盖剧本创作全流程。每个Agent都具备专业能力，点击卡片即可开始使用。
+            {t('main.welcomeBefore')} <span className="font-semibold text-black">{agents.length}</span> {t('main.welcomeAfter')}
           </p>
         </div>
 
@@ -95,7 +97,7 @@ function WelcomeState({ agents }: { agents: Agent[] }) {
         {/* 底部统计 */}
         <div className="text-center py-6 border-t border-gray-200">
           <p className="text-sm text-gray-500">
-            共 <span className="font-semibold text-gray-900">{agents.length}</span> 个专业Agent可供选择
+            {t('main.countBefore')} <span className="font-semibold text-gray-900">{agents.length}</span> {t('main.countAfter')}
           </p>
         </div>
       </div>
@@ -108,13 +110,14 @@ function WelcomeState({ agents }: { agents: Agent[] }) {
  */
 function AgentCard({ agent }: { agent: Agent }) {
   const { sendMessage, setActiveAgent } = useChat();
+  const { t } = useI18n();
   const [isHovered, setIsHovered] = useState(false);
 
   const handleClick = () => {
     // 先设置当前活跃的agent
     setActiveAgent(agent.id);
     // 使用agent的inputExample作为默认消息，并传递agent.id
-    const message = agent.inputExample || `使用${agent.displayName}`;
+    const message = agent.inputExample || t('main.useAgent', { name: agent.displayName });
     sendMessage(message, agent.id);
   };
 
@@ -162,7 +165,7 @@ function AgentCard({ agent }: { agent: Agent }) {
       {/* 详细介绍 - capabilities */}
       {agent.capabilities && agent.capabilities.length > 0 && (
         <div className="mb-4">
-          <p className="text-xs font-medium text-gray-500 mb-2">核心能力：</p>
+          <p className="text-xs font-medium text-gray-500 mb-2">{t('main.coreCapabilities')}</p>
           <ul className="space-y-1">
             {agent.capabilities.slice(0, 3).map((capability, idx) => (
               <li key={idx} className="text-xs text-gray-600 flex items-start gap-2">
@@ -172,7 +175,7 @@ function AgentCard({ agent }: { agent: Agent }) {
             ))}
             {agent.capabilities.length > 3 && (
               <li className="text-xs text-gray-400 italic">
-                +{agent.capabilities.length - 3} 项能力
+                {t('main.moreCapabilities', { count: agent.capabilities.length - 3 })}
               </li>
             )}
           </ul>
@@ -200,7 +203,7 @@ function AgentCard({ agent }: { agent: Agent }) {
       <div className="mt-auto pt-3 border-t border-gray-100">
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-gray-500">
-            <span className="font-medium">模型:</span>
+            <span className="font-medium">{t('main.model')}</span>
             <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded">{agent.model}</span>
           </div>
           <span className={`px-2.5 py-1 rounded-full font-medium ${
@@ -208,13 +211,13 @@ function AgentCard({ agent }: { agent: Agent }) {
               ? 'bg-green-100 text-green-700'
               : 'bg-amber-100 text-amber-700'
           }`}>
-            {agent.status === 'active' ? '可用' : '测试中'}
+            {agent.status === 'active' ? t('main.available') : t('main.testing')}
           </span>
         </div>
         {/* 点击提示 */}
         {isHovered && (
           <p className="text-xs text-center text-gray-500 mt-2 animate-pulse">
-            点击开始使用 →
+            {t('main.clickToStart')}
           </p>
         )}
       </div>

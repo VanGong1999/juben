@@ -129,3 +129,14 @@ docker-compose.override.yml
 *.bak
 *.backup
 *.old
+
+# 运行时生成数据 / 产物（不应提交）
+volumes/
+juben_outputs/
+projects/
+evals/
+
+# 本地数据库与用户/会话数据
+data/users.db
+data/users/
+data/session_orchestration/

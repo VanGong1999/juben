@@ -784,3 +784,208 @@ async def get_stats():
     except Exception as e:
         logger.error(f"获取统计信息失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== LLM Wiki（三级缓存）====================
+
+
+class WikiPageWriteRequest(BaseModel):
+    category: str = Field(default="concepts")
+    slug: str = Field(..., min_length=1)
+    title: str = Field(..., min_length=1)
+    summary: str = Field(..., min_length=1, description="一句话摘要，写入 index.md")
+    body: str = Field(..., min_length=1)
+    tags: List[str] = Field(default_factory=list)
+    sources: List[str] = Field(default_factory=list)
+    cache_tier: str = Field(default="L3")
+
+
+class WikiRawWriteRequest(BaseModel):
+    path: str = Field(..., description="相对 raw/ 路径")
+    content: str = Field(..., min_length=1)
+    overwrite: bool = False
+
+
+class WikiIngestRequest(BaseModel):
+    raw_path: Optional[str] = None
+    content: Optional[str] = None
+    overwrite: bool = False
+    title: str
+    summary: str
+    slug: Optional[str] = None
+    category: str = "sources"
+    wiki_body: str
+    tags: List[str] = Field(default_factory=list)
+    cache_tier: str = "L3"
+
+
+@router.get("/wiki/index")
+async def get_wiki_index():
+    """L1：返回 index.md（Agent 常驻目录）。"""
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        store = get_llm_wiki_store()
+        return BaseResponse(
+            success=True,
+            message="ok",
+            data={"index": store.read_index(), "stats": store.stats()},
+        )
+    except Exception as e:
+        logger.error(f"wiki index: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wiki/rebuild-index")
+async def rebuild_wiki_index():
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        store = get_llm_wiki_store()
+        text = store.rebuild_index()
+        return BaseResponse(success=True, message="index rebuilt", data={"index": text, "stats": store.stats()})
+    except Exception as e:
+        logger.error(f"rebuild index: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/wiki/pages")
+async def list_wiki_pages():
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        store = get_llm_wiki_store()
+        pages = [
+            {
+                "slug": p.slug,
+                "title": p.title,
+                "summary": p.summary,
+                "category": p.category,
+                "path": p.path,
+                "cache_tier": p.cache_tier,
+                "tags": p.tags,
+                "sources": p.sources,
+            }
+            for p in store.list_wiki_pages()
+        ]
+        return BaseResponse(success=True, message="ok", data={"pages": pages, "stats": store.stats()})
+    except Exception as e:
+        logger.error(f"list wiki: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/wiki/page")
+async def get_wiki_page(path: str = Query(..., description="wiki 相对路径或 slug")):
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        result = get_llm_wiki_store().read_wiki_page(path)
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail=result.get("error"))
+        return BaseResponse(success=True, message="ok", data=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get wiki page: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wiki/page")
+async def write_wiki_page(body: WikiPageWriteRequest):
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        out = get_llm_wiki_store().write_wiki_page(
+            category=body.category,
+            slug=body.slug,
+            title=body.title,
+            summary=body.summary,
+            body=body.body,
+            tags=body.tags,
+            sources=body.sources,
+            cache_tier=body.cache_tier,
+        )
+        if not out.get("ok"):
+            raise HTTPException(status_code=400, detail=out.get("error"))
+        return BaseResponse(success=True, message="wiki page saved", data=out)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"write wiki: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/wiki/raw")
+async def list_or_read_raw(path: Optional[str] = Query(default=None)):
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        store = get_llm_wiki_store()
+        if path:
+            result = store.read_raw(path)
+            if not result.get("ok"):
+                raise HTTPException(status_code=404, detail=result.get("error"))
+            return BaseResponse(success=True, message="ok", data=result)
+        return BaseResponse(success=True, message="ok", data={"files": store.list_raw()})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"raw: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wiki/raw")
+async def write_raw(body: WikiRawWriteRequest):
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        out = get_llm_wiki_store().write_raw(body.path, body.content, overwrite=body.overwrite)
+        if not out.get("ok"):
+            raise HTTPException(status_code=400, detail=out.get("error"))
+        return BaseResponse(success=True, message="raw saved", data=out)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"write raw: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wiki/ingest")
+async def wiki_ingest(body: WikiIngestRequest):
+    """原文 + wiki 页一次入库，并重建 index。"""
+    try:
+        from utils.llm_wiki import ensure_wiki_bootstrapped, get_llm_wiki_store
+
+        ensure_wiki_bootstrapped()
+        store = get_llm_wiki_store()
+        if body.content and body.raw_path:
+            wr = store.write_raw(body.raw_path, body.content, overwrite=body.overwrite)
+            if not wr.get("ok"):
+                raise HTTPException(status_code=400, detail=wr.get("error"))
+        slug = body.slug or body.title.lower().replace(" ", "-")[:48]
+        sources = [body.raw_path] if body.raw_path else []
+        out = store.write_wiki_page(
+            category=body.category,
+            slug=slug,
+            title=body.title,
+            summary=body.summary,
+            body=body.wiki_body,
+            tags=body.tags,
+            sources=sources,
+            cache_tier=body.cache_tier,
+        )
+        if not out.get("ok"):
+            raise HTTPException(status_code=400, detail=out.get("error"))
+        return BaseResponse(success=True, message="ingested", data=out)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ingest: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

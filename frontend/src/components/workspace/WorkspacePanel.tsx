@@ -22,26 +22,36 @@ import {
   CheckSquare,
   Square,
   Layers,
-  ChevronDown
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  Search,
+  Download as DownloadIcon
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
+import { useI18n, translate } from '@/i18n';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css';
 
 // 视图类型配置
 const VIEW_TYPE_CONFIG: Record<
   WorkspaceViewType,
   { icon: any; label: string; color: string }
 > = {
-  document: { icon: FileText, label: '文档', color: 'blue' },
-  mindmap: { icon: Network, label: '思维导图', color: 'green' },
-  json: { icon: FileJson, label: 'JSON', color: 'purple' },
-  outline: { icon: BookOpen, label: '大纲', color: 'orange' },
-  script: { icon: FileText, label: '剧本', color: 'red' },
-  evaluation: { icon: Code, label: '评估', color: 'cyan' },
-  notes: { icon: Layers, label: 'Notes', color: 'indigo' },
+  document: { icon: FileText, label: 'studio.viewType.document', color: 'blue' },
+  mindmap: { icon: Network, label: 'studio.viewType.mindmap', color: 'green' },
+  json: { icon: FileJson, label: 'studio.viewType.json', color: 'purple' },
+  outline: { icon: BookOpen, label: 'studio.viewType.outline', color: 'orange' },
+  script: { icon: FileText, label: 'studio.viewType.script', color: 'red' },
+  evaluation: { icon: Code, label: 'studio.viewType.evaluation', color: 'cyan' },
+  notes: { icon: Layers, label: 'studio.viewType.notes', color: 'indigo' },
 };
 
 export default function WorkspacePanel() {
+  const { t } = useI18n();
   const {
     currentContent,
     viewMode,
@@ -93,7 +103,7 @@ export default function WorkspacePanel() {
     useWorkspaceStore.getState().setContent({
       id: nextId,
       type: 'document',
-      title: `${activeAgentInfo?.displayName || activeAgent} 生成结果`,
+      title: `${activeAgentInfo?.displayName || activeAgent} ${t('studio.generatedResult')}`,
       content: latestAIMessage.content,
       metadata: {
         agentId: activeAgent,
@@ -124,7 +134,7 @@ export default function WorkspacePanel() {
       if (created) {
         await useWorkspaceStore.getState().updateNoteSelection(created, true);
       }
-      setNoteSaveHint('已保存为 Note');
+      setNoteSaveHint(t('studio.savedAsNote'));
       setTimeout(() => setNoteSaveHint(null), 2000);
     }
   };
@@ -174,15 +184,14 @@ export default function WorkspacePanel() {
   return (
     <div
       className={clsx(
-        'flex h-full min-w-0 flex-col bg-white',
-        isFullscreen && 'fixed inset-0 z-50 w-full'
+        'flex h-full min-w-0 flex-col bg-transparent',
+        isFullscreen && 'fixed inset-0 z-50 w-full bg-pearl-soft'
       )}
     >
-      {/* 顶部工具栏 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-3">
-          {/* 视图类型切换 */}
-          <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
+      {/* 顶部工具栏 — 压缩高度 */}
+      <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-pearl-line/80 bg-pearl-card/70 backdrop-blur-xl">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-0.5 bg-pearl-soft/90 rounded-lg border border-pearl-line p-0.5">
             {(['document', 'notes'] as WorkspaceViewType[]).map((mode) => {
               const modeConfig = VIEW_TYPE_CONFIG[mode];
               const ModeIcon = modeConfig.icon;
@@ -192,108 +201,94 @@ export default function WorkspacePanel() {
                   key={mode}
                   onClick={() => handleViewChange(mode)}
                   className={clsx(
-                    'flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors',
+                    'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all',
                     isActive
-                      ? 'bg-gray-900 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-atelier-teal text-white shadow-atelier'
+                      : 'text-ink-muted hover:bg-pearl-card hover:text-atelier-teal'
                   )}
                 >
-                  <ModeIcon className="w-4 h-4" />
-                  <span>{modeConfig.label}</span>
+                  <ModeIcon className="w-3 h-3" />
+                  <span>{t(modeConfig.label)}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* 标题 */}
           {currentContent && (
-            <h2 className="text-sm font-semibold text-gray-900 truncate max-w-md">
+            <h2 className="text-[11px] font-semibold text-ink truncate max-w-[200px] hidden md:block">
               {currentContent.title}
-              {isDirty && <span className="text-red-500 ml-2">• 未保存</span>}
+              {isDirty && <span className="text-atelier-gold ml-1">•</span>}
             </h2>
           )}
         </div>
 
-        {/* 工具栏 */}
-        <div className="flex items-center gap-2">
-          {/* 撤销/重做 */}
-          <div className="flex items-center gap-1 mr-2">
-            <button
-              onClick={handleUndo}
-              disabled={!canUndo}
-              className={clsx(
-                'p-1.5 rounded-lg transition-colors',
-                canUndo
-                  ? 'hover:bg-gray-200 text-gray-700'
-                  : 'text-gray-300 cursor-not-allowed'
-              )}
-              title="撤销"
-            >
-              <Undo className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={!canRedo}
-              className={clsx(
-                'p-1.5 rounded-lg transition-colors',
-                canRedo
-                  ? 'hover:bg-gray-200 text-gray-700'
-                  : 'text-gray-300 cursor-not-allowed'
-              )}
-              title="重做"
-            >
-              <Redo className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={handleUndo}
+            disabled={!canUndo}
+            className={clsx(
+              'p-1.5 rounded-lg transition-colors',
+              canUndo ? 'hover:bg-atelier-teal-soft text-ink-muted' : 'text-ink-faint/40 cursor-not-allowed'
+            )}
+            title={t('studio.undo')}
+          >
+            <Undo className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={!canRedo}
+            className={clsx(
+              'p-1.5 rounded-lg transition-colors',
+              canRedo ? 'hover:bg-atelier-teal-soft text-ink-muted' : 'text-ink-faint/40 cursor-not-allowed'
+            )}
+            title={t('studio.redo')}
+          >
+            <Redo className="w-3.5 h-3.5" />
+          </button>
 
-          {/* 保存 */}
           <button
             onClick={handleSave}
             className={clsx(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+              'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-all',
               isDirty
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-atelier-teal text-white shadow-atelier hover:bg-atelier-teal-deep'
+                : 'bg-pearl-soft text-ink-muted hover:bg-atelier-teal-soft hover:text-atelier-teal border border-pearl-line'
             )}
-            title="保存"
+            title={t('common.save')}
           >
-            <Save className="w-4 h-4" />
-            <span className="hidden sm:inline">保存</span>
+            <Save className="w-3 h-3" />
+            <span className="hidden sm:inline">{t('common.save')}</span>
           </button>
 
-          {/* 复制 */}
           <button
             onClick={handleCopy}
-            className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-700 transition-colors"
-            title="复制"
+            className="p-1.5 rounded-lg hover:bg-atelier-teal-soft text-ink-muted transition-colors"
+            title={t('studio.copy')}
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="w-3.5 h-3.5" />
           </button>
 
-          {/* 导出 */}
           <button
             onClick={handleExport}
-            className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-700 transition-colors"
-            title="导出"
+            className="p-1.5 rounded-lg hover:bg-atelier-teal-soft text-ink-muted transition-colors"
+            title={t('studio.export')}
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3.5 h-3.5" />
           </button>
 
-          {/* 全屏切换 */}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-700 transition-colors"
-            title={isFullscreen ? '退出全屏' : '全屏'}
+            className="p-1.5 rounded-lg hover:bg-atelier-teal-soft text-ink-muted transition-colors"
+            title={isFullscreen ? t('studio.exitFullscreen') : t('studio.fullscreen')}
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
       {/* 内容区域 */}
-      <div className="flex-1 overflow-auto scrollbar p-6">
+      <div className="flex-1 overflow-auto scrollbar p-3 sm:p-5">
         {viewMode === 'notes' ? (
-          // Notes 视图
           <NotesView
             notes={notes}
             notesGroupedByAction={notesGroupedByAction}
@@ -306,88 +301,96 @@ export default function WorkspacePanel() {
             onActionFilterChange={setSelectedActionFilter}
           />
         ) : !currentContent ? (
-          // 空状态
-          <div className="h-full flex flex-col items-center justify-center text-gray-400">
-            <FileText className="w-16 h-16 mb-4 opacity-50" />
-            <p className="text-lg">暂无内容</p>
-            <p className="text-sm mt-2">
-              与右侧 Agent 对话后，生成的结果将显示在这里
-            </p>
-            {notes.length > 0 && (
-              <button
-                onClick={() => handleViewChange('notes')}
-                className="mt-4 px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-              >
-                查看 Notes
-              </button>
-            )}
+          <div className="h-full min-h-[280px] flex flex-col items-center justify-center px-4">
+            <div className="relative w-full max-w-md text-center animate-fade-in py-8">
+              <div className="mx-auto w-12 h-12 rounded-2xl bg-gradient-to-br from-atelier-teal to-atelier-teal-mid text-white flex items-center justify-center shadow-atelier mb-3">
+                <FileText className="w-5 h-5" />
+              </div>
+              <p className="font-display text-lg font-semibold text-ink">{t('studio.awaitingResult')}</p>
+              <p className="text-[12px] mt-2 text-ink-muted leading-relaxed max-w-xs mx-auto">
+                {t('studio.awaitingResultHint')}
+              </p>
+              <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+                {[t('studio.awaitingTags.bios'), t('studio.awaitingTags.outline'), t('studio.awaitingTags.plot'), t('studio.awaitingTags.eval')].map((tag) => (
+                  <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full border border-pearl-line text-ink-muted">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              {notes.length > 0 && (
+                <button
+                  onClick={() => handleViewChange('notes')}
+                  className="btn btn-secondary btn-sm mt-4"
+                >
+                  {t('studio.viewNotes', { count: notes.length })}
+                </button>
+              )}
+            </div>
           </div>
         ) : (
-          // 文档视图
-          <div className="prose prose-gray max-w-none">
-            <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-sm text-gray-500">生成结果</div>
-                  <h2 className="text-base font-semibold text-gray-900 mt-1">
+          <div className="max-w-3xl mx-auto">
+            <div className="mb-3 rounded-xl border border-pearl-line bg-pearl-card/90 px-3 py-2.5 shadow-atelier backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wide text-ink-faint mb-0.5">{t('studio.resultMarkdown')}</div>
+                  <h2 className="font-display text-base font-semibold text-ink truncate">
                     {currentContent.title}
                   </h2>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-[10px] text-ink-faint mt-0.5">
                     {currentContent.metadata?.agentName || activeAgentInfo?.displayName || activeAgent}
                     {currentContent.metadata?.timestamp && (
                       <>
-                        <span className="mx-2">•</span>
+                        <span className="mx-1.5">·</span>
                         <span>
                           {new Date(currentContent.metadata.timestamp).toLocaleString('zh-CN')}
                         </span>
                       </>
                     )}
+                    {contentStats && (
+                      <>
+                        <span className="mx-1.5">·</span>
+                        <span>{t('studio.charCount', { count: contentStats.chars })}</span>
+                      </>
+                    )}
+                    {noteSaveHint && (
+                      <>
+                        <span className="mx-1.5">·</span>
+                        <span className="text-emerald-600">{noteSaveHint}</span>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={handleSaveAsNote}
-                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                    className="px-2 py-1 text-[11px] rounded-md border border-pearl-line text-ink-muted hover:bg-pearl-soft"
                   >
-                    保存为 Note
+                    Note
                   </button>
                   <button
                     onClick={handleCopy}
-                    className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                    className="px-2 py-1 text-[11px] rounded-md border border-pearl-line text-ink-muted hover:bg-pearl-soft"
                   >
-                    复制
+                    {t('studio.copy')}
                   </button>
                   <button
                     onClick={handleExport}
-                    className="px-3 py-1.5 text-sm rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                    className="px-2 py-1 text-[11px] rounded-md bg-ink text-white hover:bg-ink/90"
                   >
-                    导出 Markdown
+                    {t('studio.export')}
                   </button>
                 </div>
               </div>
-              {contentStats && (
-                <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-                  <span>{contentStats.chars} 字符</span>
-                  <span>•</span>
-                  <span>{contentStats.sections} 段</span>
-                  {noteSaveHint && (
-                    <>
-                      <span>•</span>
-                      <span className="text-green-600">{noteSaveHint}</span>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
             {contentToc.length > 0 && (
               <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-medium text-gray-700">目录导航</div>
+                  <div className="text-sm font-medium text-gray-700">{t('studio.toc')}</div>
                   <button
                     onClick={() => setTocCollapsed((prev) => !prev)}
                     className="text-xs text-gray-500 hover:text-gray-700"
                   >
-                    {tocCollapsed ? '展开' : '折叠'}
+                    {tocCollapsed ? t('dashboard.expand') : t('studio.collapse')}
                   </button>
                 </div>
                 {!tocCollapsed && (
@@ -417,13 +420,19 @@ export default function WorkspacePanel() {
                 )}
               </div>
             )}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-              {/* Markdown 渲染的内容 */}
+            <div className="bg-white rounded-xl border border-pearl-line p-4 sm:p-5 shadow-sm">
               <div
-                dangerouslySetInnerHTML={{
-                  __html: renderMarkdown(currentContent.content),
-                }}
-              />
+                className={clsx(
+                  'markdown prose prose-sm prose-neutral max-w-none text-ink',
+                  '[&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_li]:my-0.5',
+                  '[&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base',
+                  '[&_pre]:text-[12px] [&_code]:text-[12.5px] leading-relaxed text-[13px]'
+                )}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                  {currentContent.content}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         )}
@@ -444,9 +453,9 @@ export default function WorkspacePanel() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span>{currentContent.content.length} 字符</span>
+            <span>{t('studio.charTotal', { count: currentContent.content.length })}</span>
             <span>•</span>
-            <span>{Math.ceil(currentContent.content.length / 500)} 段</span>
+            <span>{t('studio.sections', { count: Math.ceil(currentContent.content.length / 500) })}</span>
           </div>
         </div>
       )}
@@ -539,6 +548,7 @@ function NotesView({
   selectedActionFilter,
   onActionFilterChange,
 }: NotesViewProps) {
+  const { t } = useI18n();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [showSelectedOnly, setShowSelectedOnly] = useState(false);
@@ -742,20 +752,22 @@ function NotesView({
 
   if (isLoadingNotes) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-        <p className="ml-3">加载Notes...</p>
+      <div className="h-full flex items-center justify-center gap-3 text-ink-faint">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-pearl-line border-t-studio-teal" />
+        <p>{t('studio.notes.loading')}</p>
       </div>
     );
   }
 
   if (notes.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-400">
-        <Layers className="w-16 h-16 mb-4 opacity-50" />
-        <p className="text-lg">暂无Notes</p>
-        <p className="text-sm mt-2">
-          Agent生成的内容将保存为Notes，可以在这里查看和选择
+      <div className="h-full flex flex-col items-center justify-center text-ink-faint text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-pearl-soft flex items-center justify-center mb-4">
+          <Layers className="w-8 h-8 text-ink-faint" />
+        </div>
+        <p className="font-display font-semibold text-ink text-base">{t('studio.notes.empty')}</p>
+        <p className="text-xs mt-2 leading-relaxed max-w-xs">
+          {t('studio.notes.emptyHint')}
         </p>
       </div>
     );
@@ -763,10 +775,12 @@ function NotesView({
 
   if (filteredNotes.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-400">
-        <Layers className="w-16 h-16 mb-4 opacity-50" />
-        <p className="text-lg">没有匹配的 Notes</p>
-        <p className="text-sm mt-2">请调整筛选或搜索条件</p>
+      <div className="h-full flex flex-col items-center justify-center text-ink-faint text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-pearl-soft flex items-center justify-center mb-4">
+          <Search className="w-8 h-8 text-ink-faint" />
+        </div>
+        <p className="font-display font-semibold text-ink text-base">{t('studio.notes.noMatch')}</p>
+        <p className="text-xs mt-2">{t('studio.notes.noMatchHint')}</p>
       </div>
     );
   }
@@ -780,7 +794,7 @@ function NotesView({
             <input
               value={filterNameInput}
               onChange={(e) => setFilterNameInput(e.target.value)}
-              placeholder="筛选名称"
+              placeholder={t('studio.notes.filterName')}
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button
@@ -788,7 +802,7 @@ function NotesView({
               disabled={!filterNameInput.trim()}
               className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              保存筛选
+              {t('studio.notes.saveFilter')}
             </button>
             <select
               value=""
@@ -799,7 +813,7 @@ function NotesView({
               }}
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="">应用筛选</option>
+              <option value="">{t('studio.notes.applyFilter')}</option>
               {savedFilters.map((item) => (
                 <option key={item.name} value={item.name}>
                   {item.name}
@@ -816,7 +830,7 @@ function NotesView({
                 }}
                 className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">删除筛选</option>
+                <option value="">{t('studio.notes.deleteFilter')}</option>
                 {savedFilters.map((item) => (
                   <option key={item.name} value={item.name}>
                     {item.name}
@@ -828,7 +842,7 @@ function NotesView({
               onClick={handleClearFilters}
               className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              清空
+              {t('studio.notes.clear')}
             </button>
           </div>
           <select
@@ -836,7 +850,7 @@ function NotesView({
             onChange={(e) => onActionFilterChange(e.target.value || null)}
             className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="">全部类型</option>
+            <option value="">{t('studio.notes.allTypes')}</option>
             {Object.keys(notesGroupedByAction).map((action) => (
               <option key={action} value={action}>
                 {getActionDisplayName(action)} ({notesGroupedByAction[action].length})
@@ -848,7 +862,7 @@ function NotesView({
             onChange={(e) => setPhaseFilter(e.target.value)}
             className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="">全部阶段</option>
+            <option value="">{t('studio.notes.allPhases')}</option>
             {phaseOptions.map((phase) => (
               <option key={phase} value={phase}>
                 {phase}
@@ -860,19 +874,22 @@ function NotesView({
             onChange={(e) => setCategoryFilter(e.target.value)}
             className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="">全部分类</option>
+            <option value="">{t('studio.notes.allCategories')}</option>
             {categoryOptions.map((category) => (
               <option key={category} value={category}>
                 {category}
               </option>
             ))}
           </select>
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索 Notes..."
-            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-faint" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t('studio.notes.searchPlaceholder')}
+              className="pl-8 pr-3 py-1.5 text-sm border border-pearl-line rounded-lg bg-white focus:outline-none focus:border-studio-teal focus:ring-1 focus:ring-studio-teal"
+            />
+          </div>
           <button
             onClick={() => setShowSelectedOnly((prev) => !prev)}
             className={clsx(
@@ -882,7 +899,7 @@ function NotesView({
                 : 'border-gray-200 text-gray-600 hover:bg-gray-50'
             )}
           >
-            仅看已选
+            {t('studio.notes.selectedOnly')}
           </button>
           <button
             onClick={() => setShowRagOnly((prev) => !prev)}
@@ -893,33 +910,33 @@ function NotesView({
                 : 'border-gray-200 text-gray-600 hover:bg-gray-50'
             )}
           >
-            仅看含引用
+            {t('studio.notes.ragOnly')}
           </button>
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
             className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="newest">最新优先</option>
-            <option value="oldest">最早优先</option>
+            <option value="newest">{t('studio.notes.newest')}</option>
+            <option value="oldest">{t('studio.notes.oldest')}</option>
           </select>
           <button
             onClick={() => onBulkSelect(filteredNotes, true)}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
-            全选筛选结果
+            {t('studio.notes.selectAll')}
           </button>
           <button
             onClick={() => onBulkSelect(filteredNotes, false)}
             className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
           >
-            取消全选
+            {t('studio.notes.deselectAll')}
           </button>
           <div className="flex items-center gap-2">
             <input
               value={bulkComment}
               onChange={(e) => setBulkComment(e.target.value)}
-              placeholder="批量评论..."
+              placeholder={t('studio.notes.bulkComment')}
               className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <button
@@ -935,28 +952,20 @@ function NotesView({
               }}
               className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              添加评论
+              {t('studio.notes.addComment')}
             </button>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={onExportSelected}
-            className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-          >
-            导出已选 ({selectedCount})
+          <button onClick={onExportSelected} className="btn btn-primary btn-sm">
+            <DownloadIcon className="w-3.5 h-3.5" />
+            {t('studio.notes.exportSelected', { count: selectedCount })}
           </button>
-          <button
-            onClick={() => onExport('txt')}
-            className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            导出TXT
+          <button onClick={() => onExport('txt')} className="btn btn-secondary btn-sm">
+            {t('studio.notes.exportTxt')}
           </button>
-          <button
-            onClick={() => onExport('md')}
-            className="px-3 py-1.5 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            导出MD
+          <button onClick={() => onExport('md')} className="btn btn-secondary btn-sm">
+            {t('studio.notes.exportMd')}
           </button>
         </div>
       </div>
@@ -964,12 +973,12 @@ function NotesView({
       {Object.keys(ragSourceCounts).length > 0 && (
         <div className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium text-gray-700">RAG 引用源</div>
+            <div className="text-sm font-medium text-gray-700">{t('studio.notes.sources')}</div>
             <button
               onClick={() => setShowRagGraph((prev) => !prev)}
               className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
             >
-              {showRagGraph ? '隐藏图谱' : '显示图谱'}
+              {showRagGraph ? t('studio.notes.hideGraph') : t('studio.notes.showGraph')}
             </button>
           </div>
           {showRagGraph && ragGraphNodes.length > 0 && (
@@ -1034,7 +1043,7 @@ function NotesView({
                 onClick={() => setRagSourceFilter('')}
                 className="px-3 py-1.5 text-xs rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50"
               >
-                清除引用源
+                {t('studio.notes.clearSource')}
               </button>
             )}
           </div>
@@ -1042,31 +1051,33 @@ function NotesView({
       )}
 
       {/* Notes列表 */}
-      <div className="flex-1 overflow-y-auto space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-3">
         {Object.entries(groupedFilteredNotes).map(([action, groupNotes]) => (
-          <div key={action} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div key={action} className="rounded-xl border border-pearl-line overflow-hidden bg-white">
             {/* 分组标题 */}
             <button
               onClick={() => toggleGroup(action)}
-              className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+              className="w-full flex items-center justify-between px-4 py-2.5 bg-pearl-soft/60 hover:bg-pearl-soft transition-colors"
             >
               <div className="flex items-center gap-2">
                 <ChevronDown
                   className={clsx(
-                    'w-4 h-4 transition-transform',
+                    'w-4 h-4 text-ink-faint transition-transform',
                     expandedGroups.has(action) || 'transform -rotate-90'
                   )}
                 />
-                <span className="font-medium text-gray-700">
+                <span className="font-display font-semibold text-ink text-sm">
                   {getActionDisplayName(action)}
                 </span>
-                <span className="text-xs text-gray-500">({groupNotes.length})</span>
+                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-pearl-soft text-ink-faint tabular-nums">
+                  {groupNotes.length}
+                </span>
               </div>
             </button>
 
             {/* 分组内容 */}
             {expandedGroups.has(action) && (
-              <div className="p-2 space-y-2">
+              <div className="p-3 space-y-2.5">
                 {groupNotes.map((note) => (
                   <NoteCard
                     key={note.id}
@@ -1089,79 +1100,116 @@ interface NoteCardProps {
   onToggleSelection: (note: Note) => Promise<void>;
 }
 
+const PHASE_META: Record<string, { label: string; cls: string }> = {
+  planning: { label: 'studio.phase.planning', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  creation: { label: 'studio.phase.creation', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  evaluation: { label: 'studio.phase.evaluation', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  analysis: { label: 'studio.phase.analysis', cls: 'bg-violet-50 text-violet-700 border-violet-200' },
+  character: { label: 'studio.phase.character', cls: 'bg-pink-50 text-pink-700 border-pink-200' },
+  story: { label: 'studio.phase.story', cls: 'bg-sky-50 text-sky-700 border-sky-200' },
+};
+
+function formatNoteDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const diff = Date.now() - d.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return translate('dashboard.time.justNow');
+  if (minutes < 60) return translate('studio.minutesAgo', undefined, { m: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return translate('dashboard.time.hoursAgo', undefined, { h: hours });
+  const days = Math.floor(hours / 24);
+  if (days < 7) return translate('dashboard.time.daysAgo', undefined, { d: days });
+  return d.toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function NoteCard({ note, onToggleSelection }: NoteCardProps) {
+  const { t } = useI18n();
   const [isExpanded, setIsExpanded] = useState(false);
   const mindMap = note.metadata?.mind_map;
   const mindMapSvg = mindMap?.svg;
+  const selected = note.select_status === 1;
+  const phase = note.metadata?.phase || '';
+  const phaseMeta = PHASE_META[phase];
+  const category = note.metadata?.category || '';
+  const ragTrace = Array.isArray(note.metadata?.rag_trace) ? note.metadata.rag_trace : [];
+  const ragCount = ragTrace.length;
 
   return (
     <div
       className={clsx(
-        'border rounded-lg p-3 transition-all',
-        note.select_status === 1
-          ? 'border-indigo-500 bg-indigo-50'
-          : 'border-gray-200 bg-white hover:border-gray-300'
+        'rounded-xl border p-4 transition-all duration-200',
+        selected
+          ? 'border-studio-teal bg-studio-teal-soft/30 shadow-sm'
+          : 'border-pearl-line bg-white hover:border-studio-teal/30 hover:shadow-sm'
       )}
     >
       <div className="flex items-start gap-3">
         {/* 选择复选框 */}
         <button
           onClick={() => onToggleSelection(note)}
-          className="mt-1 flex-shrink-0"
+          className="mt-0.5 shrink-0 text-ink-faint hover:text-studio-teal transition-colors"
+          title={selected ? t('studio.notes.deselect') : t('studio.notes.select')}
         >
-          {note.select_status === 1 ? (
-            <CheckSquare className="w-5 h-5 text-indigo-600" />
+          {selected ? (
+            <CheckSquare className="w-5 h-5 text-studio-teal" />
           ) : (
-            <Square className="w-5 h-5 text-gray-400" />
+            <Square className="w-5 h-5" />
           )}
         </button>
 
         {/* Note内容 */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-gray-900">
-              {note.title || note.name}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <h4 className="font-display font-semibold text-ink text-sm leading-snug truncate">
+                {note.title || note.name || t('studio.unnamed')}
+              </h4>
+              {selected && (
+                <span className="px-2 py-0.5 text-[10px] rounded-full bg-studio-teal text-white">
+                  {t('studio.notes.selected')}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-ink-faint shrink-0 tabular-nums">
+              {formatNoteDate(note.created_at)}
             </span>
-            {note.select_status === 1 && (
-              <span className="px-2 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">
-                已选择
-              </span>
-            )}
           </div>
-          {(note.metadata?.phase || note.metadata?.category || note.metadata?.output_tag) && (
-            <div className="flex flex-wrap gap-2 mb-2 text-[11px] text-gray-500">
-              {note.metadata?.phase && (
-                <span className="px-2 py-0.5 bg-gray-100 rounded">
-                  phase:{note.metadata.phase}
+
+          {(phase || category) && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {phaseMeta && (
+                <span className={clsx('px-2 py-0.5 text-[10px] rounded-full border', phaseMeta.cls)}>
+                  {t(phaseMeta.label)}
                 </span>
               )}
-              {note.metadata?.category && (
-                <span className="px-2 py-0.5 bg-gray-100 rounded">
-                  category:{note.metadata.category}
-                </span>
-              )}
-              {note.metadata?.output_tag && (
-                <span className="px-2 py-0.5 bg-gray-100 rounded">
-                  output:{note.metadata.output_tag}
+              {category && (
+                <span className="px-2 py-0.5 text-[10px] rounded-full border border-pearl-line bg-pearl-soft text-ink-muted">
+                  {category}
                 </span>
               )}
             </div>
           )}
 
           {!isExpanded ? (
-            <p className="text-xs text-gray-500 line-clamp-2">
+            <p className="text-xs text-ink-muted line-clamp-2 mt-2 leading-relaxed">
               {note.context}
             </p>
           ) : (
-            <div className="text-sm text-gray-700 whitespace-pre-wrap">
+            <div className="text-sm text-ink whitespace-pre-wrap mt-2 leading-relaxed">
               {note.context}
             </div>
           )}
 
           {mindMapSvg && (
-            <div className="mt-2 rounded-lg border border-gray-200 bg-white p-2">
+            <div className="mt-3 rounded-lg border border-pearl-line bg-pearl-soft/40 p-2.5">
               {mindMap?.title && (
-                <div className="text-xs font-medium text-gray-600 mb-1">{mindMap.title}</div>
+                <div className="text-xs font-medium text-ink-muted mb-1.5">{mindMap.title}</div>
               )}
               <div className="max-h-[180px] overflow-hidden">
                 <div
@@ -1173,49 +1221,50 @@ function NoteCard({ note, onToggleSelection }: NoteCardProps) {
           )}
 
           {note.user_comment && (
-            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-              <strong>用户评论:</strong> {note.user_comment}
+            <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 leading-relaxed">
+              <span className="font-medium">{t('studio.notes.comment')}</span>
+              {note.user_comment}
             </div>
           )}
 
-          {note.metadata?.rag_trace && Array.isArray(note.metadata.rag_trace) && (
-            <div className="mt-2 text-xs text-gray-500">
-              RAG 引用: {note.metadata.rag_trace.length} 条
-              {isExpanded && (
-                <div className="mt-1 space-y-1">
-                  {note.metadata.rag_trace.map((item: any, idx: number) => (
-                    <div key={idx} className="px-2 py-1 bg-gray-50 rounded">
-                      <div>来源: {item.source}</div>
-                      <div>查询: {item.query}</div>
-                      <div>结果: {item.result_count}</div>
-                      {item.filename && (item.project_id || note.metadata?.project_id) && (
-                        <div className="mt-1">
-                          <a
-                            href={`/files?project_id=${item.project_id || note.metadata?.project_id}&search=${encodeURIComponent(item.filename)}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            打开关联文件
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-pearl-line/70">
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="text-xs text-indigo-600 hover:text-indigo-700"
+              className="inline-flex items-center gap-1 text-xs text-studio-teal hover:underline"
             >
-              {isExpanded ? '收起' : '展开'}
+              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              {isExpanded ? t('dashboard.collapse') : t('studio.notes.expandFull')}
             </button>
-            <span className="text-xs text-gray-400">
-              {new Date(note.created_at).toLocaleString('zh-CN')}
-            </span>
+            {ragCount > 0 && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-ink-faint">
+                <Link2 className="w-3 h-3" />
+                {t('studio.notes.refCount', { count: ragCount })}
+              </span>
+            )}
           </div>
+
+          {isExpanded && ragCount > 0 && (
+            <div className="mt-2 space-y-1.5">
+              {ragTrace.map((item: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="px-2.5 py-1.5 bg-pearl-soft/60 rounded-lg text-[10px] text-ink-muted"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-ink truncate">{item.source}</span>
+                    {item.filename && (item.project_id || note.metadata?.project_id) && (
+                      <a
+                        href={`/files?project_id=${item.project_id || note.metadata?.project_id}&search=${encodeURIComponent(item.filename)}`}
+                        className="text-studio-teal hover:underline shrink-0"
+                      >
+                        {t('studio.notes.openFile')}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

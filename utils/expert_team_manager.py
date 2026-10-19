@@ -134,7 +134,7 @@ class TeamCollaboration:
 class ExpertTeamManager:
     """专家团队管理器"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """
         初始化专家团队管理器
         

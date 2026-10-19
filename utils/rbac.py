@@ -22,6 +22,11 @@ class Permission(str, Enum):
     AGENT_MANAGE = "agent:manage"
     AGENT_CONFIGURE = "agent:configure"
 
+    # 工具相关
+    TOOL_EXECUTE = "tool:execute"
+    TOOL_DANGEROUS = "tool:dangerous"
+    TOOL_MANAGE = "tool:manage"
+
     # 项目相关
     PROJECT_CREATE = "project:create"
     PROJECT_READ = "project:read"
@@ -110,6 +115,9 @@ ROLE_DEFINITIONS: Dict[Role, RoleDefinition] = {
             # Agent权限
             Permission.AGENT_USE,
             Permission.AGENT_CONFIGURE,
+            Permission.TOOL_EXECUTE,
+            Permission.TOOL_DANGEROUS,
+            Permission.TOOL_MANAGE,
 
             # 项目权限
             Permission.PROJECT_CREATE,
@@ -154,6 +162,8 @@ ROLE_DEFINITIONS: Dict[Role, RoleDefinition] = {
         permissions={
             # Agent权限
             Permission.AGENT_USE,
+            Permission.TOOL_EXECUTE,
+            Permission.TOOL_DANGEROUS,
 
             # 项目权限
             Permission.PROJECT_CREATE,
@@ -211,6 +221,7 @@ ROLE_DEFINITIONS: Dict[Role, RoleDefinition] = {
         permissions={
             # 基础权限
             Permission.AGENT_USE,
+            Permission.TOOL_EXECUTE,
             Permission.PROJECT_CREATE,
             Permission.PROJECT_READ,
             Permission.PROJECT_UPDATE,

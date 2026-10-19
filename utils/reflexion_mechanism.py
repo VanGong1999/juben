@@ -81,7 +81,7 @@ class MetaPrompt:
 class ReflexionMechanism:
     """Reflexion反思机制"""
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """
         初始化反思机制
         

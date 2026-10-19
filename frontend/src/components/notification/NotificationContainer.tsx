@@ -6,9 +6,11 @@
 import React from 'react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { useI18n } from '@/i18n';
 
 export const NotificationContainer: React.FC = () => {
   const { notifications, clearAll } = useNotificationStore();
+  const { t } = useI18n();
 
   // 按时间排序，最新的在前面
   const sortedNotifications = [...notifications].sort(
@@ -27,7 +29,7 @@ export const NotificationContainer: React.FC = () => {
           onClick={clearAll}
           className="self-end mb-2 px-3 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
         >
-          清除全部
+          {t('ui.clearAll')}
         </button>
       )}
 
@@ -61,6 +63,7 @@ interface NotificationItemProps {
 
 const NotificationItem: React.FC<NotificationItemProps> = ({ notification }) => {
   const { removeNotification } = useNotificationStore();
+  const { t } = useI18n();
 
   const icons = {
     success: <CheckCircle className="w-5 h-5" />,
@@ -145,7 +148,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification }) => 
         <button
           onClick={() => removeNotification(notification.id)}
           className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-          aria-label="关闭通知"
+          aria-label={t('ui.closeNotification')}
         >
           <X className="w-4 h-4" />
         </button>

@@ -7,6 +7,7 @@ import { toMarkmapMarkdown, toMermaidMindMap } from '@/utils/mindMap';
 import { createProjectFile } from '@/services/projectService';
 import { createArtifact } from '@/services/artifactService';
 import { createNote } from '@/services/noteService';
+import { useI18n } from '@/i18n';
 
 type ViewMode = 'tree' | 'mermaid' | 'markmap';
 
@@ -19,6 +20,7 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
   const [viewMode, setViewMode] = useState<ViewMode>('markmap');
   const [zoom, setZoom] = useState(1);
   const [status, setStatus] = useState<string | null>(null);
+  const { t } = useI18n();
   const mermaidId = useId();
   const mermaidContainerRef = useRef<HTMLDivElement | null>(null);
   const markmapSvgRef = useRef<SVGSVGElement | null>(null);
@@ -48,7 +50,7 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
   useEffect(() => {
     if (viewMode !== 'markmap' || !markmapSvgRef.current) return;
     if (!assetsLoadedRef.current) {
-      const assets = transformer.getUsedAssets(markmapMarkdown);
+      const assets = transformer.getUsedAssets(markmapMarkdown as any);
       if (assets?.styles) {
         loadCSS(assets.styles);
       }
@@ -95,7 +97,7 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
   const exportSvg = useCallback(async () => {
     const svgText = serializeSvg();
     if (!svgText) {
-      setStatus('当前视图无法导出 SVG');
+      setStatus(t('ui.exportSvgFailed'));
       return;
     }
     const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
@@ -105,18 +107,18 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
     link.download = `mindmap_${Date.now()}.svg`;
     link.click();
     URL.revokeObjectURL(url);
-    setStatus('SVG 已导出');
-  }, [serializeSvg]);
+    setStatus(t('ui.svgExported'));
+  }, [serializeSvg, t]);
 
   const exportPng = useCallback(async () => {
     const svgText = serializeSvg();
     if (!svgText) {
-      setStatus('当前视图无法导出 PNG');
+      setStatus(t('ui.exportPngFailed'));
       return;
     }
     const svgEl = getSvgElement();
     if (!svgEl) {
-      setStatus('导出失败：未找到 SVG');
+      setStatus(t('ui.exportSvgNotFound'));
       return;
     }
     const rect = svgEl.getBoundingClientRect();
@@ -138,25 +140,25 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
         link.href = pngUrl;
         link.download = `mindmap_${Date.now()}.png`;
         link.click();
-        setStatus('PNG 已导出');
+        setStatus(t('ui.pngExported'));
       } else {
-        setStatus('导出失败：无法创建画布');
+        setStatus(t('ui.exportCanvasFailed'));
       }
       URL.revokeObjectURL(url);
     };
     img.onerror = () => {
-      setStatus('导出失败：图片渲染错误');
+      setStatus(t('ui.exportRenderFailed'));
       URL.revokeObjectURL(url);
     };
     img.src = url;
-  }, [serializeSvg, getSvgElement]);
+  }, [serializeSvg, getSvgElement, t]);
 
   const saveSnapshot = useCallback(async (fileType: 'note' | 'export') => {
     const projectId = localStorage.getItem('projectId');
     const userId = localStorage.getItem('userId') || 'default_user';
     const sessionId = localStorage.getItem('sessionId') || 'default_session';
     if (!projectId) {
-      setStatus('未选择项目，无法保存');
+      setStatus(t('ui.noProjectSave'));
       return;
     }
     const svgText = serializeSvg();
@@ -178,7 +180,7 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
       tags: ['mind_map', viewMode, fileType]
     });
     if (!response.success) {
-      setStatus(response.message || '保存失败');
+      setStatus(response.message || t('studio.toast.saveFailed'));
       return;
     }
 
@@ -197,7 +199,7 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
           mind_map: payload
         }
       });
-      setStatus('已保存到 Notes');
+      setStatus(t('ui.savedToNotes'));
       return;
     }
 
@@ -216,19 +218,19 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
       }
     };
     await createArtifact(artifactPayload);
-    setStatus('已保存到 Files');
-  }, [agentSource, data, markmapMarkdown, mermaidCode, serializeSvg, viewMode]);
+    setStatus(t('ui.savedToFiles'));
+  }, [agentSource, data, markmapMarkdown, mermaidCode, serializeSvg, viewMode, t]);
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs text-gray-600 border">
-          视图:
+          {t('ui.view')}
           <button
             className={`px-2 py-0.5 rounded ${viewMode === 'tree' ? 'bg-black text-white' : 'hover:bg-gray-100'}`}
             onClick={() => setViewMode('tree')}
           >
-            树形
+            {t('ui.tree')}
           </button>
           <button
             className={`px-2 py-0.5 rounded ${viewMode === 'mermaid' ? 'bg-black text-white' : 'hover:bg-gray-100'}`}
@@ -245,23 +247,23 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
         </div>
 
         <div className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs text-gray-600 border">
-          缩放:
+          {t('ui.zoom')}
           <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={zoomOut}>-</button>
           <span className="min-w-[42px] text-center">{Math.round(zoom * 100)}%</span>
           <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={zoomIn}>+</button>
-          <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={resetZoom}>重置</button>
+          <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={resetZoom}>{t('common.reset')}</button>
         </div>
 
         <div className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs text-gray-600 border">
-          导出:
+          {t('ui.export')}
           <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={exportSvg}>SVG</button>
           <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={exportPng}>PNG</button>
         </div>
 
         <div className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs text-gray-600 border">
-          保存:
-          <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={() => saveSnapshot('note')}>到 Notes</button>
-          <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={() => saveSnapshot('export')}>到 Files</button>
+          {t('ui.save')}
+          <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={() => saveSnapshot('note')}>{t('ui.toNotes')}</button>
+          <button className="px-2 py-0.5 rounded hover:bg-gray-100" onClick={() => saveSnapshot('export')}>{t('ui.toFiles')}</button>
         </div>
       </div>
 
@@ -295,8 +297,9 @@ export default function MindMapViewer({ data, agentSource }: MindMapViewerProps)
 }
 
 function MindMapTree({ nodes }: { nodes: MindMapData['nodes'] }) {
+  const { t } = useI18n();
   if (!nodes || nodes.length === 0) {
-    return <div className="text-sm text-gray-500">暂无节点</div>;
+    return <div className="text-sm text-gray-500">{t('ui.noNodes')}</div>;
   }
   return (
     <ul className="pl-4 space-y-2">

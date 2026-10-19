@@ -15,6 +15,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { LINKS } from '@/config/links';
 import { useState } from 'react';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 
 interface SplitScreenHeaderProps {
   /** 项目名称 */
@@ -27,6 +28,7 @@ export default function SplitScreenHeader({
   projectName = '剧本创作 Agent 平台',
   onHelpClick,
 }: SplitScreenHeaderProps) {
+  const { t } = useI18n();
   const { activeAgent, setActiveAgent } = useAgentStore();
   const { setSettingsModalOpen, sidebarOpen, sidebarCollapsed, toggleSidebarCollapsed, setSidebarOpen, setSearchOpen } = useUIStore();
   const { user, logout, isAdmin } = useAuthStore();
@@ -74,7 +76,7 @@ export default function SplitScreenHeader({
 
   const handleLogout = async () => {
     await logout();
-    success('登出成功', '您已安全退出');
+    success(t('studio.toast.logout'), t('studio.toast.logoutHint'));
     navigate('/login');
   };
 
@@ -91,7 +93,7 @@ export default function SplitScreenHeader({
             </div>
             <div className="hidden sm:block">
               <h1 className="text-lg font-semibold group-hover:underline-animated">{projectName}</h1>
-              <p className="text-xs text-gray-500">40+ 专业 AI Agents · 短剧创作平台</p>
+              <p className="text-xs text-gray-500">{t('studio.header.tagline')}</p>
             </div>
           </div>
 
@@ -106,7 +108,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <MessageSquare className="w-4 h-4" />
-              工作区
+              {t('studio.header.nav.workspace')}
             </Link>
             <Link
               to="/baidu"
@@ -117,7 +119,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <Search className="w-4 h-4" />
-              百度搜索
+              {t('studio.header.nav.baidu')}
             </Link>
             <Link
               to="/tools"
@@ -128,7 +130,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <Wrench className="w-4 h-4" />
-              工具演示
+              {t('studio.header.nav.tools')}
             </Link>
             <Link
               to="/projects"
@@ -139,7 +141,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <FolderOpen className="w-4 h-4" />
-              项目管理
+              {t('studio.header.nav.projects')}
             </Link>
             <Link
               to="/ocr"
@@ -150,7 +152,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <ScanText className="w-4 h-4" />
-              OCR 识别
+              {t('studio.header.nav.ocr')}
             </Link>
             <Link
               to="/files"
@@ -161,7 +163,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <HardDrive className="w-4 h-4" />
-              文件系统
+              {t('studio.header.nav.files')}
             </Link>
             <Link
               to="/graph"
@@ -172,7 +174,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <Network className="w-4 h-4" />
-              图谱可视化
+              {t('studio.header.nav.graph')}
             </Link>
             <Link
               to="/knowledge"
@@ -183,7 +185,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <Database className="w-4 h-4" />
-              知识库
+              {t('studio.header.nav.knowledge')}
             </Link>
             <Link
               to="/workflow"
@@ -194,7 +196,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <Activity className="w-4 h-4" />
-              工作流
+              {t('studio.header.nav.workflow')}
             </Link>
             <Link
               to="/notes"
@@ -205,7 +207,7 @@ export default function SplitScreenHeader({
               }`}
             >
               <FileText className="w-4 h-4" />
-              笔记管理
+              {t('studio.header.nav.notes')}
             </Link>
           </nav>
 
@@ -230,7 +232,7 @@ export default function SplitScreenHeader({
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
             <Search className="w-4 h-4" />
-            <span className="hidden md:inline">搜索...</span>
+            <span className="hidden md:inline">{t('studio.header.search')}</span>
             <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 bg-gray-200 rounded text-xs">
               ⌘K
             </kbd>
@@ -243,7 +245,7 @@ export default function SplitScreenHeader({
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all animate-pulse-slow"
             >
               <Square className="w-4 h-4" />
-              <span className="hidden sm:inline">停止生成</span>
+              <span className="hidden sm:inline">{t('studio.header.stopGenerate')}</span>
             </button>
           )}
 
@@ -264,7 +266,7 @@ export default function SplitScreenHeader({
           <button
             onClick={onHelpClick}
             className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
-            title="帮助"
+            title={t('studio.help')}
           >
             <HelpCircle className="w-5 h-5" />
           </button>
@@ -281,10 +283,10 @@ export default function SplitScreenHeader({
                 </div>
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium text-gray-900">
-                    {user?.displayName || user?.username || '用户'}
+                    {user?.displayName || user?.username || t('studio.header.role.user')}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {user?.role === 'admin' ? '管理员' : user?.role === 'user' ? '用户' : '访客'}
+                    {user?.role === 'admin' ? t('studio.header.role.admin') : user?.role === 'user' ? t('studio.header.role.user') : t('studio.header.role.guest')}
                   </p>
                 </div>
               </div>
@@ -309,7 +311,7 @@ export default function SplitScreenHeader({
                     onClick={() => setShowUserMenu(false)}
                   >
                     <BarChart3 className="w-4 h-4" />
-                    统计分析
+                    {t('studio.header.nav.statistics')}
                   </Link>
                   {isAdmin() && (
                     <Link
@@ -318,7 +320,7 @@ export default function SplitScreenHeader({
                       onClick={() => setShowUserMenu(false)}
                     >
                       <Settings className="w-4 h-4" />
-                      系统管理
+                      {t('studio.header.nav.admin')}
                     </Link>
                   )}
                 </div>
@@ -329,7 +331,7 @@ export default function SplitScreenHeader({
                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                   >
                     <LogOut className="w-4 h-4" />
-                    退出登录
+                    {t('nav.signOut')}
                   </button>
                 </div>
               </div>
@@ -340,7 +342,7 @@ export default function SplitScreenHeader({
           <button
             onClick={handleSettingsClick}
             className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
-            title="设置"
+            title={t('nav.settings')}
           >
             <Settings className="w-5 h-5" />
           </button>
@@ -376,20 +378,20 @@ export default function SplitScreenHeader({
                     <p className="text-sm text-gray-500 mt-1">{activeAgentData.description}</p>
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className="font-medium">分类:</span>
+                        <span className="font-medium">{t('studio.header.agent.category')}:</span>
                         <span className="px-2 py-0.5 bg-gray-100 rounded">{activeAgentData.category}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className="font-medium">模型:</span>
+                        <span className="font-medium">{t('studio.header.agent.model')}:</span>
                         <span className="px-2 py-0.5 bg-gray-100 rounded">{activeAgentData.model}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className="font-medium">端点:</span>
+                        <span className="font-medium">{t('studio.header.agent.endpoint')}:</span>
                         <span className="px-2 py-0.5 bg-gray-100 rounded font-mono">{activeAgentData.apiEndpoint}</span>
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-xs font-medium text-gray-600 mb-1">功能特性:</div>
+                      <div className="text-xs font-medium text-gray-600 mb-1">{t('studio.header.agent.features')}:</div>
                       <div className="flex flex-wrap gap-1">
                         {activeAgentData.features.slice(0, 4).map((feature: string) => (
                           <span

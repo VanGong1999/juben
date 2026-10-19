@@ -46,7 +46,7 @@ class FileReferenceAgent(BaseJubenAgent):
     """
     
     def __init__(self):
-        super().__init__("file_reference", model_provider="zhipu")
+        super().__init__("file_reference", model_provider="deepseek")
         
         # 系统提示词配置（从prompts文件夹加载）
         self._load_system_prompt()

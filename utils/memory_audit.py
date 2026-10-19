@@ -62,6 +62,14 @@ class MemoryAuditManager:
             "script_summary": script_summary,
             "graph_summary": graph_summary
         }
+        # 整合归一：作品维度记忆快照委托给 AgentMemoryService 导出（Phase 5）。
+        if project_id:
+            try:
+                from utils.agent_memory import get_agent_memory_service
+
+                snapshot["agent_memory_export"] = get_agent_memory_service().export_memory(project_id)
+            except Exception:
+                snapshot["agent_memory_export"] = None
         self._cache.insert(0, snapshot)
         self._save()
         return snapshot
@@ -98,6 +106,23 @@ class MemoryAuditManager:
             user_id, session_id, snapshot.get("middle_term_memories", [])
         )
         return snapshot
+
+    def create_drama_snapshot(self, drama_id: str) -> Dict[str, Any]:
+        """作品记忆快照：委托 AgentMemoryService 全量导出（Phase 5）。"""
+        from utils.agent_memory import get_agent_memory_service
+
+        return get_agent_memory_service().export_memory(drama_id)
+
+    def list_drama_versions(self, drama_id: str, target: Optional[str] = None) -> List[Dict[str, Any]]:
+        from utils.agent_memory import get_agent_memory_service
+
+        return get_agent_memory_service().list_memory_versions(drama_id, target=target)
+
+    def restore_drama_version(self, drama_id: str, version_id: str) -> Dict[str, Any]:
+        """作品记忆回滚：委托 Phase 2 版本链 rollback。"""
+        from utils.agent_memory import get_agent_memory_service
+
+        return get_agent_memory_service().rollback_memory_version(drama_id, version_id)
 
     async def evaluate_quality(
         self,

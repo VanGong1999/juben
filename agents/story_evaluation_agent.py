@@ -1,3 +1,4 @@
+import re
 from typing import AsyncGenerator, Dict, Any, Optional
 
 """
@@ -39,7 +40,7 @@ class StoryEvaluationAgent(BaseJubenAgent):
     5. 多维度评估：市场潜力、创新属性、内容亮点、总体评价
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化故事评估智能体"""
         super().__init__("story_evaluation", model_provider)
         
@@ -90,8 +91,13 @@ class StoryEvaluationAgent(BaseJubenAgent):
                 }
             }
 
-            # 解析输入参数
-            story_text = request_data.get("story_text", "")
+            # 解析输入参数（兼容 /juben/chat 派发时把全文放在 input/query 的情况）
+            story_text = (
+                request_data.get("story_text")
+                or request_data.get("input")
+                or request_data.get("query")
+                or ""
+            )
             theme = request_data.get("theme", "小说")
             round_num = request_data.get("round", 1)
             
@@ -123,16 +129,19 @@ class StoryEvaluationAgent(BaseJubenAgent):
 {story_text}
 """
             
-            # 调用LLM生成故事评估
-            evaluation_chunks = []
-            async for event in self._call_llm(user_prompt, context):
-                if event.get("event_type") == "llm_chunk":
-                    chunk = event.get("data", "")
-                    evaluation_chunks.append(chunk)
-                    yield event
-            
-            # 整合生成的评估结果
-            full_evaluation = "".join(evaluation_chunks)
+            # 调用LLM生成故事评估（_call_llm 返回完整字符串，需 await）
+            try:
+                full_evaluation = await self._call_llm(
+                    [{"role": "user", "content": user_prompt}],
+                    user_id=user_id,
+                    session_id=session_id,
+                ) or ""
+            except Exception as e:
+                self.logger.error(f"故事评估 LLM 调用失败: {e}")
+                full_evaluation = ""
+
+            if full_evaluation:
+                yield {"event_type": "llm_chunk", "data": full_evaluation, "metadata": {}}
             
             # 验证和优化评估结果
             optimized_evaluation = await self._optimize_evaluation(full_evaluation, round_num)

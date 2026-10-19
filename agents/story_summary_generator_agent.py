@@ -42,7 +42,7 @@ class StorySummaryGeneratorAgent(BaseJubenAgent):
     作为故事五元素工作流中的专业子智能体，专门负责故事梗概生成任务
     """
     
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化故事梗概生成智能体"""
         super().__init__("story_summary_generator", model_provider)
         

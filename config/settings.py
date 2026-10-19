@@ -64,7 +64,7 @@ def load_yaml_config(app_env: Optional[str] = None) -> Dict[str, Any]:
 class ModelSettings(BaseSettings):
     """模型配置基类"""
     api_key: str = Field(..., description="API密钥")
-    model: str = Field(default="glm-4.5", description="模型名称")
+    model: str = Field(default="deepseek-flash", description="模型名称")
     base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4", description="API基础URL")
     temperature: float = Field(default=0.7, description="温度参数")
     max_tokens: int = Field(default=4096, description="最大token数")
@@ -72,10 +72,19 @@ class ModelSettings(BaseSettings):
     max_retries: int = Field(default=3, description="最大重试次数")
 
 
+class DeepSeekSettings(ModelSettings):
+    """DeepSeek 配置（默认便宜的 flash）"""
+    api_key: str = Field(..., env="DEEPSEEK_API_KEY", description="DeepSeek API密钥")
+    model: str = Field(default="deepseek-flash", env="DEEPSEEK_MODEL", description="DeepSeek模型名称")
+    base_url: str = Field(default="https://api.deepseek.com", env="DEEPSEEK_BASE_URL", description="DeepSeek API基础URL")
+    temperature: float = Field(default=0.7, env="DEEPSEEK_TEMPERATURE", description="DeepSeek温度参数")
+    max_tokens: int = Field(default=4096, env="DEEPSEEK_MAX_TOKENS", description="DeepSeek最大token数")
+
+
 class ZhipuSettings(ModelSettings):
     """智谱AI配置"""
     api_key: str = Field(..., env="ZHIPU_API_KEY", description="智谱API密钥")
-    model: str = Field(default="glm-4.5", env="ZHIPU_MODEL", description="智谱模型名称")
+    model: str = Field(default="glm-4.7-flash", env="ZHIPU_MODEL", description="智谱模型名称")
     base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4", env="ZHIPU_BASE_URL", description="智谱API基础URL")
     temperature: float = Field(default=0.7, env="ZHIPU_TEMPERATURE", description="智谱温度参数")
     max_tokens: int = Field(default=4096, env="ZHIPU_MAX_TOKENS", description="智谱最大token数")
@@ -142,6 +151,11 @@ class SearchSettings(BaseSettings):
     enabled: bool = Field(default=True, env="WEB_SEARCH_ENABLED", description="是否启用网络搜索")
     auto_search: bool = Field(default=True, env="AUTO_SEARCH_ENABLED", description="是否自动搜索")
     confidence_threshold: float = Field(default=0.5, env="SEARCH_CONFIDENCE_THRESHOLD", description="搜索置信度阈值")
+    provider: str = Field(
+        default="deepseek",
+        env="WEB_SEARCH_PROVIDER",
+        description="网络搜索提供商：deepseek / baidu",
+    )
 
 
 class KnowledgeBaseSettings(BaseSettings):
@@ -291,9 +305,10 @@ class JubenSettings(BaseSettings):
     log_level: str = Field(default="INFO", env="LOG_LEVEL", description="日志级别")
     
     # 默认模型提供商
-    default_provider: str = Field(default="dashscope", env="DEFAULT_MODEL_PROVIDER", description="默认模型提供商（阿里云DashScope）")
+    default_provider: str = Field(default="deepseek", env="DEFAULT_MODEL_PROVIDER", description="默认模型提供商（DeepSeek）")
 
     # 模型配置
+    deepseek: Optional[DeepSeekSettings] = None
     dashscope: Optional[DashScopeSettings] = None
     zhipu: Optional[ZhipuSettings] = None
     openrouter: Optional[OpenRouterSettings] = None
@@ -329,6 +344,13 @@ class JubenSettings(BaseSettings):
     
     def _load_model_configs(self):
         """加载模型配置"""
+        # DeepSeek（默认主力）
+        if os.getenv("DEEPSEEK_API_KEY"):
+            try:
+                self.deepseek = DeepSeekSettings()
+            except Exception:
+                pass
+
         # DashScope配置（阿里云）
         if os.getenv("DASHSCOPE_API_KEY"):
             try:
@@ -374,6 +396,8 @@ class JubenSettings(BaseSettings):
     def get_available_providers(self) -> List[str]:
         """获取可用的模型提供商列表"""
         providers = []
+        if self.deepseek:
+            providers.append("deepseek")
         if self.dashscope:
             providers.append("dashscope")
         if self.zhipu:
@@ -391,6 +415,7 @@ class JubenSettings(BaseSettings):
     def get_model_config(self, provider: str) -> Optional[ModelSettings]:
         """获取指定提供商的配置"""
         config_map = {
+            "deepseek": self.deepseek,
             "dashscope": self.dashscope,
             "zhipu": self.zhipu,
             "openrouter": self.openrouter,
@@ -404,7 +429,7 @@ class JubenSettings(BaseSettings):
         available = self.get_available_providers()
         if self.default_provider in available:
             return self.default_provider
-        return available[0] if available else "zhipu"
+        return available[0] if available else "deepseek"
     
     def load_from_yaml(self, yaml_path: str):
         """从YAML文件加载配置"""

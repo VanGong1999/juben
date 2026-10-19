@@ -42,7 +42,7 @@ class CharacterProfileGeneratorAgent(BaseJubenAgent):
     5. 确保至少8个人物
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         """初始化人物小传生成智能体"""
         super().__init__("character_profile_generator", model_provider)
 

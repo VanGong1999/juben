@@ -14,7 +14,7 @@
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
@@ -181,6 +181,16 @@ async def update_user_profile(request: UserProfileUpdate) -> UserProfileResponse
         if success:
             # 获取更新后的画像
             updated_profile = await manager.get_profile(request.user_id)
+            # 同步到五层记忆 USER.md（常驻画像）
+            try:
+                from utils.agent_memory import get_agent_memory_service
+
+                if updated_profile:
+                    get_agent_memory_service().sync_user_profile_to_resident(
+                        request.user_id, updated_profile.to_dict()
+                    )
+            except Exception as sync_err:
+                logger.warning(f"同步 USER.md 失败: {sync_err}")
             return UserProfileResponse(
                 success=True,
                 data=updated_profile.to_dict() if updated_profile else None
@@ -583,3 +593,576 @@ async def get_user_statistics(user_id: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"获取用户统计失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== 五层 Agent Memory（生产级） ====================
+
+class AgentMemoryAssembleRequest(BaseModel):
+    user_id: str
+    drama_id: Optional[str] = None
+    query: str = ""
+    budget_chars: int = 8000
+
+
+class AgentMemoryFactRequest(BaseModel):
+    drama_id: str
+    entity_type: str
+    entity_id: str
+    predicate: str
+    value: Any
+    confidence: str = "fact"
+    user_id: Optional[str] = None
+    pinned: bool = False
+    expected_version: Optional[int] = None
+
+
+class AgentMemoryEpisodeRequest(BaseModel):
+    user_id: str
+    agent_id: str
+    task_description: str
+    drama_id: Optional[str] = None
+    session_id: Optional[str] = None
+    outcome: str = "success"
+    approach: str = ""
+    resolution: str = ""
+    tags: Optional[List[str]] = None
+
+
+class AgentMemoryTextRequest(BaseModel):
+    content: str
+    expected_version: Optional[str] = None
+    session_id: Optional[str] = None
+
+
+@router.get("/agent-memory/overview")
+async def agent_memory_overview(
+    user_id: str = Query(...),
+    drama_id: Optional[str] = Query(None),
+):
+    """五层记忆总览：规则/常驻/情节/语义/程序 + 本体"""
+    try:
+        from utils.agent_memory import get_agent_memory_service
+
+        return {"success": True, "data": get_agent_memory_service().overview(user_id, drama_id)}
+    except Exception as e:
+        logger.error(f"agent memory overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/agent-memory/assemble")
+async def agent_memory_assemble(request: AgentMemoryAssembleRequest):
+    """组装工作记忆注入块（受预算约束）"""
+    try:
+        from utils.agent_memory import get_agent_memory_service
+
+        bundle = get_agent_memory_service().assemble_working_memory(
+            user_id=request.user_id,
+            drama_id=request.drama_id,
+            query=request.query,
+            budget_chars=request.budget_chars,
+        )
+        return {"success": True, "data": bundle.to_dict()}
+    except Exception as e:
+        logger.error(f"agent memory assemble: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agent-memory/rules/{drama_id}")
+async def get_drama_rules(drama_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    return {"success": True, "data": {"content": get_agent_memory_service().get_rules(drama_id)}}
+
+
+@router.put("/agent-memory/rules/{drama_id}")
+async def put_drama_rules(drama_id: str, request: AgentMemoryTextRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        result = get_agent_memory_service().set_rules(
+            drama_id, request.content, expected_version=request.expected_version, session_id=request.session_id
+        )
+        return {"success": True, "data": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/agent-memory/resident")
+async def get_resident(
+    user_id: str = Query(...),
+    drama_id: Optional[str] = Query(None),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    svc = get_agent_memory_service()
+    return {
+        "success": True,
+        "data": {
+            "user_md": svc.get_user_resident(user_id),
+            "memory_md": svc.get_drama_resident(drama_id) if drama_id else "",
+        },
+    }
+
+
+@router.put("/agent-memory/resident/user/{user_id}")
+async def put_user_resident(user_id: str, request: AgentMemoryTextRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        result = get_agent_memory_service().set_user_resident(
+            user_id, request.content, expected_version=request.expected_version, session_id=request.session_id
+        )
+        return {"success": True, "data": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.put("/agent-memory/resident/drama/{drama_id}")
+async def put_drama_resident(drama_id: str, request: AgentMemoryTextRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        result = get_agent_memory_service().set_drama_resident(
+            drama_id, request.content, expected_version=request.expected_version, session_id=request.session_id
+        )
+        return {"success": True, "data": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/agent-memory/episodes/{drama_id}")
+async def list_memory_episodes(
+    drama_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    q: Optional[str] = Query(None),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    svc = get_agent_memory_service()
+    data = svc.search_episodes(drama_id, q or "", top_k=limit) if q else svc.list_episodes(drama_id, limit=limit)
+    return {"success": True, "data": data, "total": len(data)}
+
+
+@router.post("/agent-memory/episodes")
+async def create_memory_episode(request: AgentMemoryEpisodeRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    ep = get_agent_memory_service().record_agent_turn(
+        user_id=request.user_id,
+        agent_id=request.agent_id,
+        task_description=request.task_description,
+        drama_id=request.drama_id,
+        session_id=request.session_id,
+        outcome=request.outcome,
+        approach=request.approach,
+        resolution=request.resolution,
+        tags=request.tags,
+    )
+    return {"success": True, "data": ep.to_dict()}
+
+
+@router.get("/agent-memory/facts/{drama_id}")
+async def list_memory_facts(
+    drama_id: str,
+    q: Optional[str] = Query(None),
+    active_only: bool = Query(True),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    svc = get_agent_memory_service()
+    data = svc.search_facts(drama_id, q or "", top_k=50) if q else svc.list_facts(drama_id, active_only=active_only)
+    return {"success": True, "data": data, "total": len(data)}
+
+
+@router.post("/agent-memory/facts")
+async def upsert_memory_fact(request: AgentMemoryFactRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        fact = get_agent_memory_service().upsert_fact(
+            drama_id=request.drama_id,
+            entity_type=request.entity_type,
+            entity_id=request.entity_id,
+            predicate=request.predicate,
+            value=request.value,
+            confidence=request.confidence,
+            user_id=request.user_id,
+            pinned=request.pinned,
+            expected_version=request.expected_version,
+        )
+        if isinstance(fact, dict) and fact.get("conflict"):
+            return {"success": False, "conflict": True, "data": fact}
+        return {"success": True, "data": fact}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/agent-memory/forget/{drama_id}")
+async def run_memory_forgetting(drama_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    return {"success": True, "data": get_agent_memory_service().run_forgetting(drama_id)}
+
+
+@router.post("/agent-memory/dream/{drama_id}")
+async def run_memory_dream(
+    drama_id: str,
+    user_id: Optional[str] = Query(None),
+    auto_promote: bool = Query(True),
+    compress_resident: bool = Query(True),
+):
+    """空闲离线整理：遗忘 + 反思沉淀 + MEMORY 压缩 + 技能晋升 + 向量重建。"""
+    from utils.agent_memory import get_agent_memory_service
+
+    data = get_agent_memory_service().run_dream(
+        drama_id,
+        user_id=user_id,
+        auto_promote=auto_promote,
+        compress_resident=compress_resident,
+    )
+    return {"success": True, "data": data}
+
+
+@router.post("/agent-memory/promote-skill/{drama_id}")
+async def promote_memory_skill(
+    drama_id: str,
+    name: str = Query(...),
+    trigger: str = Query(...),
+    min_success: int = Query(3, ge=2, le=20),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    skill = get_agent_memory_service().promote_skill_from_episodes(
+        drama_id, name=name, trigger=trigger, min_success=min_success
+    )
+    if not skill:
+        return {"success": False, "error": f"成功次数不足 {min_success}，未晋升"}
+    return {"success": True, "data": skill}
+
+
+@router.get("/agent-memory/skills/{drama_id}")
+async def list_memory_skills(
+    drama_id: str,
+    enabled_only: bool = Query(False),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    data = get_agent_memory_service().list_promoted_skills(drama_id, enabled_only=enabled_only)
+    return {"success": True, "data": data, "total": len(data)}
+
+
+class SkillToggleRequest(BaseModel):
+    enabled: bool
+    user_id: Optional[str] = None
+
+
+@router.patch("/agent-memory/skills/{drama_id}/{skill_id}")
+async def toggle_memory_skill(drama_id: str, skill_id: str, request: SkillToggleRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    ok = get_agent_memory_service().set_skill_enabled(
+        drama_id, skill_id, request.enabled, user_id=request.user_id
+    )
+    if not ok:
+        raise HTTPException(status_code=404, detail="skill not found")
+    return {"success": True}
+
+
+@router.delete("/agent-memory/skills/{drama_id}/{skill_id}")
+async def delete_memory_skill(
+    drama_id: str,
+    skill_id: str,
+    user_id: Optional[str] = Query(None),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    ok = get_agent_memory_service().delete_skill(drama_id, skill_id, user_id=user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="skill not found")
+    return {"success": True}
+
+
+class FactPatchRequest(BaseModel):
+    value: Optional[Any] = None
+    confidence: Optional[str] = None
+    pinned: Optional[bool] = None
+    status: Optional[str] = None
+    user_id: Optional[str] = None
+    expected_version: Optional[int] = None
+
+
+@router.patch("/agent-memory/facts/{drama_id}/{fact_id}")
+async def patch_memory_fact(drama_id: str, fact_id: str, request: FactPatchRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    fact = get_agent_memory_service().update_fact(
+        drama_id,
+        fact_id,
+        value=request.value,
+        confidence=request.confidence,
+        pinned=request.pinned,
+        status=request.status,
+        user_id=request.user_id,
+        expected_version=request.expected_version,
+    )
+    if not fact:
+        raise HTTPException(status_code=404, detail="fact not found")
+    if isinstance(fact, dict) and fact.get("conflict"):
+        return {"success": False, "conflict": True, "data": fact}
+    return {"success": True, "data": fact}
+
+
+@router.delete("/agent-memory/facts/{drama_id}/{fact_id}")
+async def delete_memory_fact(
+    drama_id: str,
+    fact_id: str,
+    user_id: Optional[str] = Query(None),
+    hard: bool = Query(False),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    ok = get_agent_memory_service().delete_fact(drama_id, fact_id, user_id=user_id, hard=hard)
+    if not ok:
+        raise HTTPException(status_code=404, detail="fact not found")
+    return {"success": True}
+
+
+@router.get("/agent-memory/episodes/{drama_id}/{episode_id}")
+async def get_memory_episode(drama_id: str, episode_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    ep = get_agent_memory_service().get_episode(drama_id, episode_id)
+    if not ep:
+        raise HTTPException(status_code=404, detail="episode not found")
+    return {"success": True, "data": ep}
+
+
+@router.delete("/agent-memory/episodes/{drama_id}/{episode_id}")
+async def delete_memory_episode(
+    drama_id: str,
+    episode_id: str,
+    user_id: Optional[str] = Query(None),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    ok = get_agent_memory_service().soft_delete_episode(drama_id, episode_id, user_id=user_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="episode not found")
+    return {"success": True}
+
+
+class EpisodePinRequest(BaseModel):
+    pinned: bool = True
+
+
+@router.post("/agent-memory/episodes/{drama_id}/{episode_id}/pin")
+async def pin_memory_episode(drama_id: str, episode_id: str, request: EpisodePinRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    ok = get_agent_memory_service().pin_episode(drama_id, episode_id, request.pinned)
+    if not ok:
+        raise HTTPException(status_code=404, detail="episode not found")
+    return {"success": True}
+
+
+@router.post("/agent-memory/episodes/{drama_id}/{episode_id}/reflect")
+async def reflect_memory_episode(
+    drama_id: str,
+    episode_id: str,
+    user_id: Optional[str] = Query(None),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    ref = get_agent_memory_service().reflect_on_episode(drama_id, episode_id, user_id=user_id)
+    if not ref:
+        raise HTTPException(status_code=404, detail="episode not found")
+    return {"success": True, "data": ref}
+
+
+@router.get("/agent-memory/reflections/{drama_id}")
+async def list_memory_reflections(drama_id: str, limit: int = Query(50, ge=1, le=200)):
+    from utils.agent_memory import get_agent_memory_service
+
+    data = get_agent_memory_service().list_reflections(drama_id, limit=limit)
+    return {"success": True, "data": data, "total": len(data)}
+
+
+@router.get("/agent-memory/audit/{drama_id}")
+async def list_memory_audit(drama_id: str, limit: int = Query(100, ge=1, le=500)):
+    from utils.agent_memory import get_agent_memory_service
+
+    data = get_agent_memory_service().list_audit(drama_id, limit=limit)
+    return {"success": True, "data": data, "total": len(data)}
+
+
+@router.get("/agent-memory/slice/{drama_id}")
+async def read_memory_slice(
+    drama_id: str,
+    path: str = Query(..., description="相对 memory/ 的路径，如 topics/foo.md"),
+    offset: int = Query(0, ge=0),
+    length: int = Query(2000, ge=1, le=20000),
+):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        data = get_agent_memory_service().read_memory_slice(
+            drama_id, relative_path=path, offset=offset, length=length
+        )
+        return {"success": True, "data": data}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="file not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/agent-memory/reindex/{drama_id}")
+async def reindex_memory_vectors(drama_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    return {"success": True, "data": get_agent_memory_service().rebuild_vector_index(drama_id)}
+
+
+@router.get("/agent-memory/search/{drama_id}")
+async def search_memory_hybrid(
+    drama_id: str,
+    q: str = Query(...),
+    top_k: int = Query(8, ge=1, le=30),
+    layer: Optional[str] = Query(None),
+):
+    """混合检索：向量 ANN + 关键词（对齐架构图 Working Memory 注入）。"""
+    from utils.agent_memory import get_agent_memory_service
+
+    svc = get_agent_memory_service()
+    return {
+        "success": True,
+        "data": {
+            "vector": svc.vector_search(drama_id, q, top_k=top_k, layer=layer),
+            "episodic": svc.search_episodes(drama_id, q, top_k=top_k) if layer in (None, "episodic", "all") else [],
+            "semantic": svc.search_facts(drama_id, q, top_k=top_k) if layer in (None, "semantic", "all") else [],
+        },
+    }
+
+
+# ==================== 版本链 / 导出 / 脱敏 / Org ====================
+
+@router.get("/agent-memory/versions/{drama_id}")
+async def list_memory_versions(drama_id: str, target: Optional[str] = Query(None)):
+    from utils.agent_memory import get_agent_memory_service
+
+    data = get_agent_memory_service().list_memory_versions(drama_id, target=target)
+    return {"success": True, "data": data, "total": len(data)}
+
+
+@router.get("/agent-memory/versions/{drama_id}/{version_id}")
+async def get_memory_version(drama_id: str, version_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    data = get_agent_memory_service().get_memory_version(drama_id, version_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="version not found")
+    return {"success": True, "data": data}
+
+
+@router.get("/agent-memory/versions/{drama_id}/{version_id}/diff")
+async def diff_memory_version(drama_id: str, version_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    diff = get_agent_memory_service().diff_memory_version(drama_id, version_id)
+    return {"success": True, "data": {"version_id": version_id, "diff": diff}}
+
+
+@router.post("/agent-memory/versions/{drama_id}/{version_id}/rollback")
+async def rollback_memory_version(drama_id: str, version_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        result = get_agent_memory_service().rollback_memory_version(drama_id, version_id)
+        return {"success": True, "data": result}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/agent-memory/export/{drama_id}")
+async def export_agent_memory(drama_id: str):
+    from utils.agent_memory import get_agent_memory_service
+
+    return {"success": True, "data": get_agent_memory_service().export_memory(drama_id)}
+
+
+class RedactRequest(BaseModel):
+    preview: bool = True
+
+
+@router.post("/agent-memory/redact/{drama_id}")
+async def redact_agent_memory(drama_id: str, request: RedactRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    return {"success": True, "data": get_agent_memory_service().redact_memory(drama_id, preview=request.preview)}
+
+
+@router.get("/agent-memory/org")
+async def get_org_memory():
+    from utils.agent_memory import get_agent_memory_service
+
+    svc = get_agent_memory_service()
+    return {
+        "success": True,
+        "data": {
+            "resident": svc.get_org_resident(),
+            "facts": svc.list_org_facts(active_only=False),
+            "versions": svc.list_org_versions(),
+        },
+    }
+
+
+class OrgResidentRequest(BaseModel):
+    content: str
+    expected_version: Optional[str] = None
+    session_id: Optional[str] = None
+
+
+@router.post("/agent-memory/org/resident")
+async def set_org_resident(request: OrgResidentRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        result = get_agent_memory_service().set_org_resident(
+            request.content, expected_version=request.expected_version, session_id=request.session_id
+        )
+        return {"success": True, "data": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class OrgFactRequest(BaseModel):
+    entity_type: str
+    entity_id: str
+    predicate: str
+    value: Any
+    confidence: str = "fact"
+    pinned: bool = False
+
+
+@router.post("/agent-memory/org/facts")
+async def upsert_org_fact(request: OrgFactRequest):
+    from utils.agent_memory import get_agent_memory_service
+
+    try:
+        fact = get_agent_memory_service().upsert_org_fact(
+            entity_type=request.entity_type,
+            entity_id=request.entity_id,
+            predicate=request.predicate,
+            value=request.value,
+            confidence=request.confidence,
+            pinned=request.pinned,
+        )
+        return {"success": True, "data": fact}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/agent-memory/org/dream")
+async def run_org_dream():
+    from utils.agent_memory import get_agent_memory_service
+
+    return {"success": True, "data": get_agent_memory_service().run_org_dream()}

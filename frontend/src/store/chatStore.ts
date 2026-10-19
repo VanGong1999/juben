@@ -4,9 +4,12 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Message, MessageStatus, Thought } from '@/types';
+import type { Message, MessageStatus, ProcessStepMeta, Thought } from '@/types';
 import { sendMessageToAgent } from '@/services/chatService';
 import { useWorkspaceStore } from '@/store/workspaceStore';
+import { saveDramaArtifact } from '@/services/dramaService';
+import { getAgentById } from '@/config/agents';
+import { mergeProcessStep } from '@/utils/agentStreamEvents';
 
 interface ChatState {
   messages: Message[];
@@ -26,6 +29,7 @@ interface ChatState {
 
   setCurrentSession: (sessionId: string) => void;
   clearCurrentSession: () => void;
+  newSession: () => void;
 
   setStreamingMessageId: (id: string | null) => void;
   setIsStreaming: (isStreaming: boolean) => void;
@@ -120,6 +124,7 @@ export const useChatStore = create<ChatState>()(
       // Session actions
       setCurrentSession: (sessionId) => set({ currentSession: sessionId }),
       clearCurrentSession: () => set({ currentSession: null }),
+      newSession: () => set({ messages: [], currentSession: null, thoughtChain: [] }),
 
       // Streaming actions
       setStreamingMessageId: (id) => set({ streamingMessageId: id }),
@@ -156,6 +161,7 @@ export const useChatStore = create<ChatState>()(
       // 新增：发送消息
       sendMessage: async (content: string, agentId: string) => {
         const state = get();
+        const agentMeta = getAgentById(agentId);
 
         // 添加用户消息
         const userMessage: Message = {
@@ -163,77 +169,202 @@ export const useChatStore = create<ChatState>()(
           role: 'user',
           content,
           timestamp: new Date().toISOString(),
-          status: 'streaming',
+          status: 'complete',
         };
         state.addMessage(userMessage);
 
-        // 清空之前的思维链和流式消息
+        // 流式助手占位（过程 + 正文都挂在这条上）
+        const assistantId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const processSteps: ProcessStepMeta[] = [];
+        state.addMessage({
+          id: assistantId,
+          role: 'assistant',
+          content: '',
+          timestamp: new Date().toISOString(),
+          status: 'streaming',
+          agentName: agentMeta?.displayName,
+          agentId,
+          metadata: {
+            agentId,
+            processSteps: [],
+            thoughtChain: [],
+          },
+        });
+
         state.setThoughtChain([]);
         state.setStreamingMessage('');
+        state.setStreamingMessageId(assistantId);
         state.setIsStreaming(true);
 
+        // 保证有稳定 session_id（新对话自动生成）
+        if (!get().currentSession) {
+          set({
+            currentSession: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          });
+        }
+        const sessionId = get().currentSession as string;
+
+        const pushStep = (step: ProcessStepMeta) => {
+          processSteps.push(step);
+          state.updateMessageMetadata(assistantId, () => ({
+            processSteps: [...processSteps],
+          }));
+        };
+
+        const replaceSteps = (next: ProcessStepMeta[]) => {
+          processSteps.length = 0;
+          processSteps.push(...next);
+          state.updateMessageMetadata(assistantId, () => ({
+            processSteps: [...processSteps],
+          }));
+        };
+
         try {
-          // 调用流式 API
           await sendMessageToAgent(
             content,
             agentId,
-            // onChunk callback
             (chunk: string, isThought: boolean) => {
-              if (isThought) {
-                return;
-              } else {
-                // 更新流式消息
-                const current = get().streamingMessage || '';
-                state.setStreamingMessage(current + chunk);
-              }
+              if (isThought) return;
+              const current = get().streamingMessage || '';
+              const next = current + chunk;
+              state.setStreamingMessage(next);
+              state.updateMessage(assistantId, { content: next, status: 'streaming' });
             },
-            // onThought callback
             (thought: Thought) => {
               state.appendThought(thought);
-            }
+              pushStep({
+                id: `th-${thought.step}`,
+                kind: thought.type || 'thinking',
+                title: thought.content.slice(0, 160),
+                detail: thought.content.length > 160 ? thought.content : undefined,
+                status: 'done',
+                timestamp: thought.timestamp,
+              });
+              state.updateMessageMetadata(assistantId, () => ({
+                thoughtChain: get().thoughtChain,
+              }));
+            },
+            (ev) => {
+              replaceSteps(mergeProcessStep(processSteps as any, ev) as ProcessStepMeta[]);
+              if (ev.event === 'system') {
+                state.updateMessageMetadata(assistantId, () => ({
+                  systemEvents: [
+                    {
+                      content:
+                        typeof ev.data === 'string'
+                          ? ev.data
+                          : String(ev.data?.content || ''),
+                      timestamp: ev.timestamp,
+                    },
+                  ],
+                }));
+              }
+              if (String(ev.event).startsWith('tool')) {
+                state.updateMessageMetadata(assistantId, () => ({
+                  toolEvents: [{ event: ev.event, data: ev.data, timestamp: ev.timestamp }],
+                }));
+              }
+            },
+            sessionId
           );
 
-          // 流式完成，创建助手消息
-          const assistantMessage: Message = {
-            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            role: 'assistant',
-            content: get().streamingMessage || '',
-            timestamp: new Date().toISOString(),
+          const finalContent = get().streamingMessage || '';
+          state.updateMessage(assistantId, {
+            content: finalContent,
             status: 'complete',
-            metadata: {
-              agentId,
-              thoughtChain: get().thoughtChain,
-            },
+          });
+          state.updateMessageMetadata(assistantId, () => ({
+            processSteps: [...processSteps],
+            thoughtChain: get().thoughtChain,
+          }));
+
+          const assistantMessage = get().messages.find((m) => m.id === assistantId) || {
+            id: assistantId,
+            role: 'assistant' as const,
+            content: finalContent,
+            timestamp: new Date().toISOString(),
+            status: 'complete' as const,
+            metadata: { agentId, processSteps, thoughtChain: get().thoughtChain },
           };
-          state.addMessage(assistantMessage);
 
           // 更新工作区内容
           const assistantContent = assistantMessage.content;
           if (assistantContent) {
+            const titleBase = agentMeta?.displayName || agentId;
             useWorkspaceStore.getState().setContent({
               id: assistantMessage.id,
               type: 'document',
-              title: `${agentId} 生成结果`,
+              title: `${titleBase} 生成结果`,
               content: assistantContent,
               metadata: {
                 agentId,
+                agentName: titleBase,
                 timestamp: assistantMessage.timestamp,
               },
             });
+
+            // 绑定作品时：自动归档专家产物到该剧 Artifacts
+            const dramaId =
+              localStorage.getItem('dramaId') ||
+              localStorage.getItem('projectId') ||
+              '';
+            if (dramaId && assistantContent.trim().length >= 40) {
+              const skipAgents = new Set([
+                'websearch',
+                'text_splitter',
+                'text_truncator',
+                'output_formatter',
+                'file_reference',
+                'series_name_extractor',
+              ]);
+              if (!skipAgents.has(agentId)) {
+                void saveDramaArtifact(dramaId, {
+                  content: assistantContent,
+                  agent_id: agentId,
+                  agent_name: titleBase,
+                  category: agentMeta?.category || '',
+                  title: `${titleBase} · ${new Date().toLocaleString('zh-CN', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}`,
+                  user_prompt: content.slice(0, 500),
+                  sync_bible: true,
+                })
+                  .then(() => {
+                    window.dispatchEvent(
+                      new CustomEvent('drama-artifacts-updated', { detail: { dramaId } })
+                    );
+                  })
+                  .catch((err) => {
+                    console.warn('[chatStore] 归档产物失败', err);
+                  });
+              }
+            }
           }
         } catch (error) {
           console.error('[chatStore] Send message error:', error);
-          // 添加错误消息
-          state.addMessage({
-            id: `msg_${Date.now()}_error`,
-            role: 'assistant',
-            content: `发送失败: ${error instanceof Error ? error.message : '未知错误'}`,
-            timestamp: new Date().toISOString(),
+          state.updateMessage(assistantId, {
+            content:
+              get().streamingMessage ||
+              `发送失败: ${error instanceof Error ? error.message : '未知错误'}`,
             status: 'error',
           });
         } finally {
           state.setIsStreaming(false);
           state.setStreamingMessage(null);
+          state.setStreamingMessageId(null);
+
+          // 对话结束后刷新作品面板：若专家在对话里用 save_drama_part 直接改了小传/大纲/剧本，
+          // 左侧 artifacts / bible / outline / episodes 需要重新拉取。
+          const dramaId =
+            localStorage.getItem('dramaId') || localStorage.getItem('projectId') || '';
+          if (dramaId) {
+            window.dispatchEvent(
+              new CustomEvent('drama-artifacts-updated', { detail: { dramaId } })
+            );
+          }
         }
       },
     }),

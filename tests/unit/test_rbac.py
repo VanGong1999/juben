@@ -17,10 +17,10 @@ class TestRoleEnum:
 
         assert Role.USER.value == "user"
         assert Role.ADMIN.value == "admin"
-        assert Role.MODERATOR.value == "moderator"
-        assert Role.EDITOR.value == "editor"
-        assert Role.VIEWER.value == "viewer"
-        assert Role.SYSTEM_ADMIN.value == "system_admin"
+        assert Role.OPERATOR.value == "operator"
+        assert Role.DEVELOPER.value == "developer"
+        assert Role.ANALYST.value == "analyst"
+        assert Role.GUEST.value == "guest"
 
     def test_role_from_string(self):
         """Test creating Role from string value"""
@@ -32,9 +32,8 @@ class TestRoleEnum:
     def test_invalid_role(self):
         """Test invalid role raises error"""
         from utils.rbac import Role
-        from enum import ValidationError
 
-        with pytest.raises((ValueError, KeyError)):
+        with pytest.raises(ValueError):
             Role("invalid_role")
 
 
@@ -48,7 +47,8 @@ class TestPermissionEnum:
 
         # System permissions
         assert Permission.SYSTEM_ADMIN in Permission
-        assert Permission.SYSTEM_READ in Permission
+        assert Permission.SYSTEM_MONITOR in Permission
+        assert Permission.SYSTEM_CONFIG in Permission
 
         # User permissions
         assert Permission.USER_CREATE in Permission
@@ -56,11 +56,11 @@ class TestPermissionEnum:
         assert Permission.USER_UPDATE in Permission
         assert Permission.USER_DELETE in Permission
 
-        # Content permissions
-        assert Permission.CONTENT_CREATE in Permission
-        assert Permission.CONTENT_READ in Permission
-        assert Permission.CONTENT_UPDATE in Permission
-        assert Permission.CONTENT_DELETE in Permission
+        # Project (content) permissions
+        assert Permission.PROJECT_CREATE in Permission
+        assert Permission.PROJECT_READ in Permission
+        assert Permission.PROJECT_UPDATE in Permission
+        assert Permission.PROJECT_DELETE in Permission
 
     def test_permission_values_are_unique(self):
         """Test all permission values are unique"""
@@ -155,11 +155,11 @@ class TestRBACChecker:
         """Test viewer role only has read permissions"""
         from utils.rbac import Role, Permission
 
-        permissions = checker.get_permissions_for_roles([Role.VIEWER])
+        permissions = checker.get_permissions_for_roles([Role.GUEST])
 
-        # Viewers should only have read permissions
-        assert Permission.CONTENT_READ in permissions
-        assert Permission.CONTENT_CREATE not in permissions
+        # Guests should only have read permissions
+        assert Permission.PROJECT_READ in permissions
+        assert Permission.PROJECT_CREATE not in permissions
 
     def test_check_permission_for_role(self, checker):
         """Test checking permission for specific role"""
@@ -169,9 +169,9 @@ class TestRBACChecker:
         assert checker.role_has_permission(Role.ADMIN, Permission.SYSTEM_ADMIN)
         assert checker.role_has_permission(Role.ADMIN, Permission.USER_CREATE)
 
-        # Viewer should only have read
-        assert checker.role_has_permission(Role.VIEWER, Permission.CONTENT_READ)
-        assert not checker.role_has_permission(Role.VIEWER, Permission.CONTENT_DELETE)
+        # Guest should only have read
+        assert checker.role_has_permission(Role.GUEST, Permission.PROJECT_READ)
+        assert not checker.role_has_permission(Role.GUEST, Permission.PROJECT_DELETE)
 
 
 @pytest.mark.unit
@@ -179,10 +179,10 @@ class TestRBACDecorator:
     """Test RBAC decorator functions"""
 
     def test_require_permissions_decorator(self):
-        """Test require_permissions decorator"""
-        from utils.rbac import require_permissions, Permission
+        """Test require_permission decorator"""
+        from utils.rbac import require_permission, Permission
 
-        @require_permissions([Permission.USER_READ])
+        @require_permission(Permission.USER_READ)
         def read_user_function():
             return "success"
 
@@ -190,13 +190,13 @@ class TestRBACDecorator:
         assert read_user_function.__name__ == "read_user_function"
 
     def test_require_permissions_multiple(self):
-        """Test require_permissions with multiple permissions"""
-        from utils.rbac import require_permissions, Permission
+        """Test require_permission with multiple permissions"""
+        from utils.rbac import require_permission, Permission
 
-        @require_permissions([
+        @require_permission(
             Permission.USER_CREATE,
             Permission.USER_UPDATE
-        ])
+        )
         def manage_user_function():
             return "success"
 
@@ -218,7 +218,7 @@ class TestRBACIntegration:
         permissions = checker.get_permissions_for_roles(user_roles)
 
         assert len(permissions) > 0
-        assert Permission.CONTENT_READ in permissions
+        assert Permission.PROJECT_READ in permissions
 
     def test_mixed_role_permissions(self):
         """Test permissions with mixed roles"""
@@ -227,12 +227,12 @@ class TestRBACIntegration:
         checker = RBACChecker()
 
         # User with multiple roles
-        user_roles = [Role.VIEWER, Role.EDITOR]
+        user_roles = [Role.GUEST, Role.USER]
         permissions = checker.get_permissions_for_roles(user_roles)
 
         # Should have union of permissions
-        assert Permission.CONTENT_READ in permissions  # From VIEWER
-        assert Permission.CONTENT_UPDATE in permissions  # From EDITER
+        assert Permission.PROJECT_READ in permissions  # From GUEST
+        assert Permission.PROJECT_UPDATE in permissions  # From USER
 
     def test_role_hierarchy(self):
         """Test that admin role has more permissions than user"""

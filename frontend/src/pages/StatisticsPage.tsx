@@ -17,7 +17,9 @@ import {
   Download,
   Filter,
 } from 'lucide-react';
+import AppShell from '@/components/layout/AppShell';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 import { statisticsService, SystemStats, DailyStats, SystemHealth, ResponseTimeDistribution, AgentUsageStats } from '@/services/statisticsService';
 
 interface StatCard {
@@ -38,6 +40,7 @@ interface UsageData {
 
 export const StatisticsPage: React.FC = () => {
   const { success, error } = useNotificationStore();
+  const { t, language } = useI18n();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
   const [isLoading, setIsLoading] = useState(false);
   const [statsData, setStatsData] = useState<SystemStats>({
@@ -74,7 +77,7 @@ export const StatisticsPage: React.FC = () => {
 
       // 转换每日数据
       const data: UsageData[] = dailyStats.map((stat) => ({
-        date: new Date(stat.date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
+        date: new Date(stat.date).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' }),
         users: stat.unique_users,
         messages: stat.access_count,
         tokens: 0, // 暂无token数据
@@ -82,7 +85,7 @@ export const StatisticsPage: React.FC = () => {
       }));
       setUsageData(data);
     } catch (err: any) {
-      error('加载失败', err?.message || '无法加载统计数据');
+      error(t('toolbox.statistics.toast.loadFailed'), err?.message || t('toolbox.statistics.toast.loadFailedDesc'));
     } finally {
       setIsLoading(false);
     }
@@ -114,29 +117,29 @@ export const StatisticsPage: React.FC = () => {
 
   const statCards: StatCard[] = [
     {
-      title: '总访问次数',
+      title: t('toolbox.statistics.card.totalAccess'),
       value: statsData.total_access,
       change: '',
       changeType: 'increase',
       icon: Users,
     },
     {
-      title: '今日访问',
+      title: t('toolbox.statistics.card.todayAccess'),
       value: statsData.today_access,
       change: '',
       changeType: 'increase',
       icon: MessageSquare,
     },
     {
-      title: '今日独立用户',
+      title: t('toolbox.statistics.card.todayUsers'),
       value: statsData.today_unique_users,
       change: '',
       changeType: 'increase',
       icon: Activity,
     },
     {
-      title: '系统状态',
-      value: statsData.status === 'healthy' ? '正常' : statsData.status === 'degraded' ? '降级' : '异常',
+      title: t('toolbox.statistics.card.systemStatus'),
+      value: statsData.status === 'healthy' ? t('toolbox.statistics.status.healthy') : statsData.status === 'degraded' ? t('toolbox.statistics.status.degraded') : t('toolbox.statistics.status.error'),
       change: '',
       changeType: statsData.status === 'healthy' ? 'increase' : 'decrease',
       icon: Zap,
@@ -155,9 +158,9 @@ export const StatisticsPage: React.FC = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      success('导出成功', '统计数据已导出');
+      success(t('toolbox.statistics.toast.exportSuccess'), t('toolbox.statistics.toast.exported'));
     } catch (err) {
-      error('导出失败', '请稍后重试');
+      error(t('toolbox.statistics.toast.exportFailed'), t('toolbox.statistics.toast.retryLater'));
     } finally {
       setIsLoading(false);
     }
@@ -168,69 +171,56 @@ export const StatisticsPage: React.FC = () => {
   const agentUsageDistribution = agentUsage.map((agent) => ({
     name: agent.agent_name,
     usage: totalAgentUsage > 0 ? Math.round((agent.usage_count / totalAgentUsage) * 100) : 0,
-    color: 'bg-blue-500',
+    color: 'bg-atelier-teal',
   }));
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* 头部 */}
-      <div className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  统计分析
-                </h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  查看系统使用情况和性能指标
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                {/* 时间范围选择器 */}
-                <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                  {(['7d', '30d', '90d'] as const).map((range) => (
-                    <button
-                      key={range}
-                      onClick={() => setTimeRange(range)}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        timeRange === range
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {range === '7d' ? '7天' : range === '30d' ? '30天' : '90天'}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={handleExport}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
-                >
-                  <Download className="w-4 h-4" />
-                  {isLoading ? '导出中...' : '导出报告'}
-                </button>
-              </div>
-            </div>
+    <AppShell
+      title={t('toolbox.statistics.title')}
+      subtitle={t('toolbox.statistics.subtitle')}
+      actions={
+        <div className="flex items-center gap-2">
+          {/* 时间范围选择器 */}
+          <div className="flex items-center bg-pearl-soft rounded-lg p-1">
+            {(['7d', '30d', '90d'] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  timeRange === range
+                    ? 'bg-white text-ink shadow-sm'
+                    : 'text-ink-muted hover:text-ink'
+                }`}
+              >
+                {range === '7d' ? t('toolbox.statistics.range.d7') : range === '30d' ? t('toolbox.statistics.range.d30') : t('toolbox.statistics.range.d90')}
+              </button>
+            ))}
           </div>
+          <button
+            onClick={handleExport}
+            disabled={isLoading}
+            className="btn btn-primary btn-sm disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            {isLoading ? t('toolbox.statistics.exporting') : t('toolbox.statistics.exportReport')}
+          </button>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      }
+    >
+      <div className="px-4 sm:px-8 lg:px-10 py-6 sm:py-8 max-w-6xl mx-auto space-y-6 sm:space-y-8">
         {/* 统计卡片 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statCards.map((card, index) => (
             <div
               key={index}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+              className="glass-panel p-6"
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-ink-muted">
                     {card.title}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                  <p className="text-2xl font-bold text-ink mt-2">
                     {card.value}
                   </p>
                   <div className="flex items-center mt-2">
@@ -244,19 +234,19 @@ export const StatisticsPage: React.FC = () => {
                     <span
                       className={`text-sm font-medium ${
                         card.changeType === 'increase'
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-red-600 dark:text-red-400'
+                          ? 'text-green-600'
+                          : 'text-red-600'
                       }`}
                     >
                       {card.change}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
-                      vs 上期
+                    <span className="text-sm text-ink-muted ml-1">
+                      {t('toolbox.statistics.vsLast')}
                     </span>
                   </div>
                 </div>
                 <div className="ml-4">
-                  <card.icon className="w-8 h-8 text-blue-500" />
+                  <card.icon className="w-8 h-8 text-atelier-teal" />
                 </div>
               </div>
             </div>
@@ -264,21 +254,21 @@ export const StatisticsPage: React.FC = () => {
         </div>
 
         {/* 图表区域 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* 使用趋势图 */}
-          <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="lg:col-span-2 glass-panel p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                使用趋势
+              <h2 className="text-lg font-semibold text-ink">
+                {t('toolbox.statistics.trend')}
               </h2>
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span className="text-gray-600 dark:text-gray-400">消息数</span>
+                  <span className="text-ink-muted">{t('toolbox.statistics.messages')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-gray-600 dark:text-gray-400">用户数</span>
+                  <span className="text-ink-muted">{t('toolbox.statistics.users')}</span>
                 </div>
               </div>
             </div>
@@ -297,7 +287,7 @@ export const StatisticsPage: React.FC = () => {
                         height: `${(item.messages / 700) * 100}%`,
                         minHeight: '4px',
                       }}
-                      title={`消息: ${item.messages}`}
+                      title={`${t('toolbox.statistics.messages')}: ${item.messages}`}
                     />
                     <div
                       className="flex-1 bg-green-500 rounded-t transition-all hover:bg-green-600"
@@ -305,11 +295,11 @@ export const StatisticsPage: React.FC = () => {
                         height: `${(item.users / 150) * 100}%`,
                         minHeight: '4px',
                       }}
-                      title={`用户: ${item.users}`}
+                      title={`${t('toolbox.statistics.users')}: ${item.users}`}
                     />
                   </div>
                   {index % Math.ceil(usageData.length / 7) === 0 && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400 transform -rotate-45 origin-top-left">
+                    <span className="text-xs text-ink-muted transform -rotate-45 origin-top-left">
                       {item.date}
                     </span>
                   )}
@@ -319,22 +309,22 @@ export const StatisticsPage: React.FC = () => {
           </div>
 
           {/* Agent使用分布 */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-              Agent使用分布
+          <div className="glass-panel p-6">
+            <h2 className="text-lg font-semibold text-ink mb-6">
+              {t('toolbox.statistics.agentDist')}
             </h2>
             <div className="space-y-4">
               {agentUsageDistribution.map((agent) => (
                 <div key={agent.name}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-sm text-ink-muted">
                       {agent.name}
                     </span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-ink">
                       {agent.usage}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-pearl-soft rounded-full h-2">
                     <div
                       className={`${agent.color} h-2 rounded-full transition-all`}
                       style={{ width: `${agent.usage}%` }}
@@ -347,49 +337,49 @@ export const StatisticsPage: React.FC = () => {
         </div>
 
         {/* 详细数据表格 */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              详细数据
+        <div className="glass-panel overflow-hidden">
+          <div className="px-6 py-4 border-b border-pearl-line">
+            <h2 className="text-lg font-semibold text-ink">
+              {t('toolbox.statistics.detail')}
             </h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+            <table className="min-w-full divide-y divide-pearl-line">
+              <thead className="bg-pearl-soft">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    日期
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase tracking-wider">
+                    {t('toolbox.statistics.table.date')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    活跃用户
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase tracking-wider">
+                    {t('toolbox.statistics.table.activeUsers')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    消息数
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase tracking-wider">
+                    {t('toolbox.statistics.table.messages')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Token使用
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase tracking-wider">
+                    {t('toolbox.statistics.table.token')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    平均响应时间
+                  <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase tracking-wider">
+                    {t('toolbox.statistics.table.avgResp')}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-pearl-line">
                 {usageData.slice(-7).map((item, index) => (
                   <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink">
                       {item.date}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink">
                       {item.users}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink">
                       {item.messages.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink">
                       {item.tokens.toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-ink">
                       {item.avgResponseTime ? `${item.avgResponseTime.toFixed(2)}s` : '-'}
                     </td>
                   </tr>
@@ -400,31 +390,31 @@ export const StatisticsPage: React.FC = () => {
         </div>
 
         {/* 性能指标 */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="glass-panel p-6">
             <div className="flex items-center gap-3 mb-4">
-              <Clock className="w-5 h-5 text-blue-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                响应时间分布
+              <Clock className="w-5 h-5 text-atelier-teal" />
+              <h3 className="text-lg font-semibold text-ink">
+                {t('toolbox.statistics.respDist')}
               </h3>
             </div>
             <div className="space-y-3">
               {responseTimeDist ? [
-                { label: '快速 (<1s)', value: responseTimeDist.fast, color: 'bg-green-500' },
-                { label: '正常 (1-2s)', value: responseTimeDist.normal, color: 'bg-blue-500' },
-                { label: '较慢 (2-5s)', value: responseTimeDist.slow, color: 'bg-yellow-500' },
-                { label: '超慢 (>5s)', value: responseTimeDist.very_slow, color: 'bg-red-500' },
+                { label: t('toolbox.statistics.fast'), value: responseTimeDist.fast, color: 'bg-green-500' },
+                { label: t('toolbox.statistics.normal'), value: responseTimeDist.normal, color: 'bg-blue-500' },
+                { label: t('toolbox.statistics.slow'), value: responseTimeDist.slow, color: 'bg-yellow-500' },
+                { label: t('toolbox.statistics.verySlow'), value: responseTimeDist.very_slow, color: 'bg-red-500' },
               ].map((item) => (
                 <div key={item.label}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-sm text-ink-muted">
                       {item.label}
                     </span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-medium text-ink">
                       {item.value}%
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div className="w-full bg-pearl-soft rounded-full h-2">
                     <div
                       className={`${item.color} h-2 rounded-full`}
                       style={{ width: `${item.value}%` }}
@@ -432,48 +422,48 @@ export const StatisticsPage: React.FC = () => {
                   </div>
                 </div>
               )) : (
-                <div className="text-sm text-gray-500">加载中...</div>
+                <div className="text-sm text-ink-muted">{t('toolbox.statistics.loading')}</div>
               )}
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <div className="glass-panel p-6">
             <div className="flex items-center gap-3 mb-4">
               <Activity className="w-5 h-5 text-purple-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                系统健康度
+              <h3 className="text-lg font-semibold text-ink">
+                {t('toolbox.statistics.health')}
               </h3>
             </div>
             <div className="space-y-4">
               {systemHealth ? (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      API可用性
+                    <span className="text-sm text-ink-muted">
+                      {t('toolbox.statistics.apiAvail')}
                     </span>
                     <span className="text-lg font-bold text-green-600">
                       {systemHealth.api_availability.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      错误率
+                    <span className="text-sm text-ink-muted">
+                      {t('toolbox.statistics.errorRate')}
                     </span>
                     <span className="text-lg font-bold text-green-600">
                       {systemHealth.error_rate.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      CPU使用率
+                    <span className="text-sm text-ink-muted">
+                      {t('toolbox.statistics.cpu')}
                     </span>
                     <span className="text-lg font-bold text-blue-600">
                       {systemHealth.cpu_usage.toFixed(0)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      内存使用率
+                    <span className="text-sm text-ink-muted">
+                      {t('toolbox.statistics.memory')}
                     </span>
                     <span className="text-lg font-bold text-yellow-600">
                       {systemHealth.memory_usage.toFixed(0)}%
@@ -481,13 +471,13 @@ export const StatisticsPage: React.FC = () => {
                   </div>
                 </>
               ) : (
-                <div className="text-sm text-gray-500">加载中...</div>
+                <div className="text-sm text-ink-muted">{t('toolbox.statistics.loading')}</div>
               )}
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 };
 

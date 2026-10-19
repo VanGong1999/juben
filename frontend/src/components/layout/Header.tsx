@@ -11,6 +11,7 @@ import { Menu, Settings, Square, PanelLeftOpen, PanelLeftClose, Info, MessageSqu
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 
 export default function Header() {
   const { toggleMobileMenu, setSettingsModalOpen, setSidebarOpen, sidebarOpen, sidebarCollapsed, toggleSidebarCollapsed, setSearchOpen } = useUIStore();
@@ -18,6 +19,7 @@ export default function Header() {
   const { activeAgentData } = useAgents();
   const { user, logout, isAdmin } = useAuthStore();
   const { success } = useNotificationStore();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [showAgentInfo, setShowAgentInfo] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -51,7 +53,7 @@ export default function Header() {
 
   const handleLogout = async () => {
     await logout();
-    success('登出成功', '您已安全退出');
+    success(t('studio.toast.logout'), t('studio.toast.logoutHint'));
     navigate('/login');
   };
 
@@ -63,7 +65,7 @@ export default function Header() {
         <button
           onClick={toggleMobileMenu}
           className="p-2 rounded-lg hover:bg-gray-100 lg:hidden hover-scale icon-bounce transition-all"
-          aria-label="打开菜单"
+          aria-label={t('ui.openMenu')}
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -73,8 +75,8 @@ export default function Header() {
           <button
             onClick={toggleSidebarCollapsed}
             className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 hover-scale icon-bounce transition-all"
-            aria-label={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
-            title={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
+            aria-label={sidebarCollapsed ? t('ui.expandSidebar') : t('ui.collapseSidebar')}
+            title={sidebarCollapsed ? t('ui.expandSidebar') : t('ui.collapseSidebar')}
           >
             {sidebarCollapsed ? (
               <PanelLeftOpen className="w-5 h-5" />
@@ -86,8 +88,8 @@ export default function Header() {
           <button
             onClick={() => setSidebarOpen(true)}
             className="hidden lg:block p-2 rounded-lg hover:bg-gray-100 hover-scale icon-bounce transition-all"
-            aria-label="打开侧边栏"
-            title="打开侧边栏"
+            aria-label={t('ui.openSidebar')}
+            title={t('ui.openSidebar')}
           >
             <PanelLeftOpen className="w-5 h-5" />
           </button>
@@ -98,7 +100,7 @@ export default function Header() {
           <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center group-hover:shadow-lg transition-shadow">
             <span className="text-white text-sm font-bold">剧</span>
           </div>
-          <h1 className="text-lg font-semibold hidden sm:block group-hover:underline-animated">剧本创作 Agent 平台</h1>
+          <h1 className="text-lg font-semibold hidden sm:block group-hover:underline-animated">{t('main.title')}</h1>
         </div>
 
         {/* 页面导航按钮 */}
@@ -112,7 +114,7 @@ export default function Header() {
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            工作区
+            {t('studio.header.nav.workspace')}
           </Link>
           <Link
             to="/baidu"
@@ -123,7 +125,7 @@ export default function Header() {
             }`}
           >
             <Search className="w-4 h-4" />
-            百度搜索
+            {t('studio.header.nav.baidu')}
           </Link>
           <Link
             to="/tools"
@@ -134,7 +136,7 @@ export default function Header() {
             }`}
           >
             <Wrench className="w-4 h-4" />
-            工具演示
+            {t('studio.header.nav.tools')}
           </Link>
           <Link
             to="/projects"
@@ -145,7 +147,7 @@ export default function Header() {
             }`}
           >
             <FolderOpen className="w-4 h-4" />
-            项目管理
+            {t('studio.header.nav.projects')}
           </Link>
           <Link
             to="/ocr"
@@ -156,7 +158,7 @@ export default function Header() {
             }`}
           >
             <ScanText className="w-4 h-4" />
-            OCR 识别
+            {t('studio.header.nav.ocr')}
           </Link>
           <Link
             to="/files"
@@ -167,7 +169,7 @@ export default function Header() {
             }`}
           >
             <HardDrive className="w-4 h-4" />
-            文件系统
+            {t('studio.header.nav.files')}
           </Link>
           <Link
             to="/graph"
@@ -178,7 +180,7 @@ export default function Header() {
             }`}
           >
             <Network className="w-4 h-4" />
-            图谱可视化
+            {t('studio.header.nav.graph')}
           </Link>
           <Link
             to="/graph/review"
@@ -189,7 +191,7 @@ export default function Header() {
             }`}
           >
             <ClipboardCheck className="w-4 h-4" />
-            审核中心
+            {t('ui.nav.reviewCenter')}
           </Link>
           <Link
             to="/knowledge"
@@ -200,7 +202,7 @@ export default function Header() {
             }`}
           >
             <Database className="w-4 h-4" />
-            知识库
+            {t('studio.header.nav.knowledge')}
           </Link>
           <Link
             to="/workflow"
@@ -211,7 +213,7 @@ export default function Header() {
             }`}
           >
             <Activity className="w-4 h-4" />
-            工作流
+            {t('studio.header.nav.workflow')}
           </Link>
           <Link
             to="/statistics"
@@ -222,7 +224,7 @@ export default function Header() {
             }`}
           >
             <BarChart3 className="w-4 h-4" />
-            统计分析
+            {t('studio.header.nav.statistics')}
           </Link>
           <Link
             to="/tokens"
@@ -233,7 +235,7 @@ export default function Header() {
             }`}
           >
             <Coins className="w-4 h-4" />
-            Token监控
+            {t('ui.nav.tokens')}
           </Link>
           <Link
             to="/memory-management"
@@ -244,7 +246,7 @@ export default function Header() {
             }`}
           >
             <Database className="w-4 h-4" />
-            记忆管理
+            {t('ui.nav.memory')}
           </Link>
           <Link
             to="/evolution"
@@ -255,7 +257,7 @@ export default function Header() {
             }`}
           >
             <Sparkles className="w-4 h-4" />
-            进化系统
+            {t('ui.nav.evolution')}
           </Link>
           <Link
             to="/feedback"
@@ -266,7 +268,7 @@ export default function Header() {
             }`}
           >
             <ThumbsUp className="w-4 h-4" />
-            反馈系统
+            {t('ui.nav.feedback')}
           </Link>
           <Link
             to="/abtest"
@@ -277,7 +279,7 @@ export default function Header() {
             }`}
           >
             <GitCompare className="w-4 h-4" />
-            A/B 测试
+            {t('ui.nav.abtest')}
           </Link>
           <Link
             to="/notes"
@@ -288,7 +290,7 @@ export default function Header() {
             }`}
           >
             <FileText className="w-4 h-4" />
-            笔记管理
+            {t('studio.header.nav.notes')}
           </Link>
           <Link
             to="/quality"
@@ -299,7 +301,7 @@ export default function Header() {
             }`}
           >
             <Shield className="w-4 h-4" />
-            质量控制
+            {t('admin.quality.title')}
           </Link>
           <Link
             to="/novel-screening"
@@ -310,7 +312,7 @@ export default function Header() {
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            小说筛选
+            {t('ui.nav.novelScreening')}
           </Link>
           <Link
             to="/release"
@@ -321,7 +323,7 @@ export default function Header() {
             }`}
           >
             <Rocket className="w-4 h-4" />
-            发布管理
+            {t('admin.release.title')}
           </Link>
           <Link
             to="/pipelines"
@@ -332,7 +334,7 @@ export default function Header() {
             }`}
           >
             <Workflow className="w-4 h-4" />
-            管道管理
+            {t('admin.pipeline.title')}
           </Link>
           {isAdmin() && (
             <Link
@@ -344,7 +346,7 @@ export default function Header() {
               }`}
             >
               <Settings className="w-4 h-4" />
-              系统管理
+              {t('studio.header.nav.admin')}
             </Link>
           )}
         </nav>
@@ -377,20 +379,20 @@ export default function Header() {
                     <p className="text-sm text-gray-500 mt-1">{activeAgentData.description}</p>
                     <div className="mt-3 space-y-2">
                       <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className="font-medium">分类:</span>
+                        <span className="font-medium">{t('studio.header.agent.category')}:</span>
                         <span className="px-2 py-0.5 bg-gray-100 rounded">{activeAgentData.category}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className="font-medium">模型:</span>
+                        <span className="font-medium">{t('studio.header.agent.model')}:</span>
                         <span className="px-2 py-0.5 bg-gray-100 rounded">{activeAgentData.model}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <span className="font-medium">端点:</span>
+                        <span className="font-medium">{t('studio.header.agent.endpoint')}:</span>
                         <span className="px-2 py-0.5 bg-gray-100 rounded font-mono">{activeAgentData.apiEndpoint}</span>
                       </div>
                     </div>
                     <div className="mt-3">
-                      <div className="text-xs font-medium text-gray-600 mb-1">功能特性:</div>
+                      <div className="text-xs font-medium text-gray-600 mb-1">{t('studio.header.agent.features')}:</div>
                       <div className="flex flex-wrap gap-1">
                         {activeAgentData.features.slice(0, 4).map((feature: string) => (
                           <span
@@ -421,7 +423,7 @@ export default function Header() {
           className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
         >
           <Search className="w-4 h-4" />
-          <span>搜索...</span>
+          <span>{t('studio.header.search')}</span>
           <kbd className="hidden md:inline-flex items-center px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 rounded text-xs">
             ⌘K
           </kbd>
@@ -434,7 +436,7 @@ export default function Header() {
             className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 hover:shadow-lg transition-all hover-scale animate-pulse-slow"
           >
             <Square className="w-4 h-4" />
-            <span className="hidden sm:inline">停止生成</span>
+            <span className="hidden sm:inline">{t('studio.header.stopGenerate')}</span>
           </button>
         )}
 
@@ -450,10 +452,10 @@ export default function Header() {
               </div>
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user?.displayName || user?.username || '用户'}
+                  {user?.displayName || user?.username || t('studio.header.role.user')}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {user?.role === 'admin' ? '管理员' : user?.role === 'user' ? '用户' : '访客'}
+                  {user?.role === 'admin' ? t('studio.header.role.admin') : user?.role === 'user' ? t('studio.header.role.user') : t('studio.header.role.guest')}
                 </p>
               </div>
             </div>
@@ -478,7 +480,7 @@ export default function Header() {
                   onClick={() => setShowUserMenu(false)}
                 >
                   <BarChart3 className="w-4 h-4" />
-                  统计分析
+                  {t('studio.header.nav.statistics')}
                 </Link>
                 {isAdmin() && (
                   <Link
@@ -487,7 +489,7 @@ export default function Header() {
                     onClick={() => setShowUserMenu(false)}
                   >
                     <Settings className="w-4 h-4" />
-                    系统管理
+                    {t('studio.header.nav.admin')}
                   </Link>
                 )}
               </div>
@@ -498,7 +500,7 @@ export default function Header() {
                   className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <LogOut className="w-4 h-4" />
-                  退出登录
+                  {t('nav.signOut')}
                 </button>
               </div>
             </div>
@@ -509,7 +511,7 @@ export default function Header() {
         <button
           onClick={() => setSettingsModalOpen(true)}
           className="p-2 rounded-lg hover:bg-gray-100 hover-scale icon-rotate transition-all"
-          aria-label="设置"
+          aria-label={t('nav.settings')}
         >
           <Settings className="w-5 h-5 text-gray-600" />
         </button>

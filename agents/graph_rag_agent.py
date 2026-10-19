@@ -24,9 +24,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from agents.base_juben_agent import BaseJubenAgent
-from utils.llm_client import LLMClient
+from utils.llm_client import get_llm_client
 from utils.graph_enhanced import get_enhanced_graph_manager, GraphRAGQuery
-from apis.core.schemas import StreamContentType
+from utils.project_types import StreamContentType
 
 logger = logging.getLogger(__name__)
 
@@ -97,15 +97,16 @@ class GraphRAGAgent(BaseJubenAgent):
     5. 世界观合规验证
     """
 
-    def __init__(self, model_provider: str = "zhipu"):
+    def __init__(self, model_provider: str = "deepseek"):
         super().__init__("graph_rag_agent", model_provider)
-        self.llm_client = LLMClient(model_provider)
+        self.llm_client = get_llm_client(provider=model_provider)
         self.graph_manager = None
 
-        async def _init():
+    async def _ensure_graph_manager(self):
+        """惰性初始化图谱管理器（避免在同步 __init__ 里创建 task）。"""
+        if self.graph_manager is None:
             self.graph_manager = await get_enhanced_graph_manager()
-
-        asyncio.create_task(_init())
+        return self.graph_manager
 
     async def process_request(
         self,
@@ -123,6 +124,7 @@ class GraphRAGAgent(BaseJubenAgent):
         5. verify_world_rules - 世界观验证
         """
         operation = request_data.get("operation", "ask_question")
+        await self._ensure_graph_manager()
 
         if operation == "ask_question":
             async for event in self._ask_question(request_data):

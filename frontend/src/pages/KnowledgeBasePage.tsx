@@ -4,30 +4,23 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
-import StatusBar from '@/components/layout/StatusBar';
-import MobileMenu from '@/components/common/MobileMenu';
-import SettingsModal from '@/components/modals/SettingsModal';
+import AppShell from '@/components/layout/AppShell';
 import {
   Database,
   Upload,
   Search,
   FileText,
   Trash2,
-  Edit,
   Eye,
-  Download,
   Tag,
-  Calendar,
   TrendingUp,
   Plus,
   FolderOpen,
   BookOpen,
-  Filter,
   RefreshCw,
 } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
+import { useI18n } from '@/i18n';
 import { getKnowledgeCollections, searchKnowledge } from '@/services/extendedApi';
 
 interface KnowledgeDocument {
@@ -51,6 +44,7 @@ interface KnowledgeCategory {
 
 export const KnowledgeBasePage: React.FC = () => {
   const { success, error } = useNotificationStore();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'documents' | 'upload' | 'search' | 'stats'>('documents');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -102,7 +96,7 @@ export const KnowledgeBasePage: React.FC = () => {
           totalCategories: mapped.length,
         });
       } catch (err: any) {
-        error('加载失败', err?.message || '无法加载知识库集合');
+        error(t('toolbox.knowledge.toast.loadFailed'), err?.message || t('toolbox.knowledge.toast.loadFailedDesc'));
       }
     };
     loadCollections();
@@ -110,7 +104,7 @@ export const KnowledgeBasePage: React.FC = () => {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
-      error('搜索失败', '请输入搜索关键词');
+      error(t('toolbox.knowledge.toast.searchFailed'), t('toolbox.knowledge.toast.emptyQuery'));
       return;
     }
     try {
@@ -118,7 +112,7 @@ export const KnowledgeBasePage: React.FC = () => {
       const results = response.search_result?.results || response.search_result?.items || response.search_result || [];
       const mapped: KnowledgeDocument[] = (Array.isArray(results) ? results : []).map((item: any, index: number) => ({
         id: item.id || item.doc_id || `${index}`,
-        title: item.title || item.source || `结果 ${index + 1}`,
+        title: item.title || item.source || `${t('toolbox.knowledge.results')} ${index + 1}`,
         content: item.content || item.text || item.snippet || JSON.stringify(item),
         category: item.collection || selectedCategory,
         source: item.source || item.url,
@@ -143,19 +137,19 @@ export const KnowledgeBasePage: React.FC = () => {
       })();
       setSearchHistory(updatedHistory);
       localStorage.setItem('knowledge_search_history', JSON.stringify(updatedHistory));
-      success('搜索完成', `找到 ${mapped.length} 条结果`);
+      success(t('toolbox.knowledge.toast.searchSuccess'), t('toolbox.knowledge.toast.found', { count: mapped.length }));
     } catch (err: any) {
-      error('搜索失败', err?.message || '无法完成搜索');
+      error(t('toolbox.knowledge.toast.searchFailed'), err?.message || t('toolbox.knowledge.toast.searchFailedDesc'));
     }
   };
 
   const handleDeleteDocument = async (docId: string) => {
-    if (!window.confirm('确定要删除这个文档吗？')) return;
+    if (!window.confirm(t('toolbox.knowledge.toast.deleteConfirm'))) return;
     const updated = localDocuments.filter((doc) => doc.id !== docId);
     setLocalDocuments(updated);
     setDocuments(updated);
     localStorage.setItem('knowledge_documents', JSON.stringify(updated));
-    success('删除成功', '文档已删除');
+    success(t('toolbox.knowledge.toast.deleteSuccess'), t('toolbox.knowledge.toast.deleted'));
   };
 
   const handleViewDocument = (doc: KnowledgeDocument) => {
@@ -164,7 +158,7 @@ export const KnowledgeBasePage: React.FC = () => {
 
   const handleCreateLocalDoc = () => {
     if (!uploadForm.title.trim() || !uploadForm.content.trim()) {
-      error('创建失败', '标题和内容不能为空');
+      error(t('toolbox.knowledge.toast.createFailed'), t('toolbox.knowledge.toast.emptyFields'));
       return;
     }
     const now = new Date().toISOString();
@@ -192,14 +186,17 @@ export const KnowledgeBasePage: React.FC = () => {
     setUploadFile(null);
     setUploadMessage('');
     setEditingDocumentId(null);
-    success(editingDocumentId ? '更新成功' : '创建成功', '本地知识文档已保存');
+    success(
+      editingDocumentId ? t('toolbox.knowledge.toast.updateSuccess') : t('toolbox.knowledge.toast.createSuccess'),
+      t('toolbox.knowledge.toast.saved')
+    );
     setActiveTab('documents');
   };
 
   const handleUploadFile = (file: File) => {
     const allowed = ['text/plain', 'text/markdown', 'application/json'];
     if (!allowed.includes(file.type) && !file.name.match(/\.(txt|md|markdown|json)$/i)) {
-      setUploadMessage('仅支持 txt / md / json 文件');
+      setUploadMessage(t('toolbox.knowledge.toast.onlyText'));
       return;
     }
     setUploadFile(file);
@@ -212,10 +209,10 @@ export const KnowledgeBasePage: React.FC = () => {
         title: prev.title || file.name.replace(/\.[^/.]+$/, ''),
         content: text,
       }));
-      setUploadMessage(`已加载 ${file.name}，可继续编辑后保存`);
+      setUploadMessage(`${t('toolbox.knowledge.toast.loaded')} ${file.name}，${t('toolbox.knowledge.toast.editableAfter')}`);
     };
     reader.onerror = () => {
-      setUploadMessage('文件读取失败，请重试');
+      setUploadMessage(t('toolbox.knowledge.toast.readFailed'));
     };
     reader.readAsText(file);
   };
@@ -238,41 +235,41 @@ export const KnowledgeBasePage: React.FC = () => {
     <div className="space-y-6">
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow p-5">
+        <div className="glass-panel p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">总文档数</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalDocuments}</p>
+              <p className="text-sm text-ink-muted">{t('toolbox.knowledge.stat.totalDocs')}</p>
+              <p className="text-2xl font-bold text-ink mt-1">{stats.totalDocuments}</p>
             </div>
-            <FileText className="w-8 h-8 text-blue-500" />
+            <FileText className="w-8 h-8 text-atelier-teal" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-5">
+        <div className="glass-panel p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">分类数</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{stats.totalCategories}</p>
+              <p className="text-sm text-ink-muted">{t('toolbox.knowledge.stat.categories')}</p>
+              <p className="text-2xl font-bold text-ink mt-1">{stats.totalCategories}</p>
             </div>
             <FolderOpen className="w-8 h-8 text-purple-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-5">
+        <div className="glass-panel p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">本地文档</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{localDocuments.length}</p>
+              <p className="text-sm text-ink-muted">{t('toolbox.knowledge.stat.localDocs')}</p>
+              <p className="text-2xl font-bold text-ink mt-1">{localDocuments.length}</p>
             </div>
             <Database className="w-8 h-8 text-green-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-5">
+        <div className="glass-panel p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">集合数量</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{categories.length}</p>
+              <p className="text-sm text-ink-muted">{t('toolbox.knowledge.stat.collections')}</p>
+              <p className="text-2xl font-bold text-ink mt-1">{categories.length}</p>
             </div>
             <Search className="w-8 h-8 text-orange-500" />
           </div>
@@ -280,18 +277,18 @@ export const KnowledgeBasePage: React.FC = () => {
       </div>
 
       {/* 文档列表 */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">文档列表</h2>
+      <div className="glass-panel overflow-hidden">
+        <div className="px-6 py-4 border-b border-pearl-line flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-ink">{t('toolbox.knowledge.docList')}</h2>
           <div className="flex items-center gap-3">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1.5 border border-pearl-line rounded-lg text-sm bg-white/60 focus:outline-none focus:ring-2 focus:ring-atelier-teal/30"
             >
-              <option value="all">所有分类</option>
+              <option value="all">{t('toolbox.knowledge.allCategories')}</option>
               {localDocuments.length > 0 && (
-                <option value="本地文档">本地文档 ({localDocuments.length})</option>
+                <option value="本地文档">{t('toolbox.knowledge.stat.localDocs')} ({localDocuments.length})</option>
               )}
               {categories.map((cat) => (
                 <option key={cat.name} value={cat.name}>
@@ -301,45 +298,45 @@ export const KnowledgeBasePage: React.FC = () => {
             </select>
             <button
               onClick={() => setActiveTab('upload')}
-              className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+              className="btn btn-primary btn-sm"
             >
               <Plus className="w-4 h-4" />
-              上传文档
+              {t('toolbox.knowledge.tab.upload')}
             </button>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-pearl-line">
+            <thead className="bg-pearl-soft">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">标题</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">分类</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">标签</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">大小</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">更新时间</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">{t('toolbox.knowledge.table.title')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">{t('toolbox.knowledge.table.category')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">{t('toolbox.knowledge.table.tags')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">{t('toolbox.knowledge.table.size')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">{t('toolbox.knowledge.table.updated')}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-ink-muted uppercase">{t('toolbox.knowledge.table.actions')}</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-pearl-line">
               {documents
                 .filter((doc) => selectedCategory === 'all' || doc.category === selectedCategory)
                 .map((doc) => (
-                <tr key={doc.id} className="hover:bg-gray-50">
+                <tr key={doc.id} className="hover:bg-pearl-soft/60">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gray-400" />
+                      <FileText className="w-5 h-5 text-ink-faint" />
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{doc.title}</div>
+                        <div className="text-sm font-medium text-ink">{doc.title}</div>
                         {doc.source && (
-                          <div className="text-xs text-gray-500">来源: {doc.source}</div>
+                          <div className="text-xs text-ink-muted">{t('toolbox.knowledge.source')}: {doc.source}</div>
                         )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                      {doc.category || '未知'}
+                    <span className="inline-flex px-2 py-1 text-xs font-medium bg-atelier-teal-soft text-atelier-teal rounded">
+                      {doc.category || t('toolbox.knowledge.unknown')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -347,36 +344,36 @@ export const KnowledgeBasePage: React.FC = () => {
                       {(doc.tags || []).slice(0, 2).map((tag) => (
                         <span
                           key={tag}
-                          className="inline-flex px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded"
+                          className="inline-flex px-2 py-0.5 text-xs bg-pearl-soft text-ink-muted rounded"
                         >
                           {tag}
                         </span>
                       ))}
                       {(doc.tags || []).length > 2 && (
-                        <span className="text-xs text-gray-500">+{(doc.tags || []).length - 2}</span>
+                        <span className="text-xs text-ink-muted">+{(doc.tags || []).length - 2}</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-ink-muted">
                     {doc.size ? formatFileSize(doc.size) : '-'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className="px-6 py-4 text-sm text-ink-muted">
                     {doc.updatedAt ? new Date(doc.updatedAt).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => handleViewDocument(doc)}
-                        className="p-1.5 hover:bg-gray-100 rounded"
-                        title="查看"
+                        className="p-1.5 hover:bg-pearl-soft rounded"
+                        title={t('toolbox.preview')}
                       >
-                        <Eye className="w-4 h-4 text-gray-600" />
+                        <Eye className="w-4 h-4 text-ink-muted" />
                       </button>
                       {doc.id.startsWith('local_') && (
                         <button
                           onClick={() => handleDeleteDocument(doc.id)}
                           className="p-1.5 hover:bg-red-100 rounded"
-                          title="删除"
+                          title={t('common.delete')}
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </button>
@@ -391,20 +388,20 @@ export const KnowledgeBasePage: React.FC = () => {
       </div>
 
       {/* 分类统计 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">分类统计</h3>
+      <div className="glass-panel p-6">
+        <h3 className="text-lg font-semibold text-ink mb-4">{t('toolbox.knowledge.categoryStats')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[...(localDocuments.length > 0
-            ? [{ name: '本地文档', description: '本地保存内容', count: localDocuments.length }]
+            ? [{ name: t('toolbox.knowledge.stat.localDocs'), description: t('toolbox.knowledge.stat.localDocs'), count: localDocuments.length }]
             : []),
             ...categories,
           ].map((cat) => (
-            <div key={cat.name} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div key={cat.name} className="border border-pearl-line rounded-lg p-4 hover:shadow-md transition-shadow bg-white/40">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-gray-900">{cat.name}</h4>
-                <span className="text-sm text-gray-500">{cat.count || 0} 篇</span>
+                <h4 className="font-medium text-ink">{cat.name}</h4>
+                <span className="text-sm text-ink-muted">{cat.count || 0} {t('toolbox.knowledge.unit')}</span>
               </div>
-              <p className="text-sm text-gray-600">{cat.description}</p>
+              <p className="text-sm text-ink-muted">{cat.description}</p>
             </div>
           ))}
         </div>
@@ -414,94 +411,94 @@ export const KnowledgeBasePage: React.FC = () => {
 
   const renderUploadTab = () => (
     <div className="max-w-2xl mx-auto">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">
-          {editingDocumentId ? '编辑本地文档' : '上传文档到知识库'}
+      <div className="glass-panel p-6">
+        <h2 className="text-lg font-semibold text-ink mb-6">
+          {editingDocumentId ? t('toolbox.knowledge.editLocalDoc') : t('toolbox.knowledge.uploadToKb')}
         </h2>
 
         <div className="space-y-6">
           {/* 本地文档保存 */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <Upload className="w-10 h-10 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-600 mb-2">支持拖拽或选择文件上传</p>
-            <p className="text-sm text-gray-500">支持 txt / md / json 文件</p>
+          <div className="border-2 border-dashed border-pearl-line rounded-lg p-8 text-center">
+            <Upload className="w-10 h-10 mx-auto mb-4 text-ink-faint" />
+            <p className="text-ink-muted mb-2">{t('toolbox.knowledge.dragHint')}</p>
+            <p className="text-sm text-ink-muted">{t('toolbox.knowledge.supportFormats')}</p>
             <div className="mt-4">
               <input
                 type="file"
                 accept=".txt,.md,.markdown,.json,text/plain,text/markdown,application/json"
                 onChange={(e) => e.target.files?.[0] && handleUploadFile(e.target.files[0])}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                className="block w-full text-sm text-ink-muted file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-atelier-teal-soft file:text-atelier-teal hover:file:bg-atelier-teal-soft"
               />
             </div>
-            {uploadFile && <p className="mt-2 text-xs text-gray-500">已选择: {uploadFile.name}</p>}
-            {uploadMessage && <p className="mt-3 text-xs text-blue-600">{uploadMessage}</p>}
+            {uploadFile && <p className="mt-2 text-xs text-ink-muted">{t('toolbox.graph.fileSelectedName')} {uploadFile.name}</p>}
+            {uploadMessage && <p className="mt-3 text-xs text-atelier-teal">{uploadMessage}</p>}
           </div>
 
           {/* 文档信息 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              文档标题 *
+            <label className="block text-sm font-medium text-ink mb-2">
+              {t('toolbox.knowledge.docTitle')} *
             </label>
             <input
               type="text"
-              placeholder="输入文档标题"
+              placeholder={t('toolbox.knowledge.titlePlaceholder')}
               value={uploadForm.title}
               onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-pearl-line rounded-lg bg-white/60 focus:outline-none focus:ring-2 focus:ring-atelier-teal/30"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              文档内容 *
+            <label className="block text-sm font-medium text-ink mb-2">
+              {t('toolbox.knowledge.docContent')} *
             </label>
             <textarea
-              placeholder="输入或粘贴文档内容..."
+              placeholder={t('toolbox.knowledge.contentPlaceholder')}
               rows={8}
               value={uploadForm.content}
               onChange={(e) => setUploadForm({ ...uploadForm, content: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-3 py-2 border border-pearl-line rounded-lg bg-white/60 focus:outline-none focus:ring-2 focus:ring-atelier-teal/30 resize-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              标签
+            <label className="block text-sm font-medium text-ink mb-2">
+              {t('toolbox.knowledge.tags')}
             </label>
             <input
               type="text"
-              placeholder="输入标签，用逗号分隔"
+              placeholder={t('toolbox.knowledge.tagsPlaceholder')}
               value={uploadForm.tags}
               onChange={(e) => setUploadForm({ ...uploadForm, tags: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-pearl-line rounded-lg bg-white/60 focus:outline-none focus:ring-2 focus:ring-atelier-teal/30"
             />
           </div>
 
-          <div className="bg-blue-50 rounded-lg p-4">
+          <div className="bg-atelier-teal-soft rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <BookOpen className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">知识向量嵌入</p>
-                <p>上传的文档将自动生成向量嵌入，支持语义搜索和智能检索</p>
+              <BookOpen className="w-5 h-5 text-atelier-teal mt-0.5" />
+              <div className="text-sm text-ink-muted">
+                <p className="font-medium mb-1">{t('toolbox.knowledge.smartUnderstand')}</p>
+                <p>{t('toolbox.knowledge.smartUnderstandDesc')}</p>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-3 pt-4 border-t border-pearl-line">
             <button
               onClick={() => {
                 setEditingDocumentId(null);
                 setActiveTab('documents');
               }}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+              className="flex-1 btn btn-secondary"
             >
-              取消
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleCreateLocalDoc}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              className="flex-1 btn btn-primary"
             >
-              {editingDocumentId ? '保存修改' : '保存文档'}
+              {editingDocumentId ? t('toolbox.knowledge.saveChanges') : t('toolbox.knowledge.saveDoc')}
             </button>
           </div>
         </div>
@@ -511,8 +508,8 @@ export const KnowledgeBasePage: React.FC = () => {
 
   const renderSearchTab = () => (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">知识库搜索</h2>
+      <div className="glass-panel p-6">
+        <h2 className="text-lg font-semibold text-ink mb-4">{t('toolbox.knowledge.searchTitle')}</h2>
 
         <div className="flex gap-3 mb-6">
           <input
@@ -520,40 +517,40 @@ export const KnowledgeBasePage: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="输入搜索关键词..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder={t('toolbox.knowledge.searchPlaceholder')}
+            className="flex-1 px-4 py-2 border border-pearl-line rounded-lg bg-white/60 focus:outline-none focus:ring-2 focus:ring-atelier-teal/30"
           />
           <button
             onClick={handleSearch}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2"
+            className="btn btn-primary"
           >
             <Search className="w-4 h-4" />
-            搜索
+            {t('nav.search')}
           </button>
         </div>
 
-        <div className="flex items-center gap-4 text-sm text-gray-600">
+        <div className="flex items-center gap-4 text-sm text-ink-muted">
           <label className="flex items-center gap-2">
             <input type="checkbox" defaultChecked className="rounded" />
-            语义搜索
+            {t('toolbox.knowledge.semantic')}
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" className="rounded" />
-            全文搜索
+            {t('toolbox.knowledge.fulltext')}
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" defaultChecked className="rounded" />
-            包摘要
+            {t('toolbox.knowledge.includeSummary')}
           </label>
         </div>
       </div>
 
       {/* 搜索结果 */}
       {searchResults.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="glass-panel p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-gray-900">
-              搜索结果 ({searchResults.length})
+            <h3 className="font-semibold text-ink">
+              {t('toolbox.knowledge.results')} ({searchResults.length})
             </h3>
             {(() => {
               const scores = searchResults
@@ -562,9 +559,9 @@ export const KnowledgeBasePage: React.FC = () => {
               if (scores.length === 0) return null;
               const avg = scores.reduce((acc, v) => acc + v, 0) / scores.length;
               return (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-ink-muted">
                   <TrendingUp className="w-4 h-4" />
-                  平均相关度: {formatRelevance(avg)}
+                  {t('toolbox.knowledge.avgRelevance')}: {formatRelevance(avg)}
                 </div>
               );
             })()}
@@ -574,23 +571,23 @@ export const KnowledgeBasePage: React.FC = () => {
             {searchResults.map((doc, index) => (
               <div
                 key={doc.id}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="border border-pearl-line rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer bg-white/40"
                 onClick={() => handleViewDocument(doc)}
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600">{index + 1}</span>
+                  <div className="flex-shrink-0 w-8 h-8 bg-atelier-teal-soft rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-atelier-teal">{index + 1}</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 mb-1">{doc.title}</h4>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                    <h4 className="font-medium text-ink mb-1">{doc.title}</h4>
+                    <p className="text-sm text-ink-muted mb-2 line-clamp-2">
                       {doc.content}
                     </p>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">{doc.category}</span>
+                    <div className="flex items-center gap-3 text-xs text-ink-muted">
+                      <span className="px-2 py-0.5 bg-pearl-soft rounded">{doc.category}</span>
                       {doc.size !== undefined && <span>{formatFileSize(doc.size)}</span>}
                       {formatRelevance(doc.relevance) && (
-                        <span>相关度: {formatRelevance(doc.relevance)}</span>
+                        <span>{t('toolbox.knowledge.relevance')}: {formatRelevance(doc.relevance)}</span>
                       )}
                     </div>
                   </div>
@@ -607,11 +604,11 @@ export const KnowledgeBasePage: React.FC = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 热门分类 */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">热门分类</h3>
+        <div className="glass-panel p-6">
+          <h3 className="text-lg font-semibold text-ink mb-4">{t('toolbox.knowledge.hotCategories')}</h3>
           <div className="space-y-3">
             {[...(localDocuments.length > 0
-              ? [{ name: '本地文档', count: localDocuments.length }]
+              ? [{ name: t('toolbox.knowledge.stat.localDocs'), count: localDocuments.length }]
               : []),
               ...categories.map((cat) => ({ name: cat.name, count: cat.count || 0 })),
             ]
@@ -620,38 +617,38 @@ export const KnowledgeBasePage: React.FC = () => {
               .map((cat, index) => (
                 <div key={cat.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-600">
+                    <span className="flex-shrink-0 w-6 h-6 bg-atelier-teal-soft rounded-full flex items-center justify-center text-sm font-medium text-atelier-teal">
                       {index + 1}
                     </span>
-                    <span className="text-gray-900">{cat.name}</span>
+                    <span className="text-ink">{cat.name}</span>
                   </div>
-                  <span className="text-sm text-gray-600">{cat.count || 0} 篇</span>
+                  <span className="text-sm text-ink-muted">{cat.count || 0} {t('toolbox.knowledge.unit')}</span>
                 </div>
               ))}
             {categories.length === 0 && localDocuments.length === 0 && (
-              <div className="text-sm text-gray-500">暂无分类数据</div>
+              <div className="text-sm text-ink-muted">{t('toolbox.knowledge.noCategoryData')}</div>
             )}
           </div>
         </div>
 
         {/* 概况 */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">知识库概况</h3>
-          <div className="space-y-4 text-sm text-gray-600">
+        <div className="glass-panel p-6">
+          <h3 className="text-lg font-semibold text-ink mb-4">{t('toolbox.knowledge.overview')}</h3>
+          <div className="space-y-4 text-sm text-ink-muted">
             <div className="flex items-center justify-between">
-              <span>文档总数</span>
+              <span>{t('toolbox.knowledge.stat.totalDocs')}</span>
               <span className="font-medium">{stats.totalDocuments}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>集合数量</span>
+              <span>{t('toolbox.knowledge.stat.collections')}</span>
               <span className="font-medium">{categories.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>本地文档</span>
+              <span>{t('toolbox.knowledge.stat.localDocs')}</span>
               <span className="font-medium">{localDocuments.length}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span>最近搜索</span>
+              <span>{t('toolbox.knowledge.recentSearch')}</span>
               <span className="font-medium">{searchHistory.length}</span>
             </div>
           </div>
@@ -659,21 +656,21 @@ export const KnowledgeBasePage: React.FC = () => {
       </div>
 
       {/* 搜索记录 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">最近搜索</h3>
+      <div className="glass-panel p-6">
+        <h3 className="text-lg font-semibold text-ink mb-4">{t('toolbox.knowledge.recentSearch')}</h3>
         {searchHistory.length === 0 ? (
-          <div className="text-sm text-gray-500">暂无搜索记录</div>
+          <div className="text-sm text-ink-muted">{t('toolbox.knowledge.noSearchHistory')}</div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-pearl-line">
             {searchHistory.slice(0, 10).map((item) => (
               <div key={item.query} className="py-2 flex items-center justify-between text-sm">
                 <div>
-                  <div className="font-medium text-gray-900">{item.query}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="font-medium text-ink">{item.query}</div>
+                  <div className="text-xs text-ink-muted">
                     {new Date(item.timestamp).toLocaleString()}
                   </div>
                 </div>
-                <span className="text-xs text-gray-500">次数 {item.count}</span>
+                <span className="text-xs text-ink-muted">{t('toolbox.knowledge.count')} {item.count}</span>
               </div>
             ))}
           </div>
@@ -682,137 +679,81 @@ export const KnowledgeBasePage: React.FC = () => {
     </div>
   );
 
+  const tabs: { key: 'documents' | 'upload' | 'search' | 'stats'; label: string; resetEdit?: boolean }[] = [
+    { key: 'documents', label: t('toolbox.knowledge.tab.documents'), resetEdit: true },
+    { key: 'upload', label: t('toolbox.knowledge.tab.upload') },
+    { key: 'search', label: t('toolbox.knowledge.tab.search'), resetEdit: true },
+    { key: 'stats', label: t('toolbox.knowledge.tab.stats'), resetEdit: true },
+  ];
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      <MobileMenu />
-      <Sidebar />
-
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header />
-        <StatusBar />
-
-        <div className="flex-1 overflow-y-auto">
-          {/* 页面头部 */}
-          <div className="bg-white border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-6 py-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                    <Database className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">知识库管理</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                      管理文档、知识条目和向量嵌入
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-gray-100 rounded-lg" title="刷新">
-                    <RefreshCw className="w-5 h-5 text-gray-600" />
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('upload')}
-                    className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-                  >
-                    <Upload className="w-4 h-4" />
-                    上传文档
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 标签页导航 */}
-          <div className="bg-white border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => {
-                    setEditingDocumentId(null);
-                    setActiveTab('documents');
-                  }}
-                  className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                    activeTab === 'documents'
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  文档管理
-                </button>
-                <button
-                  onClick={() => setActiveTab('upload')}
-                  className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                    activeTab === 'upload'
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  上传文档
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingDocumentId(null);
-                    setActiveTab('search');
-                  }}
-                  className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                    activeTab === 'search'
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  搜索知识
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingDocumentId(null);
-                    setActiveTab('stats');
-                  }}
-                  className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                    activeTab === 'stats'
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  统计分析
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 内容区 */}
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            {activeTab === 'documents' && renderDocumentsTab()}
-            {activeTab === 'upload' && renderUploadTab()}
-            {activeTab === 'search' && renderSearchTab()}
-            {activeTab === 'stats' && renderStatsTab()}
-          </div>
+    <AppShell
+      title={t('toolbox.knowledge.title')}
+      subtitle={t('toolbox.knowledge.subtitle')}
+      actions={
+        <div className="flex gap-2">
+          <button className="btn btn-ghost btn-sm" title={t('toolbox.refresh')}>
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setActiveTab('upload')}
+            className="btn btn-primary btn-sm"
+          >
+            <Upload className="w-4 h-4" />
+            {t('toolbox.knowledge.tab.upload')}
+          </button>
         </div>
-      </div>
+      }
+    >
+      <div className="px-4 sm:px-8 lg:px-10 py-6 sm:py-8 max-w-6xl mx-auto space-y-6 sm:space-y-8">
+        {/* 标签页导航 */}
+        <div className="glass-panel p-1 flex items-center gap-1 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                if (tab.resetEdit) setEditingDocumentId(null);
+                setActiveTab(tab.key);
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.key
+                  ? 'bg-atelier-teal text-white'
+                  : 'text-ink-muted hover:text-ink'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      <SettingsModal />
+        {/* 内容区 */}
+        {activeTab === 'documents' && renderDocumentsTab()}
+        {activeTab === 'upload' && renderUploadTab()}
+        {activeTab === 'search' && renderSearchTab()}
+        {activeTab === 'stats' && renderStatsTab()}
+      </div>
 
       {/* 文档详情弹窗 */}
       {selectedDocument && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden mx-4">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div className="glass-dense rounded-2xl shadow-atelier-lg max-w-3xl w-full max-h-[90vh] overflow-hidden mx-4">
+            <div className="p-6 border-b border-pearl-line flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-ink">
                 {selectedDocument.title}
               </h3>
               <button
                 onClick={() => setSelectedDocument(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-pearl-soft rounded-lg"
               >
                 ✕
               </button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+              <div className="flex items-center gap-4 text-sm text-ink-muted mb-4">
+                <span className="px-2 py-1 bg-atelier-teal-soft text-atelier-teal rounded">
                   {selectedDocument.category}
                 </span>
-                <span>{formatFileSize(selectedDocument.size)}</span>
+                <span>{formatFileSize(selectedDocument.size ?? 0)}</span>
                 <span>
                   {selectedDocument.updatedAt
                     ? new Date(selectedDocument.updatedAt).toLocaleDateString()
@@ -823,25 +764,25 @@ export const KnowledgeBasePage: React.FC = () => {
                 {(selectedDocument.tags || []).map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
+                    className="px-2 py-1 bg-pearl-soft text-ink-muted text-xs rounded"
                   >
                     {tag}
                   </span>
                 ))}
                 {(selectedDocument.tags || []).length === 0 && (
-                  <span className="text-xs text-gray-400">暂无标签</span>
+                  <span className="text-xs text-ink-faint">{t('toolbox.knowledge.noTags')}</span>
                 )}
               </div>
               <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 whitespace-pre-wrap">{selectedDocument.content}</p>
+                <p className="text-ink-muted whitespace-pre-wrap">{selectedDocument.content}</p>
               </div>
             </div>
-            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+            <div className="p-6 border-t border-pearl-line flex justify-end gap-3">
               <button
                 onClick={() => setSelectedDocument(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
+                className="btn btn-secondary"
               >
-                关闭
+                {t('toolbox.close')}
               </button>
               {selectedDocument.id.startsWith('local_') && (
                 <button
@@ -855,16 +796,16 @@ export const KnowledgeBasePage: React.FC = () => {
                     setEditingDocumentId(selectedDocument.id);
                     setSelectedDocument(null);
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  className="btn btn-primary"
                 >
-                  继续编辑
+                  {t('toolbox.knowledge.continueEdit')}
                 </button>
               )}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 };
 
