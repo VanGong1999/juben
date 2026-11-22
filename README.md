@@ -30,7 +30,7 @@
 
 **相关仓库**
 
-更推荐： 类GrokBot集合150多个Agents和82个tools以及137个SKills的类似GrokBot的根据用户偏好自动优化的主动型多智能体系统包含此系统全部功能更轻量化易部署：[面向商业化写作的多智能体系统](https://github.com/VanGong1999/ai-commerical-writing-personalagents)
+更推荐： 集合150多个Agents和82个tools以及137个SKills的类似GrokBot的根据用户偏好自动优化的主动型多智能体系统包含此系统全部功能多智能体协作更流畅更轻量化易部署，飞书帮助操作整个系统：[面向商业化写作的多智能体系统](https://github.com/VanGong1999/ai-commerical-writing-personalagents)
 - 剧本知识库：[VanGong1999/skills](https://github.com/VanGong1999/skills)
 - 影视创作 Skills：[VanGong1999/screen-creative-skills](https://github.com/VanGong1999/screen-creative-skills)
 
